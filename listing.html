@@ -334,16 +334,11 @@
       <div class="card">
         <h2>五、上傳照片</h2>
         <div class="field">
-          <label>現場照片</label>
-          <div class="hint">外觀、內部、周邊環境等現場照片。選好後會自動壓縮、在背景上傳，可以繼續填其他欄位；如果照片分散在不同資料夾，可以按好幾次「選擇檔案」，會自動累加。</div>
-          <input type="file" id="photoInput" accept="image/*" multiple>
+          <label>上傳照片／文件</label>
+          <div class="hint">選好檔案後會自動在背景上傳，可以繼續填其他欄位；如果照片分散在不同資料夾，可以按好幾次「選擇檔案」，會自動累加。
+手機照片預設會自動壓縮（上傳比較快）。權狀、謄本、使用執照、合約等需要看清楚小字的文件，請在檔案旁勾選「保留原圖」，就不會壓縮；PDF 一律保留原檔。</div>
+          <input type="file" id="photoInput" accept="image/*,application/pdf" multiple>
           <div id="photoList" style="margin-top:8px;"></div>
-        </div>
-        <div class="field">
-          <label>文件照片／檔案（保留原圖）</label>
-          <div class="hint">權狀、謄本、使用執照、合約等需要看清楚小字的文件，這裡上傳的檔案「不壓縮」，保留原始畫質（檔案較大，上傳會比較久）；PDF 請放這裡。</div>
-          <input type="file" id="docInput" accept="image/*,application/pdf" multiple>
-          <div id="docList" style="margin-top:8px;"></div>
         </div>
         <div class="hint">如果數量比較多，也可以直接傳給秘書。</div>
         <div class="hint" id="docChecklistNote"></div>
@@ -551,9 +546,19 @@ function toRocText_(val) {
   if (!val) return '';
   var m = val.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/);
   if (!m) return val;
-  var roc = parseInt(m[1], 10) - 1911;
-  if (roc < 1) return val;
+  var year = parseInt(m[1], 10);
+  // 年份格直接輸入「113」會變成西元 113 年（0113）：年份小於 200 一律當成民國年，
+  // 不然送到試算表會被當成西元 113 年的日期，顯示成「0113年…」
+  var roc = year < 200 ? year : year - 1911;
+  if (roc < 1) return val; // 西元 200～1911 年：不合理，原樣保留，讓檢查擋下來
   return roc + '年' + parseInt(m[2], 10) + '月' + (m[3] ? parseInt(m[3], 10) + '日' : '');
+}
+// 日期選擇器的值是否為不合理的年份（西元 200～1911 年）
+function isImplausibleDateValue_(val) {
+  var m = String(val || '').match(/^(\d{4})-/);
+  if (!m) return false;
+  var y = parseInt(m[1], 10);
+  return y >= 200 && y <= 1911;
 }
 function attachRocPreview_(inputEl) {
   var prev = document.createElement('div');
@@ -562,6 +567,12 @@ function attachRocPreview_(inputEl) {
   inputEl.insertAdjacentElement('afterend', prev);
   function update() {
     var t = toRocText_(inputEl.value);
+    if (isImplausibleDateValue_(inputEl.value)) {
+      prev.textContent = '⚠ 年份看起來不對（西元 ' + parseInt(inputEl.value, 10) + ' 年），請重新選擇；民國年請直接輸入，例如 113';
+      prev.style.color = '#a3352c';
+      return;
+    }
+    prev.style.color = '';
     prev.textContent = (t && t !== inputEl.value) ? ('→ 民國 ' + t) : '';
   }
   inputEl.addEventListener('input', update);
@@ -665,7 +676,7 @@ var FIELD_CONFIG = {
     { label: '基地深度', type: 'text', required: true },
     { label: '基地面寬', type: 'text', required: true },
     { label: '面臨路寬', type: 'text', required: true },
-    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期，系統會自動轉成民國年（例：民國90年10月4日）' },
+    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期，系統會自動轉成民國年。年份格可以直接輸入民國年（例如 113）或西元年（例如 2024）' },
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總樓層數，例如：4；如果只提供其中一層樓，請填該樓層，例如：3F(僅提供3樓)；如果基地上有好幾棟不同樓層的建物，請簡短列出，例如：廠房2F、倉庫1F、宿舍3F' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)；如果好幾棟都有地下室，請簡短列出，例如：廠房B1、宿舍B1' },
     { label: '物件格局(廠房)', type: 'room-layout', required: true },
@@ -763,7 +774,7 @@ var FIELD_CONFIG = {
     { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
-    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期，系統會自動轉成民國年（例：民國115年11月10日）' },
+    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期，系統會自動轉成民國年。年份格可以直接輸入民國年（例如 113）或西元年（例如 2024）' },
     { label: '所在樓別', type: 'text', required: true, hint: '物件位於幾樓' },
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)' },
@@ -777,7 +788,7 @@ var FIELD_CONFIG = {
     { label: '車位說明', type: 'text', group: 'parking', required: true },
     { label: '屋主是否一年內取得', type: 'select', options: YES_NO, required: true },
     { label: '資訊為實價登錄或屋主提供?', type: 'select', options: ['實價登錄','屋主提供'], required: true },
-    { label: '取得年月', type: 'roc-month', required: true, hint: '請選擇年月，系統會自動轉成民國年' },
+    { label: '取得年月', type: 'roc-month', required: true, hint: '請選擇年月，系統會自動轉成民國年。年份可以直接輸入民國年（例如 113）或西元年（例如 2024）' },
     { label: '取得成交價格', type: 'text', required: true },
     { label: '小學', type: 'text' },
     { label: '國中', type: 'text' },
@@ -2128,10 +2139,11 @@ document.getElementById('docChecklistNote').innerHTML = linkify(DOC_CHECKLIST_TE
 
 // ------------------------------------------------------------
 // 照片上傳：選好檔案就在背景自動上傳（不用等到按送出），按送出時只需要等還沒傳完的。
-//  - 「現場照片」：手機拍的照片動輒好幾 MB，先在手機上縮小（長邊最多 2000 像素、
+//  - 預設壓縮：手機拍的照片動輒好幾 MB，先在手機上縮小（長邊最多 2000 像素、
 //    JPEG 品質 82%）再上傳，通常只剩原本的 1/5～1/10，速度快很多。已經很小的照片、
 //    縮完反而變大、或瀏覽器不能處理的格式，會直接用原檔，不會失敗。
-//  - 「文件照片／檔案」：權狀、謄本、PDF 等一律保留原始畫質，不壓縮（檔名前面會加「文件_」）。
+//  - 「保留原圖」：權狀、謄本等需要看清楚小字的文件，業務在檔案旁勾選就不壓縮（檔名前面會加「文件_」）；PDF 等非圖片一律保留原檔。
+//    勾選的時間點不限：已經傳好的也能改，舊版本會自動丟垃圾桶、改傳另一種版本。
 //  - 每個檔案最多自動重試 3 次，失敗的可以按「重試」；移除已經傳好的檔案時，會順便通知
 //    後端把它丟進垃圾桶。
 // ------------------------------------------------------------
@@ -2149,11 +2161,31 @@ function formatSize_(bytes) {
   return Math.max(1, Math.round(bytes / 1024)) + 'KB';
 }
 
-function addUploadFiles_(fileList, kind) {
+function addUploadFiles_(fileList) {
   Array.prototype.slice.call(fileList).forEach(function(file) {
-    uploadItems.push({ id: ++uploadSeq, file: file, kind: kind, status: 'wait', tries: 0,
-      origSize: file.size, sentSize: file.size, error: '', url: '', fileId: '', cancelled: false });
+    // PDF 或其他不是圖片的檔案一律保留原檔；圖片預設壓縮，業務可以在檔案旁勾「保留原圖」
+    var isImage = /^image\//.test(file.type) && !/gif|svg/.test(file.type);
+    uploadItems.push({ id: ++uploadSeq, file: file, keepOriginal: !isImage, forcedOriginal: !isImage, gen: 0,
+      status: 'wait', tries: 0, origSize: file.size, sentSize: file.size, error: '', url: '', fileId: '', cancelled: false });
   });
+  renderUploadLists_();
+  pumpUploadQueue_();
+}
+
+// 勾選／取消「保留原圖」。就算檔案已經照舊方式傳好（或正在傳），也會自動改傳另一種版本：
+// 已經傳上去的舊版本會丟垃圾桶，不會殘留兩份。
+function setKeepOriginal_(item, value) {
+  if (item.forcedOriginal || item.keepOriginal === value) return;
+  item.keepOriginal = value;
+  item.gen++;
+  if (item.status === 'done') {
+    trashUploadedFile_(item);
+    item.url = ''; item.fileId = '';
+    item.status = 'wait'; item.tries = 0; item.sentSize = item.origSize;
+  } else if (item.status === 'error') {
+    item.status = 'wait'; item.tries = 0; item.error = ''; item.sentSize = item.origSize;
+  }
+  // 'wait'：下一輪就會用新的設定；'compressing'／'uploading'：做完之後發現設定變了，會自動重做
   renderUploadLists_();
   pumpUploadQueue_();
 }
@@ -2216,15 +2248,17 @@ function compressImage_(file) {
 function sleep_(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 
 async function processUploadItem_(item) {
+  var myGen = item.gen;
   try {
     var toSend = { blob: item.file, name: item.file.name };
-    if (item.kind === 'photo') {
+    if (!item.keepOriginal) {
       item.status = 'compressing';
       renderUploadLists_();
       toSend = await compressImage_(item.file);
     }
+    if (item.gen !== myGen) { item.status = 'wait'; item.tries = 0; return; } // 壓縮期間設定被改了，重來
     item.sentSize = toSend.blob.size;
-    var sendName = (item.kind === 'doc' ? '文件_' : '') + toSend.name;
+    var sendName = (item.keepOriginal ? '文件_' : '') + toSend.name;
     var mime = toSend.blob.type || item.file.type || 'application/octet-stream';
     item.status = 'uploading';
     renderUploadLists_();
@@ -2238,9 +2272,15 @@ async function processUploadItem_(item) {
           item.url = result.url;
           var m = /[?&]id=([a-zA-Z0-9_-]+)/.exec(result.url || '');
           item.fileId = m ? m[1] : '';
+          if (item.cancelled || item.gen !== myGen) {
+            // 已經被移除，或傳的過程中「保留原圖」設定改了：這份丟垃圾桶，需要的話重傳
+            trashUploadedFile_(item);
+            item.url = ''; item.fileId = '';
+            if (!item.cancelled) { item.status = 'wait'; item.tries = 0; }
+            return;
+          }
           item.status = 'done';
           item.error = '';
-          if (item.cancelled) trashUploadedFile_(item);
           return;
         }
         lastError = (result && result.message) || '上傳失敗';
@@ -2276,51 +2316,64 @@ function retryUploadItem_(item) {
 }
 
 function renderUploadLists_() {
-  [['photo', 'photoList'], ['doc', 'docList']].forEach(function(pair) {
-    var list = document.getElementById(pair[1]);
-    if (!list) return;
-    list.innerHTML = '';
-    var items = uploadItems.filter(function(it) { return it.kind === pair[0]; });
-    if (!items.length) return;
-    var doneCount = items.filter(function(it) { return it.status === 'done'; }).length;
-    var summary = document.createElement('div');
-    summary.style.cssText = 'font-size:12px;color:#555;margin-bottom:4px;';
-    summary.textContent = '已選 ' + items.length + ' 個檔案，已上傳 ' + doneCount + ' 個';
-    list.appendChild(summary);
-    items.forEach(function(item) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#555;margin-bottom:3px;';
-      var nameSpan = document.createElement('span');
-      nameSpan.textContent = item.file.name;
-      nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-      var statusSpan = document.createElement('span');
-      statusSpan.style.whiteSpace = 'nowrap';
-      var sizeText = (item.sentSize && item.sentSize < item.origSize)
-        ? (formatSize_(item.origSize) + ' → ' + formatSize_(item.sentSize)) : formatSize_(item.origSize);
-      if (item.status === 'wait') statusSpan.textContent = '等待中';
-      else if (item.status === 'compressing') statusSpan.textContent = '處理中…';
-      else if (item.status === 'uploading') statusSpan.textContent = '上傳中…' + (item.tries > 1 ? '（第 ' + item.tries + ' 次）' : '');
-      else if (item.status === 'done') { statusSpan.textContent = '✓ 已上傳 ' + sizeText; statusSpan.style.color = '#2f6f4e'; }
-      else { statusSpan.textContent = '⚠ 上傳失敗'; statusSpan.style.color = '#a3352c'; statusSpan.title = item.error; }
-      row.appendChild(nameSpan);
-      row.appendChild(statusSpan);
-      if (item.status === 'error') {
-        var retryBtn = document.createElement('button');
-        retryBtn.type = 'button';
-        retryBtn.className = 'remove-btn';
-        retryBtn.style.cssText += 'background:#e9f1ec;color:#1e4a32;';
-        retryBtn.textContent = '重試';
-        retryBtn.addEventListener('click', function() { retryUploadItem_(item); });
-        row.appendChild(retryBtn);
-      }
-      var removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'remove-btn';
-      removeBtn.textContent = '移除';
-      removeBtn.addEventListener('click', function() { removeUploadItem_(item); });
-      row.appendChild(removeBtn);
-      list.appendChild(row);
-    });
+  var list = document.getElementById('photoList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!uploadItems.length) return;
+  var doneCount = uploadItems.filter(function(it) { return it.status === 'done'; }).length;
+  var summary = document.createElement('div');
+  summary.style.cssText = 'font-size:12px;color:#555;margin-bottom:4px;';
+  summary.textContent = '已選 ' + uploadItems.length + ' 個檔案，已上傳 ' + doneCount + ' 個';
+  list.appendChild(summary);
+  uploadItems.forEach(function(item) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:12px;color:#555;margin-bottom:5px;flex-wrap:wrap;';
+    var nameSpan = document.createElement('span');
+    nameSpan.textContent = item.file.name;
+    nameSpan.style.cssText = 'flex:1 1 140px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+
+    var keepLabel = document.createElement('label');
+    keepLabel.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin:0;font-size:12px;font-weight:400;white-space:nowrap;cursor:pointer;';
+    var keepBox = document.createElement('input');
+    keepBox.type = 'checkbox';
+    keepBox.className = 'keep-original-checkbox';
+    keepBox.style.width = 'auto';
+    keepBox.checked = item.keepOriginal;
+    keepBox.disabled = item.forcedOriginal;
+    keepBox.addEventListener('change', function() { setKeepOriginal_(item, keepBox.checked); });
+    keepLabel.appendChild(keepBox);
+    keepLabel.appendChild(document.createTextNode(item.forcedOriginal ? '原檔' : '保留原圖'));
+    if (item.forcedOriginal) keepLabel.title = 'PDF 等非圖片檔案一律保留原檔，不壓縮';
+
+    var statusSpan = document.createElement('span');
+    statusSpan.style.whiteSpace = 'nowrap';
+    var sizeText = (item.sentSize && item.sentSize < item.origSize)
+      ? (formatSize_(item.origSize) + ' → ' + formatSize_(item.sentSize)) : formatSize_(item.origSize);
+    if (item.status === 'wait') statusSpan.textContent = '等待中';
+    else if (item.status === 'compressing') statusSpan.textContent = '處理中…';
+    else if (item.status === 'uploading') statusSpan.textContent = '上傳中…' + (item.tries > 1 ? '（第 ' + item.tries + ' 次）' : '');
+    else if (item.status === 'done') { statusSpan.textContent = '✓ 已上傳 ' + sizeText; statusSpan.style.color = '#2f6f4e'; }
+    else { statusSpan.textContent = '⚠ 上傳失敗'; statusSpan.style.color = '#a3352c'; statusSpan.title = item.error; }
+
+    row.appendChild(nameSpan);
+    row.appendChild(keepLabel);
+    row.appendChild(statusSpan);
+    if (item.status === 'error') {
+      var retryBtn = document.createElement('button');
+      retryBtn.type = 'button';
+      retryBtn.className = 'remove-btn';
+      retryBtn.style.cssText += 'background:#e9f1ec;color:#1e4a32;';
+      retryBtn.textContent = '重試';
+      retryBtn.addEventListener('click', function() { retryUploadItem_(item); });
+      row.appendChild(retryBtn);
+    }
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '移除';
+    removeBtn.addEventListener('click', function() { removeUploadItem_(item); });
+    row.appendChild(removeBtn);
+    list.appendChild(row);
   });
 }
 
@@ -2345,12 +2398,8 @@ window.addEventListener('beforeunload', function(e) {
 });
 
 document.getElementById('photoInput').addEventListener('change', function() {
-  addUploadFiles_(this.files, 'photo');
+  addUploadFiles_(this.files);
   this.value = ''; // 清空，讓同一個檔案下次也能被選到、也能繼續累加
-});
-document.getElementById('docInput').addEventListener('change', function() {
-  addUploadFiles_(this.files, 'doc');
-  this.value = '';
 });
 
 // ------------------------------------------------------------
@@ -2404,6 +2453,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
   }
 
   var fieldValues = {};
+  var implausibleDateLabels_ = [];
   fieldValues['主要業務名稱'] = split.primaryNames.join('、');
   fieldValues['主要業務人員比例'] = split.primaryRatios.join('、');
   fieldValues['次要業務名稱'] = split.secondaryNames.join('、');
@@ -2415,7 +2465,10 @@ document.getElementById('listingForm').addEventListener('submit', async function
   // 文字框內容接在後面組合成「區外(南屯工業區)」這種格式，不會整個蓋掉。
   document.querySelectorAll('#listingForm [data-label]').forEach(function(el) {
     var value = el.value;
-    if (el.type === 'date' || el.type === 'month') value = toRocText_(value);
+    if (el.type === 'date' || el.type === 'month') {
+      if (isImplausibleDateValue_(value)) implausibleDateLabels_.push(el.getAttribute('data-label'));
+      value = toRocText_(value);
+    }
     if (el.classList.contains('room-layout-select')) {
       if (value === '有格局') {
         var roomWrap2 = el.parentElement.querySelector('.room-layout-inputs');
@@ -2540,6 +2593,8 @@ document.getElementById('listingForm').addEventListener('submit', async function
     var val = fieldValues[f.label];
     if (!val || !String(val).trim()) missingLabels.push(f.label);
   });
+  implausibleDateLabels_.forEach(function(l) { missingLabels.push(l + '（年份看起來不正確，請重新選擇日期）'); });
+
   // 地號、建號：每一筆都要選好段別並填寫（土地沒有建號）
   function entriesIncomplete_(selector, inputClass) {
     var rows = document.querySelectorAll(selector);
@@ -2600,8 +2655,8 @@ document.getElementById('listingForm').addEventListener('submit', async function
 
   // 送出前確認摘要
   var fv_ = fieldValues;
-  var photoCount_ = uploadItems.filter(function(it) { return it.kind === 'photo'; }).length;
-  var docCount_ = uploadItems.filter(function(it) { return it.kind === 'doc'; }).length;
+  var photoCount_ = uploadItems.filter(function(it) { return !it.keepOriginal; }).length;
+  var docCount_ = uploadItems.filter(function(it) { return it.keepOriginal; }).length;
   var bizText_ = '';
   if (fv_['主要業務名稱']) bizText_ += '主要：' + fv_['主要業務名稱'] + (fv_['主要業務人員比例'] ? '（' + fv_['主要業務人員比例'] + '%）' : '');
   if (fv_['次要業務名稱']) bizText_ += '\n次要：' + fv_['次要業務名稱'] + (fv_['次要業務人員比例'] ? '（' + fv_['次要業務人員比例'] + '%）' : '');
@@ -2616,7 +2671,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
     ['單價／總價', [fv_['單價'], fv_['總價']].filter(Boolean).join('　／　')],
     ['使用分區', fv_['使用分區']],
     ['國土功能分區', fv_['國土功能分區']],
-    ['照片', (photoCount_ || docCount_) ? ('現場照片 ' + photoCount_ + ' 張、文件 ' + docCount_ + ' 個') : '沒有上傳照片'],
+    ['照片', (photoCount_ || docCount_) ? ('壓縮照片 ' + photoCount_ + ' 張、保留原檔 ' + docCount_ + ' 個') : '沒有上傳照片'],
   ]);
   if (!confirmed_) return;
 
