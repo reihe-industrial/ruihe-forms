@@ -406,7 +406,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     msgBox.className = 'msg error';
     msgBox.textContent = '請填寫以下必填欄位：\n' + missingParts.join('\n');
     scrollToFirstMissing_();
-    showToast('還有 ' + missingParts.length + ' 項必填沒填，已用紅框標出，並捲到第一個', 'error', true);
+    showToast('還有 ' + missingParts.length + ' 項必填沒填，請看紅框標示處', 'error', true);
     return;
   }
 

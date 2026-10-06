@@ -169,6 +169,8 @@
     .confirm-actions .confirm-ok { background: var(--brand); color: #fff; }
     .district-block { border: 1px dashed var(--line); border-radius: 8px; padding: 14px; background: #fbfaf6; }
     .district-block-title { font-weight: 700; font-size: 14px; color: var(--brand-dark); margin-bottom: 10px; }
+    .field.deed-filled { background: #fffbe6; border-radius: 8px; box-shadow: 0 0 0 1px #ecd98b; padding: 8px 10px; }
+    .district-entry.deed-filled { background: #fffbe6; border-radius: 8px; }
     .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; white-space: pre-line; line-height: 1.55; }
     .hint a { color: var(--brand); }
     .other-input { margin-top: 8px; }
@@ -274,12 +276,12 @@
         <div class="row2">
           <div class="field">
             <label class="required">合約起始</label>
-            <div class="hint">依據合約起始日選擇日期，會自動轉成民國年；口約請選填表日期（填「口約」會自動帶入）</div>
+            <div class="hint">依據合約起始日選擇日期，年份可以輸入民國年（例如 115）或西元年（例如 2026）；口約請選填表日期</div>
             <input type="date" data-label="合約起始">
           </div>
           <div class="field">
             <label class="required">合約到期</label>
-            <div class="hint">依據合約到期日選擇日期，會自動轉成民國年；口約到期日為填表日期往後推算1年（填「口約」會自動帶入）</div>
+            <div class="hint">依據合約到期日選擇日期，年份可以輸入民國年（例如 116）或西元年（例如 2027）；口約到期日為填表日期往後推算1年</div>
             <input type="date" data-label="合約到期">
           </div>
         </div>
@@ -330,6 +332,16 @@
         </div>
       </div>
 
+      <!-- 謄本自動帶入（選填） -->
+      <div class="card" id="deedCard">
+        <h2>謄本自動帶入（選填）</h2>
+        <div class="hint">上傳土地謄本、建物謄本的 PDF（電子謄本或電傳資料都可以，可以一次選好幾份），預覽確認後可帶入下面「三、物件資訊」的欄位。
+只支援文字型 PDF，掃描檔或翻拍的照片讀不出來。帶入後請核對內容。</div>
+        <input type="file" id="deedInput" accept="application/pdf" multiple>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;margin:8px 0 0;cursor:pointer;"><input type="checkbox" id="deedAddToUploads" checked style="width:auto;"> 同時把這些謄本加入「上傳照片／文件」（保留原檔）</label>
+        <div id="deedResult" style="margin-top:6px;"></div>
+      </div>
+
       <!-- 三、物件資訊（依類型切換，地段地號及建號也在這裡） -->
       <div class="card">
         <h2>三、物件資訊</h2>
@@ -341,8 +353,7 @@
         <h2>四、上傳照片</h2>
         <div class="field">
           <label>上傳照片／文件</label>
-          <div class="hint">選好檔案後會自動在背景上傳，可以繼續填其他欄位；如果照片分散在不同資料夾，可以按好幾次「選擇檔案」，會自動累加。
-手機照片預設會自動壓縮（上傳比較快）。權狀、謄本、使用執照、合約等需要看清楚小字的文件，請在檔案旁勾選「保留原圖」，就不會壓縮；PDF 一律保留原檔。</div>
+          <div class="hint">可以一次選好幾張，也可以分好幾次選。一般照片會壓縮後上傳；權狀、謄本、使用執照、合約等需要看清楚小字的文件，請在檔案旁勾選「保留原圖」。PDF 一律保留原檔。</div>
           <input type="file" id="photoInput" accept="image/*,application/pdf" multiple>
           <div id="photoList" style="margin-top:8px;"></div>
         </div>
@@ -431,7 +442,7 @@ function showToast(message, type, noScroll) {
 // 業務一改到那一題（輸入、選擇），紅框就自動消失。
 // ------------------------------------------------------------
 function clearMissingMarks_() {
-  document.querySelectorAll('.field-missing').forEach(function(f) { f.classList.remove('field-missing'); });
+  document.querySelectorAll('.field-missing').forEach(function(f) { f.classList.remove('field-missing'); f.classList.remove('deed-filled'); });
   document.querySelectorAll('.missing-msg').forEach(function(m) { m.remove(); });
 }
 function fieldLabelEl_(fieldEl) {
@@ -471,8 +482,8 @@ function markMissingFields_(labels) {
   if (focusable) { try { focusable.focus({ preventScroll: true }); } catch (err) {} }
   return true;
 }
-document.getElementById('listingForm').addEventListener('input', function(e) { var f = e.target.closest('.field'); if (f) { f.classList.remove('field-missing'); var m = f.querySelector('.missing-msg'); if (m) m.remove(); } });
-document.getElementById('listingForm').addEventListener('change', function(e) { var f = e.target.closest('.field'); if (f) { f.classList.remove('field-missing'); var m = f.querySelector('.missing-msg'); if (m) m.remove(); } });
+document.getElementById('listingForm').addEventListener('input', function(e) { var f = e.target.closest('.field'); if (f) { f.classList.remove('field-missing'); f.classList.remove('deed-filled'); var m = f.querySelector('.missing-msg'); if (m) m.remove(); } });
+document.getElementById('listingForm').addEventListener('change', function(e) { var f = e.target.closest('.field'); if (f) { f.classList.remove('field-missing'); f.classList.remove('deed-filled'); var m = f.querySelector('.missing-msg'); if (m) m.remove(); } });
 
 
 // ------------------------------------------------------------
@@ -547,24 +558,38 @@ function refreshAllPriceUnits_() {
 // 變成一般文字框，手打「115年11月10日」也照樣接受（原樣保留）。
 // ------------------------------------------------------------
 var rocInputs_ = [];
-function toRocText_(val) {
+var CONTRACT_DATE_LABELS = ['合約起始', '合約到期'];
+function isContractDateLabel_(label) { return CONTRACT_DATE_LABELS.indexOf(label) !== -1; }
+
+function toRocText_(val, label) {
   val = String(val || '').trim();
   if (!val) return '';
   var m = val.match(/^(\d{4})-(\d{1,2})(?:-(\d{1,2}))?$/);
   if (!m) return val;
   var year = parseInt(m[1], 10);
+  var tail = parseInt(m[2], 10) + '月' + (m[3] ? parseInt(m[3], 10) + '日' : '');
   // 年份格直接輸入「113」會變成西元 113 年（0113）：年份小於 200 一律當成民國年，
   // 不然送到試算表會被當成西元 113 年的日期，顯示成「0113年…」
-  var roc = year < 200 ? year : year - 1911;
-  if (roc < 1) return val; // 西元 200～1911 年：不合理，原樣保留，讓檢查擋下來
-  return roc + '年' + parseInt(m[2], 10) + '月' + (m[3] ? parseInt(m[3], 10) + '日' : '');
+  if (year >= 1 && year < 200) return year + '年' + tail;
+  // 1912 年（民國元年）以前的老建築（古厝、日治時期、清代…）用「民國前」寫法，
+  // 例如西元 1895 年＝民國前 17 年；民國元年是西元 1912 年
+  // （合約日期不會有 1912 年以前的情況，所以只有建築完成日這類欄位才允許「民國前」）
+  if (year >= 1600 && year <= 1911 && !isContractDateLabel_(label)) return '民國前' + (1912 - year) + '年' + tail;
+  if (year >= 1912) return (year - 1911) + '年' + tail;
+  return val; // 其他（0 年、西元 200～1599 年）：不合理，原樣保留，讓檢查擋下來
 }
 // 日期選擇器的值是否為不合理的年份（西元 200～1911 年）
-function isImplausibleDateValue_(val) {
+function isImplausibleDateValue_(val, label) {
   var m = String(val || '').match(/^(\d{4})-/);
   if (!m) return false;
   var y = parseInt(m[1], 10);
-  return y >= 200 && y <= 1911;
+  if (isContractDateLabel_(label)) {
+    // 合約日期：換算成民國年後，要落在「民國 80 年」到「今年＋30 年」之間才算合理
+    var roc = y < 200 ? y : y - 1911;
+    var thisRoc = new Date().getFullYear() - 1911;
+    return y < 1 || y < 1912 && y >= 200 || roc < 80 || roc > thisRoc + 30;
+  }
+  return y < 1 || (y >= 200 && y < 1600);
 }
 function attachRocPreview_(inputEl) {
   var prev = document.createElement('div');
@@ -572,14 +597,18 @@ function attachRocPreview_(inputEl) {
   prev.style.margin = '4px 0 0';
   inputEl.insertAdjacentElement('afterend', prev);
   function update() {
-    var t = toRocText_(inputEl.value);
-    if (isImplausibleDateValue_(inputEl.value)) {
-      prev.textContent = '⚠ 年份看起來不對（西元 ' + parseInt(inputEl.value, 10) + ' 年），請重新選擇；民國年請直接輸入，例如 113';
+    var label = inputEl.getAttribute('data-label');
+    var t = toRocText_(inputEl.value, label);
+    if (isImplausibleDateValue_(inputEl.value, label)) {
+      var yy = parseInt(inputEl.value, 10);
+      prev.textContent = isContractDateLabel_(label)
+        ? ('⚠ 合約日期的年份看起來不對（' + (yy < 200 ? '民國 ' + yy : '西元 ' + yy) + ' 年），請重新選擇；民國年可以直接輸入，例如 115')
+        : ('⚠ 年份看起來不對（西元 ' + yy + ' 年），請重新選擇。民國年可以直接輸入，例如 113');
       prev.style.color = '#a3352c';
       return;
     }
     prev.style.color = '';
-    prev.textContent = (t && t !== inputEl.value) ? ('→ 民國 ' + t) : '';
+    prev.textContent = (t && t !== inputEl.value) ? ('→ ' + (t.indexOf('民國前') === 0 ? t + '（西元 ' + parseInt(inputEl.value, 10) + ' 年）' : '民國 ' + t)) : '';
   }
   inputEl.addEventListener('input', update);
   inputEl.addEventListener('change', update);
@@ -653,8 +682,8 @@ var LAND_ZONE_OPTIONS = [
 var FIELD_CONFIG = {
   '廠房': [
     { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
-    { label: '單價', type: 'price', required: true, hint: '填數字並選單位，例如：8 ＋ 萬/坪。單位預設會依上面「委託種類」（買賣／租賃）切換' },
-    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數，例如：2380 ＋ 萬' },
+    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月' },
+    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
     { label: '使用狀態補充說明(廠房)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
@@ -669,7 +698,7 @@ var FIELD_CONFIG = {
       hint: '如果為都市計畫請查詢土地是什麼細部計畫並填寫\n例如：擬定谷關風景特定區計畫細部計畫案、變更臺中市都市計畫(新市政中心專用區南側)細部計畫(配合醫療專用區變更附帶條件修訂土地使用分區管制要點)\n★要注意特定非都有另外的細部計畫規定!!(如：嘉義大埔美)\n※各縣市細部計畫查詢(有些縣市不包含，台中的請點下面的網址)\nhttps://ngis.nlma.gov.tw/TCDPageD2.aspx\n※台中市細部計畫查詢\nhttps://www.ud.taichung.gov.tw/2878076/post' },
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
     { label: '地段地號及建號', type: 'district-block' },
-    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '選好上面「地段地號及建號資訊」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
+    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '產業園區名稱', type: 'select-other', required: true, options: [], extraDetailFor: ['區外'], skipOtherOption: true, dynamicParkOptions: true,
       hint: '先在上面「地段地號及建號資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
     { label: '詳細地址', type: 'address-detail', required: true },
@@ -683,7 +712,7 @@ var FIELD_CONFIG = {
     { label: '基地深度', type: 'text', required: true },
     { label: '基地面寬', type: 'text', required: true },
     { label: '面臨路寬', type: 'text', required: true },
-    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期，系統會自動轉成民國年。年份格可以直接輸入民國年（例如 113）或西元年（例如 2024）' },
+    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期。年份可以輸入民國年（例如 113）或西元年（例如 2024）；1912 年以前的老建築請輸入西元年（例如 1895）' },
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總樓層數，例如：4；如果只提供其中一層樓，請填該樓層，例如：3F(僅提供3樓)；如果基地上有好幾棟不同樓層的建物，請簡短列出，例如：廠房2F、倉庫1F、宿舍3F' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)；如果好幾棟都有地下室，請簡短列出，例如：廠房B1、宿舍B1' },
     { label: '物件格局(廠房)', type: 'room-layout', required: true },
@@ -718,8 +747,8 @@ var FIELD_CONFIG = {
   ],
   '土地': [
     { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
-    { label: '單價', type: 'price', required: true, hint: '填數字並選單位，例如：8 ＋ 萬/坪。單位預設會依上面「委託種類」（買賣／租賃）切換' },
-    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數，例如：2380 ＋ 萬' },
+    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月' },
+    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
     { label: '使用狀態補充說明(土地)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
@@ -734,7 +763,7 @@ var FIELD_CONFIG = {
       hint: '如果為都市計畫請查詢土地是什麼細部計畫並填寫\n例如：擬定谷關風景特定區計畫細部計畫案、變更臺中市都市計畫(新市政中心專用區南側)細部計畫(配合醫療專用區變更附帶條件修訂土地使用分區管制要點)\n★要注意特定非都有另外的細部計畫規定!!(如：嘉義大埔美)\n※各縣市細部計畫查詢(有些縣市不包含，台中的請點下面的網址)\nhttps://ngis.nlma.gov.tw/TCDPageD2.aspx\n※台中市細部計畫查詢\nhttps://www.ud.taichung.gov.tw/2878076/post' },
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
     { label: '地段地號及建號', type: 'district-block' },
-    { label: '案件坐落', type: 'text', autoFromDistrict: true, hint: '選好上面「地段地號及建號資訊」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
+    { label: '案件坐落', type: 'text', autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '產業園區名稱(土地)', type: 'select-other', options: [], extraDetailFor: ['區外', '非園區'], skipOtherOption: true, dynamicParkOptions: true, dynamicParkExtraOption: '非園區',
       hint: '先在上面「地段資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」；不是產業用地（例如農地、建地）請選「非園區」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
     { label: '土地面積(m²)', type: 'number', required: true, showPing: true, hint: '從權狀本填寫，無需填單位。範例：13000' },
@@ -754,8 +783,8 @@ var FIELD_CONFIG = {
   ],
   '房屋': [
     { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
-    { label: '單價', type: 'price', required: true, hint: '填數字並選單位，例如：8 ＋ 萬/坪。單位預設會依上面「委託種類」（買賣／租賃）切換' },
-    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數，例如：2380 ＋ 萬' },
+    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月' },
+    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
     { label: '使用狀態補充說明(房屋)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
@@ -768,7 +797,7 @@ var FIELD_CONFIG = {
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
     { label: '社區大樓名稱', type: 'text', required: true },
     { label: '地段地號及建號', type: 'district-block' },
-    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '選好上面「地段地號及建號資訊」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
+    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '詳細地址', type: 'address-detail', required: true },
     { label: '土地面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
     { label: '主建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
@@ -783,7 +812,7 @@ var FIELD_CONFIG = {
     { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
-    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期，系統會自動轉成民國年。年份格可以直接輸入民國年（例如 113）或西元年（例如 2024）' },
+    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期。年份可以輸入民國年（例如 113）或西元年（例如 2024）；1912 年以前的老建築請輸入西元年（例如 1895）' },
     { label: '所在樓別', type: 'text', required: true, hint: '物件位於幾樓' },
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)' },
@@ -797,7 +826,7 @@ var FIELD_CONFIG = {
     { label: '車位說明', type: 'text', group: 'parking', required: true },
     { label: '屋主是否一年內取得', type: 'select', options: YES_NO, required: true },
     { label: '資訊為實價登錄或屋主提供?', type: 'select', options: ['實價登錄','屋主提供'], required: true },
-    { label: '取得年月', type: 'roc-month', required: true, hint: '請選擇年月，系統會自動轉成民國年。年份可以直接輸入民國年（例如 113）或西元年（例如 2024）' },
+    { label: '取得年月', type: 'roc-month', required: true, hint: '請選擇年月。年份可以輸入民國年（例如 113）或西元年（例如 2024）' },
     { label: '取得成交價格', type: 'text', required: true },
     { label: '小學', type: 'text' },
     { label: '國中', type: 'text' },
@@ -2479,8 +2508,9 @@ document.getElementById('listingForm').addEventListener('submit', async function
   document.querySelectorAll('#listingForm [data-label]').forEach(function(el) {
     var value = el.value;
     if (el.type === 'date' || el.type === 'month') {
-      if (isImplausibleDateValue_(value)) implausibleDateLabels_.push(el.getAttribute('data-label'));
-      value = toRocText_(value);
+      var dateLabel_ = el.getAttribute('data-label');
+      if (isImplausibleDateValue_(value, dateLabel_)) implausibleDateLabels_.push(dateLabel_);
+      value = toRocText_(value, dateLabel_);
     }
     if (el.classList.contains('room-layout-select')) {
       if (value === '有格局') {
@@ -2607,6 +2637,19 @@ document.getElementById('listingForm').addEventListener('submit', async function
     if (!val || !String(val).trim()) missingLabels.push(f.label);
   });
   implausibleDateLabels_.forEach(function(l) { missingLabels.push(l + '（年份看起來不正確，請重新選擇日期）'); });
+  (function() {
+    var startEl = document.querySelector('[data-label="合約起始"]');
+    var endEl = document.querySelector('[data-label="合約到期"]');
+    if (!startEl || !endEl || implausibleDateLabels_.indexOf('合約起始') !== -1 || implausibleDateLabels_.indexOf('合約到期') !== -1) return;
+    function toDate(iso) {
+      var m = String(iso || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (!m) return null;
+      var y = parseInt(m[1], 10);
+      return new Date(y < 200 ? y + 1911 : y, parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    }
+    var sd = toDate(startEl.value), ed = toDate(endEl.value);
+    if (sd && ed && ed.getTime() < sd.getTime()) missingLabels.push('合約到期（到期日不能早於合約起始日）');
+  })();
 
   // 地號、建號：每一筆都要選好段別並填寫（土地沒有建號）
   function entriesIncomplete_(selector, inputClass) {
@@ -2631,7 +2674,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
     msgBox.textContent = '以下必填欄位還沒填寫，請補齊後再送出：' + missingLabels.join('、');
     msgBox.style.display = 'block';
     markMissingFields_(missingLabels);
-    showToast('還有 ' + missingLabels.length + ' 個必填欄位沒填，已用紅框標出，並捲到第一個', 'error', true);
+    showToast('還有 ' + missingLabels.length + ' 個必填欄位沒填，請看紅框標示處', 'error', true);
     return;
   }
   clearMissingMarks_();
@@ -2774,6 +2817,510 @@ document.getElementById('listingForm').addEventListener('submit', async function
     })
     ;
 });
+
+// ============================================================
+// 謄本解析（純函式，不碰網頁元素；也能在 Node 測試）
+// 支援兩種來源：
+//   1. 地政電子謄本 PDF（「土地登記第二類謄本」「建物登記第二類謄本」）
+//   2. 電傳資料（houseai 等網頁列印成的 PDF，每頁一個「○○標示部／所有權部／他項權利部」）
+// 只讀「標示部」（地號建號、面積、使用分區、門牌、樓層、建材、完成日等物件資料），
+// 完全不讀所有權人姓名、統編、住址、他項權利（貸款）這些個人資料。
+// ============================================================
+
+// 電傳 PDF 的文字常用「部首字」（⽇、⺠、⼀…），看起來跟一般字一樣但字元不同，
+// 先用 NFKC 正規化轉回一般字；NFKC 轉不回去的「⺠」另外處理。臺→台跟段名資料一致。
+function normDeedText_(s) {
+  return String(s || '').normalize('NFKC').replace(/\u2EA0/g, '民').replace(/臺/g, '台');
+}
+
+function deedNum_(s) { return parseFloat(String(s).replace(/,/g, '')); }
+function deedBlank_(s) { s = String(s || '').trim(); return (s === '(空白)' || s === '空白') ? '' : s; }
+function deedNumberText_(main, sub) {
+  var m = parseInt(main, 10), u = parseInt(sub, 10);
+  return u ? (m + '-' + u) : String(m);
+}
+
+// 把「縣市／鄉鎮／段」對應到表單選單用的名稱。districtData 格式：{縣市: {鄉鎮: [段名,...]}}
+function deedFindSegment_(segText, segList) {
+  segText = String(segText || '').replace(/\s+/g, '');
+  if (!segText) return '';
+  if (segList.indexOf(segText) !== -1) return segText;
+  var cands = segList.filter(function(s) { return segText.indexOf(s) === 0 || s.indexOf(segText) === 0; });
+  cands.sort(function(a, b) { return b.length - a.length; });
+  return cands[0] || '';
+}
+function deedResolveLocation_(countyHint, townSegText, districtData, explicitSeg) {
+  var text = String(townSegText || '').replace(/\s+/g, '');
+  var counties = Object.keys(districtData);
+  if (countyHint && districtData[countyHint]) counties = [countyHint];
+  var found = [];
+  counties.forEach(function(c) {
+    Object.keys(districtData[c]).forEach(function(t) {
+      var prefix = explicitSeg ? (c + t) : t;
+      if (text.indexOf(prefix) === 0) {
+        var segText = explicitSeg ? String(explicitSeg) : text.slice(prefix.length);
+        var seg = deedFindSegment_(segText, districtData[c][t]);
+        found.push({ county: c, town: t, district: seg || String(segText).replace(/\s+/g, ''), resolved: !!seg });
+      }
+    });
+  });
+  found.sort(function(a, b) { return (b.resolved ? 1 : 0) - (a.resolved ? 1 : 0) || b.town.length - a.town.length; });
+  return found[0] || { county: '', town: '', district: String(explicitSeg || text), resolved: false };
+}
+
+var DEED_SECTION_TITLES_ = ['土地標示部', '建物標示部', '土地所有權部', '建物所有權部', '土地他項權利部', '建物他項權利部', '土地增值稅概算表'];
+
+function deedIsNoise_(line) {
+  var t = line.trim();
+  if (!t) return true;
+  if (/^第\d+頁$/.test(t)) return true;
+  if (/^[0-9A-Z]{2,3}$/.test(t)) return true;               // 謄本邊上的「6D」「5E」
+  if (/^.{2,12}地政事務所$/.test(t)) return true;             // 浮水印文字
+  if (/^(本查詢資料|查詢時間|列印時間)/.test(t)) return true;
+  return false;
+}
+
+function parseDeedPages_(rawPages, districtData) {
+  var lines = [];
+  rawPages.forEach(function(page) { page.forEach(function(l) { lines.push(normDeedText_(l)); }); });
+
+  var countyHint = '';
+  lines.some(function(l) {
+    var m = l.match(/資料管轄機關\s*:\s*(\S{2,3}[縣市])/);
+    if (m) { countyHint = m[1]; return true; }
+    return false;
+  });
+  // 地政電子謄本的標題：「鹿港鎮上林段 0375-0000地號」；沒有縣市，縣市從管轄機關來
+  var titleLoc = null;
+  lines.slice(0, 8).some(function(l) {
+    var m = l.trim().match(/^(.+?)\s*(\d{3,5})-(\d{3,4})\s*(地號|建號)$/);
+    if (m) { titleLoc = { text: m[1], main: m[2], sub: m[3] }; return true; }
+    return false;
+  });
+
+  var headerIdx = [];
+  lines.forEach(function(l, i) {
+    var key = l.replace(/[*\s]/g, '');
+    if (DEED_SECTION_TITLES_.indexOf(key) !== -1) headerIdx.push({ i: i, key: key });
+  });
+
+  var records = [];
+  headerIdx.forEach(function(h, k) {
+    if (h.key !== '土地標示部' && h.key !== '建物標示部') return;
+    var end = k + 1 < headerIdx.length ? headerIdx[k + 1].i : lines.length;
+    var body = lines.slice(h.i + 1, end);
+    var isLand = h.key === '土地標示部';
+    var rec = { kind: isLand ? 'land' : 'building', source: '', warnings: [] };
+
+    // ---- 位置與編號 ----
+    var loc = null;
+    for (var j = 0; j < Math.min(body.length, 4); j++) {
+      var m = body[j].match(/^(.+?)\s*>\s*(.+?)\s*(?:\(\d+\))?\s*>\s*(地號|建號)\s*(\d{3,5})-(\d{3,4})/);
+      if (m) { loc = { countyTown: m[1], seg: m[2], main: m[4], sub: m[5] }; break; }
+    }
+    if (loc) {
+      rec.source = '電傳';
+      var r1 = deedResolveLocation_('', loc.countyTown, districtData, loc.seg);
+      Object.assign(rec, { county: r1.county, town: r1.town, district: r1.district, locationOk: r1.resolved });
+      rec.number = deedNumberText_(loc.main, loc.sub);
+    } else if (titleLoc) {
+      rec.source = '電子謄本';
+      var r2 = deedResolveLocation_(countyHint, titleLoc.text, districtData, '');
+      Object.assign(rec, { county: r2.county, town: r2.town, district: r2.district, locationOk: r2.resolved });
+      rec.number = deedNumberText_(titleLoc.main, titleLoc.sub);
+    } else {
+      rec.source = '未知';
+      rec.locationOk = false;
+    }
+
+    var content = body.filter(function(l) { return !deedIsNoise_(l); });
+    function firstMatch(re) {
+      for (var q = 0; q < content.length; q++) { var mm = content[q].trim().match(re); if (mm) return mm; }
+      return null;
+    }
+
+    if (isLand) {
+      var area = firstMatch(/^面\s*積\s*:?\s*\**\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
+      rec.areaM2 = area ? deedNum_(area[1]) : null;
+      var zl = firstMatch(/^使用分區\s*:?\s*(\S+)/);
+      var cl = null;
+      content.some(function(l) { var mm = l.match(/使用地類別\s*:?\s*(\S+)/); if (mm) { cl = mm; return true; } return false; });
+      rec.zoning = zl ? deedBlank_(zl[1]) : '';
+      rec.landCategory = cl ? deedBlank_(cl[1]) : '';
+      if (rec.areaM2 === null) rec.warnings.push('找不到土地面積');
+    } else {
+      var addr = firstMatch(/^建物門牌\s*:?\s*(\S.*)$/);
+      rec.address = addr ? addr[1].trim() : '';
+      // 建物坐落地號：「上林段  0375-0000  0376-0000」，可能接續好幾行
+      rec.lots = [];
+      for (var q = 0; q < content.length; q++) {
+        var lm = content[q].trim().match(/^建物坐落地號\s*:?\s*(.*)$/);
+        if (!lm) continue;
+        var chunk = lm[1];
+        var nextIdx = q + 1;
+        while (nextIdx < content.length && /^(?:[\u4e00-\u9fa5]*段\s*)?(?:\d{3,5}-\d{3,4}\s*)+$/.test(content[nextIdx].trim())) { chunk += ' ' + content[nextIdx].trim(); nextIdx++; }
+        var curSeg = '';
+        chunk.split(/\s+/).forEach(function(tok) {
+          if (!tok) return;
+          var nm = tok.match(/^(\d{3,5})-(\d{3,4})$/);
+          if (nm) { rec.lots.push({ segment: curSeg, number: deedNumberText_(nm[1], nm[2]) }); }
+          else curSeg = tok;
+        });
+        break;
+      }
+      var use = firstMatch(/^主要用途\s*:?\s*(\S.*)$/);
+      rec.mainUse = use ? use[1].trim() : '';
+      var mat = firstMatch(/^主要建材\s*:?\s*(\S+)/);
+      rec.materials = mat ? mat[1].split('、').filter(Boolean) : [];
+      var fl = firstMatch(/層\s*數\s*:?\s*(\d+)\s*層/);
+      rec.floors = fl ? parseInt(fl[1], 10) : null;
+      var total = null;
+      for (var t = 0; t < content.length; t++) { var tm = content[t].match(/總\s*面\s*積\s*:?\s*\**\s*([\d,]+(?:\.\d+)?)\s*平方公尺/); if (tm) { total = tm; break; } }
+      rec.totalAreaM2 = total ? deedNum_(total[1]) : null;
+      // 標示部的上半（共有部分之前）用來數地下層
+      var cut = content.findIndex(function(l) { return /共有部分|^建號-\d/.test(l); });
+      var top = cut === -1 ? content : content.slice(0, cut);
+      var basement = {};
+      top.join('\n').replace(/地下\s*([一二三四五六七八九十\d]+)\s*層/g, function(_, n) { basement[n] = true; return ''; });
+      rec.basementCount = Object.keys(basement).length;
+      // 附屬建物：「用途  陽台  面積  15.21平方公尺」
+      rec.attachedAreaM2 = 0;
+      var inAttach = false;
+      top.forEach(function(l) {
+        if (/附屬建物/.test(l)) inAttach = true;
+        var am = l.match(/用途\s*:?\s*(\S+)\s+面積\s*:?\s*\**\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
+        if (am && inAttach) rec.attachedAreaM2 += deedNum_(am[2]);
+      });
+      rec.attachedAreaM2 = Math.round(rec.attachedAreaM2 * 100) / 100;
+      var sh = content.join('\n').match(/權利範圍合計約\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
+      rec.sharedAreaM2 = sh ? deedNum_(sh[1]) : null;
+      var dm = firstMatch(/^建築完成日期\s*:?\s*民國\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
+      rec.completion = dm ? { rocYear: parseInt(dm[1], 10), month: parseInt(dm[2], 10), day: parseInt(dm[3], 10) } : null;
+      if (rec.totalAreaM2 === null) rec.warnings.push('找不到建物總面積');
+    }
+    records.push(rec);
+  });
+  return records;
+}
+
+// ============================================================
+// 謄本自動帶入（網頁介面）：上傳 PDF → 在瀏覽器裡解析 → 預覽 → 確認後帶入欄位
+// ============================================================
+var PDFJS_CDN_ = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+var deedState_ = []; // [{ rec, fileName, include }]
+var deedFiles_ = []; // 已經讀過的檔案（避免重複）
+
+// PDF 讀取元件（pdf.js）：優先用同一個網站裡的 lib/ 資料夾（速度快、不依賴外部網站），
+// 沒有的話改用 cdnjs 上的同一版本。只有第一次選謄本時才會載入，平常不影響表單速度。
+var PDFJS_SOURCES_ = ['lib/', PDFJS_CDN_];
+function loadPdfJs_() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  var idx = 0;
+  return new Promise(function(resolve, reject) {
+    function tryNext() {
+      if (idx >= PDFJS_SOURCES_.length) { reject(new Error('無法載入 PDF 讀取元件，請確認網路後再試，或手動填寫')); return; }
+      var base = PDFJS_SOURCES_[idx++];
+      var s = document.createElement('script');
+      s.src = base + 'pdf.min.js';
+      s.onload = function() {
+        if (!window.pdfjsLib) { tryNext(); return; }
+        try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js'; } catch (e) {}
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = function() { s.remove(); tryNext(); };
+      document.head.appendChild(s);
+    }
+    tryNext();
+  });
+}
+function readFileAsArrayBuffer_(file) {
+  return new Promise(function(resolve, reject) {
+    var r = new FileReader();
+    r.onload = function() { resolve(r.result); };
+    r.onerror = function() { reject(new Error('讀取檔案失敗')); };
+    r.readAsArrayBuffer(file);
+  });
+}
+// 把 PDF 每一頁的文字片段，依高度（y 座標）接成一行一行的文字
+async function readPdfPages_(file) {
+  var lib = await loadPdfJs_();
+  var buf = await readFileAsArrayBuffer_(file);
+  var doc = await lib.getDocument({ data: new Uint8Array(buf) }).promise;
+  var pages = [];
+  for (var p = 1; p <= doc.numPages; p++) {
+    var page = await doc.getPage(p);
+    var tc = await page.getTextContent();
+    var items = tc.items.filter(function(i) { return i.str && i.str.trim() !== ''; })
+      .map(function(i) { return { s: i.str, x: i.transform[4], y: i.transform[5], w: i.width }; });
+    items.sort(function(a, b) { return Math.abs(b.y - a.y) > 3 ? b.y - a.y : a.x - b.x; });
+    var lines = [];
+    items.forEach(function(it) {
+      var last = lines[lines.length - 1];
+      if (last && Math.abs(last.y - it.y) <= 3) last.items.push(it); else lines.push({ y: it.y, items: [it] });
+    });
+    pages.push(lines.map(function(l) {
+      l.items.sort(function(a, b) { return a.x - b.x; });
+      var t = ''; var prevEnd = null;
+      l.items.forEach(function(it) { if (prevEnd !== null && it.x - prevEnd > 6) t += '  '; t += it.s; prevEnd = it.x + it.w; });
+      return t;
+    }));
+  }
+  return pages;
+}
+
+function deedRecordText_(r) {
+  var loc = (r.county || '') + (r.town || '') + ' ' + (r.district || '');
+  if (r.kind === 'land') {
+    return '土地｜' + loc + ' ' + r.number + ' 地號｜面積 ' + (r.areaM2 === null ? '？' : r.areaM2.toLocaleString() + ' m²') +
+      '｜' + ([r.zoning, r.landCategory].filter(Boolean).join('／') || '使用分區未載明') + '｜' + r.source;
+  }
+  var c = r.completion ? ('民國' + r.completion.rocYear + '年' + r.completion.month + '月' + r.completion.day + '日') : '完成日？';
+  return '建物｜' + loc + ' ' + r.number + ' 建號｜' + (r.address || '門牌？') + '｜總面積 ' + (r.totalAreaM2 === null ? '？' : r.totalAreaM2.toLocaleString() + ' m²') +
+    '｜附屬 ' + r.attachedAreaM2 + ' m²｜' + c + '｜' + (r.floors || '？') + '層｜' + r.source;
+}
+
+function renderDeedPreview_(messages) {
+  var box = document.getElementById('deedResult');
+  box.innerHTML = '';
+  (messages || []).forEach(function(m) {
+    var d = document.createElement('div'); d.className = 'hint'; d.style.color = 'var(--danger)'; d.textContent = m; box.appendChild(d);
+  });
+  if (!deedState_.length) return;
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:13px;font-weight:600;margin:10px 0 4px;';
+  title.textContent = '讀到以下資料（取消勾選的不會帶入）：';
+  box.appendChild(title);
+  deedState_.forEach(function(item) {
+    var row = document.createElement('label');
+    row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;font-size:12.5px;font-weight:400;margin:0 0 4px;cursor:pointer;';
+    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = item.include; cb.style.cssText = 'width:auto;margin-top:3px;';
+    cb.addEventListener('change', function() { item.include = cb.checked; });
+    var tx = document.createElement('span'); tx.textContent = deedRecordText_(item.rec) + '（' + item.fileName + '）';
+    row.appendChild(cb); row.appendChild(tx); box.appendChild(row);
+    (item.rec.warnings || []).concat(item.rec.locationOk === false ? ['地段名稱沒有對應到選單，地段需要手動選擇'] : []).forEach(function(w) {
+      var wd = document.createElement('div'); wd.className = 'hint'; wd.style.cssText = 'color:var(--danger);margin:0 0 4px 26px;'; wd.textContent = '⚠ ' + w; box.appendChild(wd);
+    });
+  });
+  var btnRow = document.createElement('div'); btnRow.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
+  var applyBtn = document.createElement('button'); applyBtn.type = 'button'; applyBtn.id = 'deedApplyBtn'; applyBtn.textContent = '帶入表單';
+  applyBtn.style.cssText = 'flex:1;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;';
+  applyBtn.addEventListener('click', function() { applyDeed_(); });
+  var clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.textContent = '清除';
+  clearBtn.style.cssText = 'padding:10px 16px;background:#eee;color:#333;border:none;border-radius:8px;cursor:pointer;';
+  clearBtn.addEventListener('click', function() { deedState_ = []; deedFiles_ = []; document.getElementById('deedResult').innerHTML = ''; });
+  btnRow.appendChild(applyBtn); btnRow.appendChild(clearBtn); box.appendChild(btnRow);
+  var out = document.createElement('div'); out.id = 'deedApplyResult'; box.appendChild(out);
+}
+
+async function handleDeedFiles_(fileList) {
+  var files = Array.prototype.slice.call(fileList);
+  var msgs = [];
+  var statusEl = document.getElementById('deedResult');
+  statusEl.textContent = '讀取中…';
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    if (deedFiles_.some(function(x) { return x.name === f.name && x.size === f.size; })) { msgs.push('「' + f.name + '」已經讀過了'); continue; }
+    try {
+      var pages = await readPdfPages_(f);
+      var hasText = pages.some(function(p) { return p.length > 0; });
+      if (!hasText) { msgs.push('「' + f.name + '」沒有文字內容（可能是掃描檔或照片），讀不出來，請手動填寫'); continue; }
+      var recs = parseDeedPages_(pages, districtData);
+      if (!recs.length) { msgs.push('「' + f.name + '」找不到土地或建物標示部，可能不是謄本，或格式不支援'); continue; }
+      deedFiles_.push(f);
+      f._deedFile = true;
+      recs.forEach(function(r) { deedState_.push({ rec: r, fileName: f.name, include: true, file: f }); });
+    } catch (err) {
+      msgs.push('「' + f.name + '」讀取失敗：' + (err && err.message ? err.message : err));
+    }
+  }
+  renderDeedPreview_(msgs);
+}
+
+// ---------- 帶入欄位 ----------
+function deedField_(label) { return document.querySelector('#typeFields [data-label="' + label + '"]'); }
+function deedMark_(el) { var f = el.closest('.field'); if (f) f.classList.add('deed-filled'); }
+function deedFire_(el, types) { types.forEach(function(t) { el.dispatchEvent(new Event(t, { bubbles: true })); }); }
+function deedSetInput_(label, value, res) {
+  var el = deedField_(label);
+  if (!el) return false;
+  if (String(el.value).trim() !== '') { res.skipped.push(label); return false; }
+  el.value = value;
+  deedFire_(el, ['input', 'change']);
+  deedMark_(el); res.filled.push(label);
+  return true;
+}
+function deedCheckGroup_(label, values, others, res) {
+  var group = document.querySelector('#typeFields [data-checkbox-label="' + label + '"]');
+  if (!group) return;
+  if (group.querySelector('input:checked')) { res.skipped.push(label); return; }
+  var boxes = Array.prototype.slice.call(group.querySelectorAll('input[type=checkbox]'));
+  var did = false;
+  values.forEach(function(v) {
+    var b = boxes.filter(function(x) { return x.value === v; })[0];
+    if (b) { b.checked = true; deedFire_(b, ['change']); did = true; } else others.push(v);
+  });
+  if (others.length) {
+    var ob = boxes.filter(function(x) { return x.classList.contains('otherCheckbox') || x.value === '其他'; })[0];
+    if (ob) {
+      ob.checked = true; deedFire_(ob, ['change']);
+      var oi = group.parentElement.querySelector('.other-input');
+      if (oi) { oi.style.display = ''; oi.value = others.join('、'); deedFire_(oi, ['input']); }
+      did = true;
+    }
+  }
+  if (did) { deedMark_(group); res.filled.push(label); }
+}
+function deedMaterialOption_(text) {
+  if (/鋼骨鋼筋混凝土|SRC/i.test(text)) return 'SRC 鋼骨鋼筋混凝土';
+  if (/鋼筋混凝土|RC/i.test(text)) return 'RC 鋼筋混凝土';
+  if (/鋼骨|鋼構|鋼造/.test(text)) return 'SC 鋼骨';
+  if (/加強磚/.test(text)) return '加強磚造';
+  if (/磚/.test(text)) return '磚造';
+  if (/木/.test(text)) return '木造';
+  return text.replace(/造$/, '');
+}
+function deedSortNums_(arr) {
+  return arr.slice().sort(function(a, b) { var pa = a.split('-').map(Number), pb = b.split('-').map(Number); return (pa[0] - pb[0]) || ((pa[1] || 0) - (pb[1] || 0)); });
+}
+function deedFillRow_(row, g, valueSel, text) {
+  var c = row.querySelector('.countySelect'); c.value = g.county; deedFire_(c, ['change']);
+  var t = row.querySelector('.townSelect'); t.value = g.town; deedFire_(t, ['change']);
+  var d = row.querySelector('.districtSelect'); d.value = g.district; deedFire_(d, ['change']);
+  var v = row.querySelector(valueSel); v.value = text; deedFire_(v, ['input']);
+  row.classList.add('deed-filled');
+}
+function deedClearBlankRows_(containerId, valueSel) {
+  Array.prototype.slice.call(document.querySelectorAll('#' + containerId + ' .district-entry')).forEach(function(r) {
+    var d = r.querySelector('.districtSelect'), v = r.querySelector(valueSel);
+    if ((!d || !d.value) && (!v || !v.value.trim())) r.remove();
+  });
+}
+
+function applyDeed_() {
+  var out = document.getElementById('deedApplyResult');
+  var chosen = deedState_.filter(function(x) { return x.include; });
+  var lands = chosen.filter(function(x) { return x.rec.kind === 'land'; }).map(function(x) { return x.rec; });
+  var blds = chosen.filter(function(x) { return x.rec.kind === 'building'; }).map(function(x) { return x.rec; });
+  var res = { filled: [], skipped: [], notes: [], infos: [] };
+  if (!chosen.length) { out.innerHTML = ''; out.textContent = '沒有勾選任何資料'; return; }
+
+  // 1. 地號、建號列（同一段別的號碼合併成一格）
+  function addGroup(map, c, t, d, num) {
+    var key = c + '|' + t + '|' + d;
+    if (!map[key]) map[key] = { county: c, town: t, district: d, nums: [] };
+    if (map[key].nums.indexOf(num) === -1) map[key].nums.push(num);
+  }
+  var lotGroups = {}, bldGroups = {};
+  lands.forEach(function(l) { addGroup(lotGroups, l.county, l.town, l.district, l.number); });
+  blds.forEach(function(b) {
+    (b.lots || []).forEach(function(lt) {
+      var seg = (districtData[b.county] && districtData[b.county][b.town]) ? deedFindSegment_(lt.segment, districtData[b.county][b.town]) : '';
+      addGroup(lotGroups, b.county, b.town, seg || lt.segment || b.district, lt.number);
+    });
+    addGroup(bldGroups, b.county, b.town, b.district, b.number);
+  });
+  var lotKeys = Object.keys(lotGroups), bldKeys = Object.keys(bldGroups);
+  if (lotKeys.length) {
+    deedClearBlankRows_('lotEntries', '.lotValueInput');
+    lotKeys.forEach(function(k) { addLotEntry(); var rows = document.querySelectorAll('#lotEntries .district-entry'); deedFillRow_(rows[rows.length - 1], lotGroups[k], '.lotValueInput', deedSortNums_(lotGroups[k].nums).join(',')); });
+    res.filled.push('地號');
+  }
+  if (bldKeys.length && currentType !== '土地') {
+    deedClearBlankRows_('buildingEntries', '.buildingValueInput');
+    bldKeys.forEach(function(k) { addBuildingEntry(); var rows = document.querySelectorAll('#buildingEntries .district-entry'); deedFillRow_(rows[rows.length - 1], bldGroups[k], '.buildingValueInput', deedSortNums_(bldGroups[k].nums).join(',')); });
+    res.filled.push('建號');
+  } else if (bldKeys.length) { res.notes.push('目前選的是「土地」類型，建物資料（建號、門牌、面積、完成日…）沒有帶入'); }
+
+  // 2. 土地面積、使用分區
+  if (lands.length) {
+    var sum = 0; lands.forEach(function(l) { if (l.areaM2) sum += l.areaM2; });
+    deedSetInput_('土地面積(m²)', String(Math.round(sum * 100) / 100), res);
+    var landNums = {}; lands.forEach(function(l) { landNums[l.district + l.number] = true; });
+    var missing = [];
+    blds.forEach(function(b) { (b.lots || []).forEach(function(lt) { if (!landNums[lt.segment + lt.number] && missing.indexOf(lt.number) === -1) missing.push(lt.number); }); });
+    if (missing.length) res.notes.push('建物坐落的地號 ' + missing.join('、') + ' 沒有上傳土地謄本，土地面積只合計已上傳的 ' + lands.length + ' 筆，請補上傳或自行修改');
+    // 謄本只有「非都市計畫」的土地才會載明使用分區＋使用地類別；
+    // 都市計畫的土地這兩格是空白（都市計畫的分區要另外查都市計畫圖），所以：
+    //   有使用分區或使用地類別 → 非都市計畫，使用分區 ＝「非都-使用分區＋使用地類別」
+    //   兩格都空白 → 判斷為都市計畫，使用分區留給業務自己查詢填寫
+    var combos = [];
+    var blankLands = [];
+    lands.forEach(function(l) {
+      if (l.zoning || l.landCategory) {
+        var c = '非都-' + l.zoning + l.landCategory;
+        if (combos.indexOf(c) === -1) combos.push(c);
+      } else {
+        blankLands.push(l.number);
+      }
+    });
+    var plan = combos.length ? '非都市計畫' : '都市計畫';
+    var planSel = deedField_('都市或非都市計畫');
+    if (planSel) {
+      if (!planSel.value) {
+        planSel.value = plan; deedFire_(planSel, ['change']); deedMark_(planSel); res.filled.push('都市或非都市計畫');
+        if (plan === '都市計畫') res.notes.push('土地謄本沒有使用分區、使用地類別，已選「都市計畫」。請自行查詢並選擇使用分區；如果是非都市土地，請改選「非都市計畫」');
+      } else if (planSel.value !== plan) {
+        res.notes.push('謄本判斷是「' + plan + '」，但你已經選了「' + planSel.value + '」，使用分區沒有帶入，請確認');
+      }
+      if (planSel.value === plan && plan === '非都市計畫') deedCheckGroup_('使用分區', combos, [], res);
+    }
+    if (plan === '非都市計畫' && blankLands.length) res.notes.push('地號 ' + blankLands.join('、') + ' 的謄本沒有載明使用分區，這幾筆請手動確認');
+  } else if (blds.length) {
+    res.notes.push('沒有上傳土地謄本，土地面積、使用分區沒有帶入');
+  }
+
+  // 3. 建物
+  if (blds.length && currentType !== '土地') {
+    var b0 = blds[0];
+    if (blds.length > 1) res.notes.push('一共帶入 ' + blds.length + ' 筆建物：面積加總，門牌、完成日、樓層、建材以第一筆（建號 ' + b0.number + '）為主，請確認');
+    if (b0.address) deedSetInput_('詳細地址', b0.address, res) || (function() { var di = document.getElementById('detailAddressInput'); if (di && !di.value.trim()) { di.value = b0.address; deedFire_(di, ['input']); deedMark_(di); res.filled.push('詳細地址'); } })();
+    var total = 0, attached = 0, shared = 0, hasShared = false;
+    blds.forEach(function(b) { total += b.totalAreaM2 || 0; attached += b.attachedAreaM2 || 0; if (b.sharedAreaM2 !== null && b.sharedAreaM2 !== undefined) { shared += b.sharedAreaM2; hasShared = true; } });
+    deedSetInput_('主建物面積(m²)', String(Math.round(total * 100) / 100), res);
+    deedSetInput_('附屬建物面積(m²)', String(Math.round(attached * 100) / 100), res);
+    if (hasShared) deedSetInput_('共同使用面積(m²)', String(Math.round(shared * 100) / 100), res);
+    else if (deedField_('共同使用面積(m²)')) res.notes.push('這份謄本沒有列出共有部分的面積，「共同使用面積」請從權狀填寫');
+    if (b0.completion) {
+      var y = b0.completion.rocYear + 1911, mm = ('0' + b0.completion.month).slice(-2), dd = ('0' + b0.completion.day).slice(-2);
+      deedSetInput_('建築完成日', y + '-' + mm + '-' + dd, res);
+    }
+    var maxFloors = 0, maxBase = 0;
+    blds.forEach(function(b) { if (b.floors > maxFloors) maxFloors = b.floors; if (b.basementCount > maxBase) maxBase = b.basementCount; });
+    if (maxFloors) deedSetInput_('地上樓層', String(maxFloors), res);
+    deedSetInput_('地下樓層', String(maxBase), res);
+    var mats = [];
+    blds.forEach(function(b) { (b.materials || []).forEach(function(m) { var o = deedMaterialOption_(m); if (mats.indexOf(o) === -1) mats.push(o); }); });
+    if (mats.length) deedCheckGroup_('主要建材', mats, [], res);
+    if (currentType === '廠房' && deedField_ && document.querySelector('#typeFields [data-checkbox-label="建物類別"]')) {
+      var use = blds.map(function(b) { return b.mainUse || ''; }).join('、');
+      var cat = /廠房/.test(use) ? '廠房' : (/倉庫|儲藏/.test(use) ? '倉庫' : '');
+      if (cat) deedCheckGroup_('建物類別', [cat], [], res);
+    }
+  }
+
+  // 4. 把謄本檔案一起加入上傳（保留原檔）
+  var addBox = document.getElementById('deedAddToUploads');
+  if (addBox && addBox.checked) {
+    var newFiles = [];
+    chosen.forEach(function(x) { if (x.file && !x.file._deedQueued && newFiles.indexOf(x.file) === -1) { x.file._deedQueued = true; newFiles.push(x.file); } });
+    if (newFiles.length) { addUploadFiles_(newFiles); res.infos.push('已把 ' + newFiles.length + ' 份謄本加入下面的「上傳照片／文件」（保留原檔）。'); }
+  }
+
+  out.innerHTML = '';
+  function line(text, color) { var d = document.createElement('div'); d.className = 'hint'; if (color) d.style.color = color; d.style.margin = '6px 0 0'; d.textContent = text; out.appendChild(d); }
+  if (res.filled.length) line('✓ 已帶入（黃色底色）：' + res.filled.join('、') + '。請檢查是否正確，可以直接修改。', 'var(--brand-dark)');
+  if (res.skipped.length) line('這些欄位本來就有內容，沒有被覆蓋：' + res.skipped.join('、'));
+  res.notes.forEach(function(n) { line('⚠ ' + n, 'var(--danger)'); });
+  res.infos.forEach(function(n) { line('✓ ' + n, 'var(--brand-dark)'); });
+  if (!res.filled.length && !res.skipped.length && !res.notes.length && !res.infos.length) line('沒有可以帶入的欄位。');
+}
+
+document.getElementById('deedInput').addEventListener('change', function() {
+  var files = this.files;
+  handleDeedFiles_(files);
+  this.value = '';
+});
+
 </script>
 </body>
 </html>
