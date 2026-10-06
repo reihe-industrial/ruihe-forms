@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; }
+    #toastNotice {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 9999; max-width: 90%; padding: 14px 20px; border-radius: 10px;
+      font-size: 15px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      display: none; text-align: center;
+    }
+    #toastNotice.success { background: #2f6f4e; color: #fff; }
+    #toastNotice.error { background: #c0392b; color: #fff; }
+    :root {
+      --ink: #1c2b22;
+      --muted: #66776c;
+      --paper: #f3f1e9;
+      --card: #ffffff;
+      --line: #dfe2d7;
+      --brand: #2f6f4e;
+      --brand-dark: #1e4a32;
+      --brand-soft: #e9f1ec;
+      --danger: #a3352c;
+      --danger-soft: #fbebe9;
+      --radius: 10px;
+    }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: var(--paper);
+      margin: 0;
+      padding: 20px 16px 60px;
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .container { max-width: 640px; margin: 0 auto; }
+
+    h1 {
+      font-family: "Noto Serif TC", "Noto Sans TC", serif;
+      font-size: 23px; font-weight: 700; letter-spacing: 0.02em;
+      margin: 4px 0 6px; color: var(--brand-dark);
+    }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 20px;
+      margin-bottom: 14px;
+    }
+    .card h2 {
+      font-size: 15px; font-weight: 700; margin: 0 0 16px;
+      color: var(--brand-dark);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card h2::before {
+      content: ""; display: inline-block; width: 4px; height: 15px;
+      background: var(--brand); border-radius: 2px; flex-shrink: 0;
+    }
+
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
+    label.required::after { content: " *"; color: var(--danger); font-weight: 700; }
+
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 8px;
+      background: #fff; color: var(--ink);
+      font-family: inherit;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    input::placeholder, textarea::placeholder { color: #a9b0a2; }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--brand);
+      box-shadow: 0 0 0 3px var(--brand-soft);
+    }
+    textarea { resize: vertical; min-height: 64px; }
+    select { appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366776c' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 10px center; background-size: 18px;
+      padding-right: 34px;
+    }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px 6px; }
+    .checkbox-group label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13.5px; font-weight: 400; color: var(--ink);
+      background: #fbfaf6; border: 1px solid var(--line); border-radius: 999px;
+      padding: 6px 12px 6px 10px; margin: 0; cursor: pointer;
+    }
+    .checkbox-group label:has(input:checked) {
+      background: var(--brand-soft); border-color: var(--brand); color: var(--brand-dark);
+    }
+    .checkbox-group input { width: auto; accent-color: var(--brand); }
+
+    .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; white-space: pre-line; line-height: 1.55; }
+    .other-input { margin-top: 8px; }
+
+    .type-block {
+      border: 1px dashed var(--line); border-radius: 8px; padding: 16px;
+      margin-top: 14px; display: none; background: #fbfaf6;
+    }
+    .type-block .type-block-title {
+      font-weight: 700; font-size: 14px; margin: 0 0 14px; color: var(--brand-dark);
+    }
+
+    .region-entry {
+      display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px;
+      align-items: end; margin-bottom: 12px;
+      padding-bottom: 12px; border-bottom: 1px dashed var(--line);
+    }
+    .region-entry:last-child { border-bottom: none; margin-bottom: 4px; padding-bottom: 0; }
+    .region-entry .mini-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 600; }
+    .region-entry select { padding: 8px 10px; font-size: 13.5px; }
+    @media (max-width: 480px) {
+      .region-entry { grid-template-columns: 1fr 1fr; }
+      .region-entry .remove-btn { grid-column: 1 / -1; }
+    }
+
+    .remove-btn {
+      background: var(--danger-soft); color: var(--danger); border: none; border-radius: 8px;
+      padding: 8px 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .add-row-btn {
+      background: var(--brand-soft); color: var(--brand-dark);
+      border: 1px dashed var(--brand); border-radius: 8px;
+      padding: 10px 14px; cursor: pointer; font-size: 13.5px; font-weight: 600;
+      width: 100%; margin-top: 6px;
+    }
+
+    button.submit {
+      width: 100%; padding: 15px; font-size: 16px; font-weight: 700;
+      background: var(--brand); color: #fff; border: none; border-radius: 10px;
+      cursor: pointer; letter-spacing: 0.03em;
+      transition: background .15s ease;
+    }
+    button.submit:hover:not(:disabled) { background: var(--brand-dark); }
+    button.submit:disabled { background: #b9c3ba; cursor: not-allowed; }
+
+    .msg {
+      margin-top: 12px; padding: 13px 14px; border-radius: 8px;
+      font-size: 14px; line-height: 1.6; display: none; white-space: pre-wrap;
+    }
+    .msg.success { background: var(--brand-soft); color: var(--brand-dark); display: block; }
+    .msg.error { background: var(--danger-soft); color: var(--danger); display: block; }
+  </style>
+</head>
+<body>
+<div id="toastNotice"></div>
+<div class="container">
+  <h1>客需資料填寫表</h1>
+  <div class="subtitle">業務拜訪或電話聯繫客戶後填寫，記錄客戶購買／承租需求</div>
+
+  <!-- 一、客戶資料 -->
+  <div class="card">
+    <h2>一、客戶資料</h2>
+    <div class="field">
+      <label class="required">負責業務</label>
+      <select id="businessSelect"><option value="">請選擇</option></select>
+      <input type="text" id="businessOtherInput" class="other-input" placeholder="請輸入姓名" style="display:none;">
+    </div>
+    <div class="field">
+      <label class="required">填表日期</label>
+      <input type="date" id="fillDate">
+    </div>
+    <div class="field">
+      <label>資訊來源</label>
+      <select id="sourceSelect">
+        <option value="">請選擇</option>
+        <option>服務中心</option><option>網路詢問</option><option>廣告來電</option>
+        <option>同行介紹</option><option>客戶介紹</option><option>公部門</option><option>其他</option>
+      </select>
+      <input type="text" id="sourceOtherInput" class="other-input" placeholder="請輸入資訊來源" style="display:none;">
+    </div>
+    <div class="field">
+      <label>客戶身份</label>
+      <select id="identitySelect">
+        <option value="">請選擇</option>
+        <option>自然人</option><option>法人團體</option><option>代理人</option><option>其他</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="required">公司／客戶名稱</label>
+      <input type="text" id="clientNameInput">
+    </div>
+    <div class="field">
+      <label>聯絡人與職稱</label>
+      <input type="text" id="contactPersonInput">
+    </div>
+    <div class="field">
+      <label>聯絡電話</label>
+      <input type="text" id="contactPhoneInput">
+    </div>
+    <div class="field">
+      <label>Line ID</label>
+      <input type="text" id="lineIdInput">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="text" id="emailInput">
+    </div>
+  </div>
+
+  <!-- 二、物件需求 -->
+  <div class="card">
+    <h2>二、物件需求</h2>
+
+    <div class="field">
+      <label class="required">物件類型（可複選）</label>
+      <div class="checkbox-group" id="propertyTypeGroup">
+        <label><input type="checkbox" class="propertyTypeCheckbox" value="廠房">廠房</label>
+        <label><input type="checkbox" class="propertyTypeCheckbox" value="土地">土地</label>
+        <label><input type="checkbox" class="propertyTypeCheckbox" value="房屋">房屋</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="required">需求類型</label>
+      <select id="demandTypeSelect">
+        <option value="">請選擇</option>
+        <option>購買</option><option>承租</option><option>皆可</option>
+      </select>
+    </div>
+
+    <div class="field" id="landKindBlock" style="display:none;">
+      <label>需求土地種類（可複選）</label>
+      <div class="checkbox-group" id="landKindGroup">
+        <label><input type="checkbox" class="landKindCheckbox" value="建廠用">建廠用</label>
+        <label><input type="checkbox" class="landKindCheckbox" value="農地">農地</label>
+        <label><input type="checkbox" class="landKindCheckbox" value="建地">建地</label>
+        <label><input type="checkbox" class="landKindCheckbox" value="停車場用">停車場用</label>
+        <label><input type="checkbox" class="landKindCheckbox" value="倉儲用">倉儲用</label>
+        <label><input type="checkbox" class="landKindCheckbox" value="其他" id="landKindOtherCheckbox">其他</label>
+      </div>
+      <input type="text" id="landUseOtherInput" class="other-input" placeholder="請輸入土地種類／用途" style="display:none;">
+    </div>
+
+    <div class="field" id="industryBlock" style="display:none;">
+      <label>產業類別</label>
+      <div class="checkbox-group" id="industryCheckGroup"></div>
+      <input type="text" id="industryOtherInput" class="other-input" placeholder="請輸入產業別" style="display:none;">
+    </div>
+
+    <!-- 廠房區塊 -->
+    <div class="type-block" id="factoryBlock">
+      <div class="type-block-title">廠房需求</div>
+      <div class="field buy-field"><label>廠房需求坪數</label><input type="text" id="factoryAreaBuy"></div>
+      <div class="field buy-field"><label>廠房總價上限(萬元)</label><input type="text" id="factoryPriceBuy"></div>
+      <div class="field rent-field"><label>廠房需求坪數（承租）</label><input type="text" id="factoryAreaRent"></div>
+      <div class="field rent-field"><label>廠房租金上限(元/坪/月)</label><input type="text" id="factoryRent"></div>
+      <div class="field rent-field"><label>廠房預計租期</label><input type="text" id="factoryRentTerm" placeholder="例：3年"></div>
+      <div class="field">
+        <label>土地坪數需求</label>
+        <input type="text" id="factoryLandArea">
+      </div>
+      <div class="field">
+        <label>需求土地分區</label>
+        <input type="text" id="factoryLandZoning" placeholder="例：乙種工業區、丁種建築用地">
+      </div>
+      <div class="field">
+        <label class="required">廠房淨高需求（公尺）</label>
+        <div class="hint">例：最低6米</div>
+        <input type="text" id="factoryHeight">
+      </div>
+      <div class="field">
+        <label class="required">電力需求</label>
+        <div class="hint">例：需300KW以上</div>
+        <input type="text" id="factoryPower">
+      </div>
+      <div class="field">
+        <label class="required">用水需求</label>
+        <input type="text" id="factoryWater">
+      </div>
+      <div class="field">
+        <label>是否需要天車</label>
+        <select id="factoryCrane">
+          <option value="">請選擇</option><option>需要</option><option>不需要</option><option>有無皆可</option>
+        </select>
+      </div>
+      <div class="field" id="craneTonBlock" style="display:none;">
+        <label>天車需求噸數</label>
+        <input type="text" id="factoryCraneTon">
+      </div>
+      <div class="field">
+        <label>是否需要裝卸月台/碼頭</label>
+        <select id="factoryDock">
+          <option value="">請選擇</option><option>需要</option><option>不需要</option><option>有無皆可</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>是否需要汙水處理設施</label>
+        <select id="factorySewage">
+          <option value="">請選擇</option><option>需要</option><option>不需要</option><option>有無皆可</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="required">廠房其他需求</label>
+        <div class="hint">如：需要臨12米路、需要鄰近台積電、要鄰近高速公路...等</div>
+        <textarea id="factoryOther"></textarea>
+      </div>
+    </div>
+
+    <!-- 土地區塊 -->
+    <div class="type-block" id="landBlock">
+      <div class="type-block-title">土地需求</div>
+      <div class="field buy-field"><label>土地需求面積(坪)</label><input type="text" id="landAreaBuy"></div>
+      <div class="field buy-field"><label>土地總價上限(萬元)</label><input type="text" id="landPriceBuy"></div>
+      <div class="field rent-field"><label>土地需求面積（承租）(坪)</label><input type="text" id="landAreaRent"></div>
+      <div class="field rent-field"><label>土地租金上限(元/坪/月)</label><input type="text" id="landRent"></div>
+      <div class="field rent-field"><label>土地預計租期</label><input type="text" id="landRentTerm" placeholder="例：3年"></div>
+      <div class="field">
+        <label>地形需求</label>
+        <select id="landShape">
+          <option value="">請選擇</option><option>方正</option><option>不規則皆可</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>鄰路寬度需求</label>
+        <input type="text" id="landRoadWidth" placeholder="例：臨8米以上道路">
+      </div>
+      <div class="field">
+        <label>需求土地分區</label>
+        <input type="text" id="landZoning" placeholder="例：乙種工業區、丁種建築用地">
+      </div>
+      <div class="field">
+        <label>土地其他需求</label>
+        <textarea id="landOther"></textarea>
+      </div>
+    </div>
+
+    <!-- 房屋區塊 -->
+    <div class="type-block" id="houseBlock">
+      <div class="type-block-title">房屋需求</div>
+      <div class="field buy-field"><label>房屋需求坪數</label><input type="text" id="houseAreaBuy"></div>
+      <div class="field buy-field"><label>房屋總價上限(萬元)</label><input type="text" id="housePriceBuy"></div>
+      <div class="field rent-field"><label>房屋需求坪數（承租）</label><input type="text" id="houseAreaRent"></div>
+      <div class="field rent-field"><label>房屋租金上限(元/月)</label><input type="text" id="houseRent"></div>
+      <div class="field rent-field"><label>房屋預計租期</label><input type="text" id="houseRentTerm" placeholder="例：1年"></div>
+      <div class="field">
+        <label>需求房型</label>
+        <select id="houseLayoutSelect">
+          <option value="">請選擇</option><option>不限</option><option>開放式格局</option><option>有格局</option>
+        </select>
+        <div id="houseLayoutDetail" style="display:none; margin-top:8px;">
+          <span style="display:inline-flex;align-items:center;gap:3px;margin-right:12px;"><input type="number" id="houseRoomCount" style="width:60px;" min="0"> 房</span>
+          <span style="display:inline-flex;align-items:center;gap:3px;margin-right:12px;"><input type="number" id="houseHallCount" style="width:60px;" min="0"> 廳</span>
+          <span style="display:inline-flex;align-items:center;gap:3px;"><input type="number" id="houseBathCount" style="width:60px;" min="0"> 衛</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>樓層需求</label>
+        <input type="text" id="houseFloor" placeholder="例：3樓以上、不要頂樓">
+      </div>
+      <div class="field">
+        <label>屋齡需求</label>
+        <input type="text" id="houseAge" placeholder="例：15年內">
+      </div>
+      <div class="field">
+        <label>車位需求</label>
+        <select id="houseParking">
+          <option value="">請選擇</option><option>需要</option><option>不需要</option><option>有無皆可</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>房屋其他需求</label>
+        <textarea id="houseOther"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 三、目標區域 -->
+  <div class="card">
+    <h2>三、目標區域</h2>
+    <div class="hint">可以新增好幾筆，各自選縣市/鄉鎮市區；鄉鎮市區留空代表整個縣市都可以</div>
+    <div id="regionEntries"></div>
+    <button type="button" class="add-row-btn" id="addRegionBtn">＋ 新增一筆區域</button>
+  </div>
+
+  <!-- 四、其他資訊 -->
+  <div class="card">
+    <h2>四、其他資訊</h2>
+    <div class="field">
+      <label>進駐時間</label>
+      <select id="moveInTimeSelect">
+        <option value="">請選擇</option>
+        <option>1個月內</option><option>3個月內</option><option>6個月內</option><option>1年內</option><option>時間彈性</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>客戶急迫程度</label>
+      <select id="urgencySelect">
+        <option value="">請選擇</option><option>非常急</option><option>普通</option><option>不急</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>是否已看過其他物件</label>
+      <select id="seenOthersSelect">
+        <option value="">請選擇</option><option>有</option><option>無</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>是否有競爭仲介接觸</label>
+      <select id="competitorSelect">
+        <option value="">請選擇</option><option>有</option><option>無</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>其他需求／備註</label>
+      <textarea id="finalNoteInput"></textarea>
+    </div>
+  </div>
+
+  <button type="button" class="submit" id="submitBtn">送出</button>
+  <div id="msgBox" class="msg"></div>
+</div>
+
+<script>
+var API_URL = 'https://script.google.com/macros/s/AKfycbz_pJ4-O2_B5iY7fmy0u0BFZi4kkYbMh68izz345YCqIcU5whFHwPFX3wIRQfwYgy_J/exec';
+var PERSON_LIST = [];
+var DISTRICT_DATA = {};
+var INDUSTRY_LIST = ['08 食品製造業', '09 飲料製造業', '10 菸草製造業', '11 紡織業', '12 成衣及服飾品製造業',
+  '13 皮革毛皮及其製品製造業', '14 木竹製品製造業', '15 紙漿紙及紙製品製造業', '16 印刷及資料儲存媒體複製業',
+  '17 石油及煤製品製造業', '18 化學原材料肥料塑膠橡膠及人造纖維製造業', '19 其他化學製品製造業',
+  '20 藥品及醫用化學製品製造業', '21 橡膠製品製造業', '22 塑膠製品製造業', '23 非金屬礦物製品製造業',
+  '24 基本金屬製造業', '25 金屬製品製造業', '26 電子零組件製造業', '27 電腦電子產品及光學製品製造業',
+  '28 電力設備及配備製造業', '29 機械設備製造業', '30 汽車及其零件製造業', '31 其他運輸工具及其零件製造業',
+  '32 家具製造業', '33 其他製造業'];
+var regionEntryCount = 0;
+
+var toastTimer_;
+function showToast(message, type) {
+  var toast = document.getElementById('toastNotice');
+  toast.className = type === 'error' ? 'error' : 'success';
+  toast.textContent = message;
+  toast.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  clearTimeout(toastTimer_);
+  toastTimer_ = setTimeout(function() { toast.style.display = 'none'; }, 5000);
+}
+
+function setupOtherSelect(selectId, otherInputId) {
+  var sel = document.getElementById(selectId);
+  var other = document.getElementById(otherInputId);
+  sel.addEventListener('change', function() {
+    other.style.display = (sel.value === '其他') ? 'block' : 'none';
+  });
+}
+
+function buildBusinessSelect(selectId) {
+  var sel = document.getElementById(selectId);
+  PERSON_LIST.forEach(function(name) {
+    var o = document.createElement('option');
+    o.value = name; o.textContent = name;
+    sel.appendChild(o);
+  });
+  var otherOpt = document.createElement('option');
+  otherOpt.value = '其他'; otherOpt.textContent = '其他';
+  sel.appendChild(otherOpt);
+}
+
+function getBusinessValue(selectId, otherInputId) {
+  var sel = document.getElementById(selectId);
+  if (sel.value === '其他') return document.getElementById(otherInputId).value.trim();
+  return sel.value;
+}
+
+function updatePropertyTypeBlocks() {
+  var checked = Array.prototype.slice.call(document.querySelectorAll('.propertyTypeCheckbox:checked')).map(function(cb) { return cb.value; });
+  document.getElementById('factoryBlock').style.display = checked.indexOf('廠房') !== -1 ? 'block' : 'none';
+  document.getElementById('landBlock').style.display = checked.indexOf('土地') !== -1 ? 'block' : 'none';
+  document.getElementById('houseBlock').style.display = checked.indexOf('房屋') !== -1 ? 'block' : 'none';
+  document.getElementById('landKindBlock').style.display = checked.indexOf('土地') !== -1 ? 'block' : 'none';
+  var landBuildFactory = checked.indexOf('土地') !== -1 && !!document.querySelector('.landKindCheckbox[value="建廠用"]:checked');
+  document.getElementById('industryBlock').style.display = (checked.indexOf('廠房') !== -1 || landBuildFactory) ? 'block' : 'none';
+}
+document.querySelectorAll('.landKindCheckbox').forEach(function(cb) {
+  cb.addEventListener('change', function() {
+    document.getElementById('landUseOtherInput').style.display =
+      document.getElementById('landKindOtherCheckbox').checked ? 'block' : 'none';
+    updatePropertyTypeBlocks();
+  });
+});
+document.querySelectorAll('.propertyTypeCheckbox').forEach(function(cb) {
+  cb.addEventListener('change', updatePropertyTypeBlocks);
+});
+
+function updateDemandTypeFields() {
+  var val = document.getElementById('demandTypeSelect').value;
+  var showBuy = (val === '購買' || val === '皆可');
+  var showRent = (val === '承租' || val === '皆可');
+  document.querySelectorAll('.buy-field').forEach(function(el) { el.style.display = showBuy ? 'block' : 'none'; });
+  document.querySelectorAll('.rent-field').forEach(function(el) { el.style.display = showRent ? 'block' : 'none'; });
+}
+document.getElementById('demandTypeSelect').addEventListener('change', updateDemandTypeFields);
+
+document.getElementById('factoryCrane').addEventListener('change', function() {
+  document.getElementById('craneTonBlock').style.display = (this.value === '需要') ? 'block' : 'none';
+});
+
+document.getElementById('houseLayoutSelect').addEventListener('change', function() {
+  document.getElementById('houseLayoutDetail').style.display = (this.value === '有格局') ? 'block' : 'none';
+});
+
+function buildIndustryChecklist() {
+  var group = document.getElementById('industryCheckGroup');
+  INDUSTRY_LIST.forEach(function(item) {
+    var lbl = document.createElement('label');
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = item; cb.className = 'industryCheckbox';
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(item));
+    group.appendChild(lbl);
+  });
+  var otherLbl = document.createElement('label');
+  var otherCb = document.createElement('input');
+  otherCb.type = 'checkbox'; otherCb.value = '其他'; otherCb.className = 'industryCheckbox';
+  otherLbl.appendChild(otherCb);
+  otherLbl.appendChild(document.createTextNode('其他'));
+  group.appendChild(otherLbl);
+  otherCb.addEventListener('change', function() {
+    document.getElementById('industryOtherInput').style.display = otherCb.checked ? 'block' : 'none';
+  });
+}
+
+// 目標區域：新增一筆＝縣市→鄉鎮市區兩層選單，鄉鎮市區留空代表整個縣市
+function createRegionEntry() {
+  regionEntryCount++;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'region-entry';
+
+  var countyWrap = document.createElement('div');
+  var countyLabel = document.createElement('div');
+  countyLabel.className = 'mini-label';
+  countyLabel.textContent = '縣市';
+  var countySelect = document.createElement('select');
+  countySelect.className = 'countySelect';
+  var blankCounty = document.createElement('option');
+  blankCounty.value = ''; blankCounty.textContent = '請選擇';
+  countySelect.appendChild(blankCounty);
+  Object.keys(DISTRICT_DATA).forEach(function(county) {
+    var o = document.createElement('option');
+    o.value = county; o.textContent = county;
+    countySelect.appendChild(o);
+  });
+  countyWrap.appendChild(countyLabel);
+  countyWrap.appendChild(countySelect);
+
+  var townWrap = document.createElement('div');
+  var townLabel = document.createElement('div');
+  townLabel.className = 'mini-label';
+  townLabel.textContent = '鄉鎮市區（可留空）';
+  var townSelect = document.createElement('select');
+  townSelect.className = 'townSelect';
+  var blankTown = document.createElement('option');
+  blankTown.value = ''; blankTown.textContent = '不限（整個縣市）';
+  townSelect.appendChild(blankTown);
+  townWrap.appendChild(townLabel);
+  townWrap.appendChild(townSelect);
+
+  countySelect.addEventListener('change', function() {
+    townSelect.innerHTML = '';
+    townSelect.appendChild(blankTown.cloneNode(true));
+    var towns = DISTRICT_DATA[countySelect.value] || {};
+    Object.keys(towns).forEach(function(town) {
+      var o = document.createElement('option');
+      o.value = town; o.textContent = town;
+      townSelect.appendChild(o);
+    });
+  });
+
+  var removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'remove-btn';
+  removeBtn.textContent = '刪除';
+  removeBtn.addEventListener('click', function() {
+    var allEntries = document.querySelectorAll('.region-entry');
+    if (allEntries.length <= 1) { alert('至少要保留一筆區域'); return; }
+    wrap.remove();
+  });
+
+  wrap.appendChild(countyWrap);
+  wrap.appendChild(townWrap);
+  wrap.appendChild(removeBtn);
+  document.getElementById('regionEntries').appendChild(wrap);
+}
+document.getElementById('addRegionBtn').addEventListener('click', createRegionEntry);
+
+fetch(API_URL + '?action=options').then(function(r) { return r.json(); }).then(function(options) {
+  PERSON_LIST = options.personList || [];
+  DISTRICT_DATA = options.districtData || {};
+
+  buildBusinessSelect('businessSelect');
+  setupOtherSelect('businessSelect', 'businessOtherInput');
+  setupOtherSelect('sourceSelect', 'sourceOtherInput');
+  buildIndustryChecklist();
+  createRegionEntry();
+
+  var today = new Date();
+  document.getElementById('fillDate').value = today.toISOString().slice(0, 10);
+}).catch(function(err) {
+  var msgBox = document.getElementById('msgBox');
+  msgBox.className = 'msg error';
+  msgBox.textContent = '載入資料失敗：' + (err && err.message ? err.message : err);
+});
+
+document.getElementById('submitBtn').addEventListener('click', function() {
+  var msgBox = document.getElementById('msgBox');
+  msgBox.style.display = 'none';
+
+  var business = getBusinessValue('businessSelect', 'businessOtherInput');
+  var clientName = document.getElementById('clientNameInput').value.trim();
+  var propertyTypes = Array.prototype.slice.call(document.querySelectorAll('.propertyTypeCheckbox:checked')).map(function(cb) { return cb.value; });
+  var demandType = document.getElementById('demandTypeSelect').value;
+
+  var missing = [];
+  if (!business) missing.push('負責業務');
+  if (!document.getElementById('fillDate').value) missing.push('填表日期');
+  if (!clientName) missing.push('公司／客戶名稱');
+  if (propertyTypes.length === 0) missing.push('物件類型（至少勾選一項）');
+  if (!demandType) missing.push('需求類型');
+  if (propertyTypes.indexOf('廠房') !== -1) {
+    if (!document.getElementById('factoryHeight').value.trim()) missing.push('廠房淨高需求');
+    if (!document.getElementById('factoryPower').value.trim()) missing.push('電力需求');
+    if (!document.getElementById('factoryWater').value.trim()) missing.push('用水需求');
+    if (!document.getElementById('factoryOther').value.trim()) missing.push('廠房其他需求');
+  }
+
+  if (missing.length > 0) {
+    msgBox.className = 'msg error';
+    msgBox.textContent = '請填寫以下必填欄位：\n' + missing.join('\n');
+    showToast('請填寫必填欄位（詳見下方紅字說明）', 'error');
+    return;
+  }
+
+  var industryList = Array.prototype.slice.call(document.querySelectorAll('.industryCheckbox:checked')).map(function(cb) {
+    if (cb.value === '其他') return document.getElementById('industryOtherInput').value.trim();
+    return cb.value;
+  }).filter(function(v) { return v; });
+
+  var landKindList = Array.prototype.slice.call(document.querySelectorAll('.landKindCheckbox:checked')).map(function(cb) {
+    if (cb.value === '其他') return document.getElementById('landUseOtherInput').value.trim();
+    return cb.value;
+  }).filter(function(v) { return v; });
+
+  var regionList = [];
+  document.querySelectorAll('.region-entry').forEach(function(entry) {
+    var county = entry.querySelector('.countySelect').value;
+    var town = entry.querySelector('.townSelect').value;
+    if (!county) return;
+    regionList.push(town ? (county + town) : county);
+  });
+
+  var houseLayout = document.getElementById('houseLayoutSelect').value;
+  if (houseLayout === '有格局') {
+    var r = document.getElementById('houseRoomCount').value.trim();
+    var h = document.getElementById('houseHallCount').value.trim();
+    var b = document.getElementById('houseBathCount').value.trim();
+    var parts = [];
+    if (r) parts.push(r + '房');
+    if (h) parts.push(h + '廳');
+    if (b) parts.push(b + '衛');
+    houseLayout = parts.join('');
+  }
+
+  var data = {
+    business: business,
+    fillDate: document.getElementById('fillDate').value,
+    source: getBusinessValue('sourceSelect', 'sourceOtherInput'),
+    identity: document.getElementById('identitySelect').value,
+    clientName: clientName,
+    industry: industryList.join('、'),
+    contactPerson: document.getElementById('contactPersonInput').value.trim(),
+    contactPhone: document.getElementById('contactPhoneInput').value.trim(),
+    lineId: document.getElementById('lineIdInput').value.trim(),
+    email: document.getElementById('emailInput').value.trim(),
+    propertyTypes: propertyTypes.join('、'),
+    demandType: demandType,
+
+    factoryAreaBuy: document.getElementById('factoryAreaBuy').value.trim(),
+    factoryPriceBuy: document.getElementById('factoryPriceBuy').value.trim(),
+    factoryAreaRent: document.getElementById('factoryAreaRent').value.trim(),
+    factoryRent: document.getElementById('factoryRent').value.trim(),
+    factoryRentTerm: document.getElementById('factoryRentTerm').value.trim(),
+    factoryLandArea: document.getElementById('factoryLandArea').value.trim(),
+    factoryLandZoning: document.getElementById('factoryLandZoning').value.trim(),
+    factoryHeight: document.getElementById('factoryHeight').value.trim(),
+    factoryPower: document.getElementById('factoryPower').value.trim(),
+    factoryWater: document.getElementById('factoryWater').value.trim(),
+    factoryCrane: document.getElementById('factoryCrane').value,
+    factoryCraneTon: document.getElementById('factoryCraneTon').value.trim(),
+    factoryDock: document.getElementById('factoryDock').value,
+    factorySewage: document.getElementById('factorySewage').value,
+    factoryOther: document.getElementById('factoryOther').value.trim(),
+
+    landAreaBuy: document.getElementById('landAreaBuy').value.trim(),
+    landPriceBuy: document.getElementById('landPriceBuy').value.trim(),
+    landAreaRent: document.getElementById('landAreaRent').value.trim(),
+    landRent: document.getElementById('landRent').value.trim(),
+    landRentTerm: document.getElementById('landRentTerm').value.trim(),
+    landShape: document.getElementById('landShape').value,
+    landRoadWidth: document.getElementById('landRoadWidth').value.trim(),
+    landUse: landKindList.join('、'),
+    landZoning: document.getElementById('landZoning').value.trim(),
+    landOther: document.getElementById('landOther').value.trim(),
+
+    houseAreaBuy: document.getElementById('houseAreaBuy').value.trim(),
+    housePriceBuy: document.getElementById('housePriceBuy').value.trim(),
+    houseAreaRent: document.getElementById('houseAreaRent').value.trim(),
+    houseRent: document.getElementById('houseRent').value.trim(),
+    houseRentTerm: document.getElementById('houseRentTerm').value.trim(),
+    houseLayout: houseLayout,
+    houseFloor: document.getElementById('houseFloor').value.trim(),
+    houseAge: document.getElementById('houseAge').value.trim(),
+    houseParking: document.getElementById('houseParking').value,
+    houseOther: document.getElementById('houseOther').value.trim(),
+
+    region: regionList.join('、'),
+
+    moveInTime: document.getElementById('moveInTimeSelect').value,
+    urgency: document.getElementById('urgencySelect').value,
+    seenOthers: document.getElementById('seenOthersSelect').value,
+    competitor: document.getElementById('competitorSelect').value,
+    finalNote: document.getElementById('finalNoteInput').value.trim(),
+  };
+
+  var submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '送出中...';
+
+  fetch(API_URL, { method: 'POST', body: JSON.stringify(data) }).then(function(r) { return r.json(); }).then(function(result) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '送出';
+    if (result && result.success) {
+      msgBox.className = 'msg success';
+      msgBox.textContent = result.message || '送出成功！';
+      showToast(result.message || '送出成功！', 'success');
+      document.querySelectorAll('input[type=text], input[type=number], textarea').forEach(function(el) { el.value = ''; });
+      document.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
+      document.querySelectorAll('input[type=checkbox]').forEach(function(el) { el.checked = false; });
+      updatePropertyTypeBlocks();
+      updateDemandTypeFields();
+      document.getElementById('craneTonBlock').style.display = 'none';
+      document.getElementById('houseLayoutDetail').style.display = 'none';
+      document.getElementById('businessOtherInput').style.display = 'none';
+      document.getElementById('industryOtherInput').style.display = 'none';
+      document.getElementById('sourceOtherInput').style.display = 'none';
+      document.getElementById('landUseOtherInput').style.display = 'none';
+      document.getElementById('regionEntries').innerHTML = '';
+      createRegionEntry();
+      document.getElementById('fillDate').value = new Date().toISOString().slice(0, 10);
+    } else {
+      msgBox.className = 'msg error';
+      msgBox.textContent = (result && result.message) || '送出失敗，請稍後再試。';
+      showToast((result && result.message) || '送出失敗，請稍後再試。', 'error');
+    }
+    window.scrollTo(0, 0);
+  }).catch(function(err) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '送出';
+    msgBox.className = 'msg error';
+    msgBox.textContent = '送出失敗：' + (err && err.message ? err.message : err);
+    showToast('送出失敗：' + (err && err.message ? err.message : err), 'error');
+    window.scrollTo(0, 0);
+  });
+});
+</script>
+</body>
+</html>
