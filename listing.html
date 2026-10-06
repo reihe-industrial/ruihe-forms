@@ -1,0 +1,2160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; }
+    #toastNotice {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 9999; max-width: 90%; padding: 14px 20px; border-radius: 10px;
+      font-size: 15px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      display: none; text-align: center;
+    }
+    #toastNotice.success { background: #2f6f4e; color: #fff; }
+    #toastNotice.error { background: #c0392b; color: #fff; }
+    :root {
+      --ink: #1c2b22;
+      --muted: #66776c;
+      --paper: #f3f1e9;
+      --card: #ffffff;
+      --line: #dfe2d7;
+      --brand: #2f6f4e;
+      --brand-dark: #1e4a32;
+      --brand-soft: #e9f1ec;
+      --danger: #a3352c;
+      --danger-soft: #fbebe9;
+      --radius: 10px;
+    }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: var(--paper);
+      margin: 0;
+      padding: 20px 16px 60px;
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    .container { max-width: 640px; margin: 0 auto; }
+
+    h1 {
+      font-family: "Noto Serif TC", "Noto Sans TC", serif;
+      font-size: 23px; font-weight: 700; letter-spacing: 0.02em;
+      margin: 4px 0 6px; color: var(--brand-dark);
+    }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+    .type-switch {
+      display: flex; gap: 8px; margin-bottom: 22px;
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 999px; padding: 4px;
+    }
+    .type-switch label {
+      flex: 1; text-align: center; padding: 10px 0;
+      border-radius: 999px; cursor: pointer;
+      font-size: 15px; font-weight: 600;
+      color: var(--muted); transition: background .15s ease, color .15s ease;
+    }
+    .type-switch input { display: none; }
+    .type-switch label.active { background: var(--brand); color: #fff; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 20px;
+      margin-bottom: 14px;
+    }
+    .card h2 {
+      font-size: 15px; font-weight: 700; margin: 0 0 16px;
+      color: var(--brand-dark);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card h2::before {
+      content: ""; display: inline-block; width: 4px; height: 15px;
+      background: var(--brand); border-radius: 2px; flex-shrink: 0;
+    }
+
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
+    label.required::after { content: " *"; color: var(--danger); font-weight: 700; }
+
+    /* 「四、物件資訊」欄位最多、最重複，排成兩欄比較不用一直滑動。
+       用多欄流版（columns）取代表格式網格（grid）：每個欄位各自往下
+       接續排列，不會因為左右兩格說明文字長短不一，被迫拉齊同一列高度、
+       造成輸入框高高低低對不齊；說明文字長的、複選/文字區域這些
+       內容較寬的欄位，用 column-span 撐滿整行寬度。 */
+    #typeFields {
+      columns: 2;
+      column-gap: 16px;
+    }
+    #typeFields > .field {
+      margin-bottom: 16px;
+      break-inside: avoid;
+    }
+    #typeFields > .field-wide { column-span: all; }
+    @media (max-width: 560px) {
+      #typeFields { columns: 1; }
+    }
+
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 8px;
+      background: #fff; color: var(--ink);
+      font-family: inherit;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    input::placeholder, textarea::placeholder { color: #a9b0a2; }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--brand);
+      box-shadow: 0 0 0 3px var(--brand-soft);
+    }
+    textarea { resize: vertical; min-height: 64px; }
+    select { appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366776c' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 10px center; background-size: 18px;
+      padding-right: 34px;
+    }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px 6px; }
+    .checkbox-group label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13.5px; font-weight: 400; color: var(--ink);
+      background: #fbfaf6; border: 1px solid var(--line); border-radius: 999px;
+      padding: 6px 12px 6px 10px; margin: 0; cursor: pointer;
+    }
+    .checkbox-group label:has(input:checked) {
+      background: var(--brand-soft); border-color: var(--brand); color: var(--brand-dark);
+    }
+    .checkbox-group input { width: auto; accent-color: var(--brand); }
+
+    .ratio-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    }
+    .ratio-row .ratio-name { font-size: 13.5px; color: var(--ink); min-width: 70px; }
+    .ratio-row input { width: 90px; }
+    .ratio-row .ratio-unit { font-size: 13.5px; color: var(--muted); }
+    .ratio-empty-hint { font-size: 13px; color: var(--muted); }
+
+
+    .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; white-space: pre-line; line-height: 1.55; }
+    .hint a { color: var(--brand); }
+    .other-input { margin-top: 8px; }
+
+    .district-entry {
+      display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 8px;
+      align-items: end; margin-bottom: 12px;
+      padding-bottom: 12px; border-bottom: 1px dashed var(--line);
+    }
+    .district-entry:last-child { border-bottom: none; margin-bottom: 4px; padding-bottom: 0; }
+    .district-entry.no-building { grid-template-columns: 1fr 1fr 1fr auto; }
+    .district-entry .mini-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 600; }
+    .district-entry select, .district-entry input { padding: 8px 10px; font-size: 13.5px; }
+    @media (max-width: 480px) {
+      .district-entry { grid-template-columns: 1fr 1fr; }
+      .district-entry .remove-btn { grid-column: 1 / -1; }
+    }
+
+    .remove-btn {
+      background: var(--danger-soft); color: var(--danger); border: none; border-radius: 8px;
+      padding: 8px 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .add-district-btn {
+      background: var(--brand-soft); color: var(--brand-dark);
+      border: 1px dashed var(--brand); border-radius: 8px;
+      padding: 10px 14px; cursor: pointer; font-size: 13.5px; font-weight: 600;
+      width: 100%; margin-top: 6px;
+    }
+
+    button.submit {
+      width: 100%; padding: 15px; font-size: 16px; font-weight: 700;
+      background: var(--brand); color: #fff; border: none; border-radius: 10px;
+      cursor: pointer; letter-spacing: 0.03em;
+      transition: background .15s ease;
+    }
+    button.submit:hover:not(:disabled) { background: var(--brand-dark); }
+    button.submit:disabled { background: #b9c3ba; cursor: not-allowed; }
+
+    .msg {
+      margin-top: 12px; padding: 13px 14px; border-radius: 8px;
+      font-size: 14px; line-height: 1.6; display: none;
+    }
+    .msg.success { background: var(--brand-soft); color: var(--brand-dark); display: block; }
+    .msg.error { background: var(--danger-soft); color: var(--danger); display: block; }
+  </style>
+</head>
+<body>
+  <div id="toastNotice"></div>
+  <div class="container">
+    <h1>委託物件資料輸入</h1>
+    <div class="subtitle">請依實際委託內容填寫，送出後會自動同步進總彙整表、個人試算表、物件簡表</div>
+
+    <div id="draftBanner" style="display:none; background:#fff8e1; border:1px solid #e0c341; border-radius:10px; padding:14px; margin-bottom:16px; font-size:14px; color:#5a4a00;">
+      偵測到瀏覽器裡有尚未送出的草稿，要繼續剛才填到一半的內容嗎？（照片沒辦法存進草稿，需要重新選取）
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button type="button" id="restoreDraftBtn" style="flex:1; padding:9px; background:#2f6f4e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">繼續使用草稿</button>
+        <button type="button" id="discardDraftBtn" style="flex:1; padding:9px; background:#eee; color:#333; border:none; border-radius:8px; cursor:pointer;">捨棄，重新開始</button>
+      </div>
+    </div>
+
+    <div class="type-switch">
+      <label id="typeLabel-廠房"><input type="radio" name="typeTab" value="廠房" checked><span>廠房</span></label>
+      <label id="typeLabel-土地"><input type="radio" name="typeTab" value="土地"><span>土地</span></label>
+      <label id="typeLabel-房屋"><input type="radio" name="typeTab" value="房屋"><span>房屋</span></label>
+    </div>
+
+    <form id="listingForm">
+
+      <!-- 一、基本資料（各類型共用） -->
+      <div class="card">
+        <h2>一、基本資料</h2>
+        <div class="field">
+          <label class="required">業務名單（可複選）</label>
+          <div class="checkbox-group" id="businessPersonGroup"></div>
+        </div>
+        <div class="field">
+          <label class="required">每人比例</label>
+          <div class="hint">勾選了幾位業務，下面就會出現幾格比例，填完送出時系統會自動判斷：比例最高的算「主要業務」，其他人算「次要業務」，不用自己再分主要/次要。</div>
+          <div id="businessRatioRows"></div>
+        </div>
+        <div class="field">
+          <label>中人比例</label>
+          <div class="hint">例：某中人20%；無則填「無」</div>
+          <input type="text" data-label="中人比例" placeholder="例：某中人20%；無則填「無」">
+        </div>
+      </div>
+
+      <!-- 二、委託內容（各類型共用） -->
+      <div class="card">
+        <h2>二、委託內容</h2>
+        <div class="field">
+          <label class="required">契約編號</label>
+          <div class="hint">若無委託請填「口約」</div>
+          <input type="text" data-label="契約編號" placeholder="若無委託請填「口約」">
+        </div>
+        <div class="field">
+          <label class="required">委託種類</label>
+          <select data-label="委託種類">
+            <option value="買賣">買賣</option>
+            <option value="租賃">租賃</option>
+          </select>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label class="required">合約起始</label>
+            <div class="hint">依據合約起始日填寫，口約請填寫填表日期，如：115年11月10日</div>
+            <input type="text" data-label="合約起始" placeholder="例：115年11月10日">
+          </div>
+          <div class="field">
+            <label class="required">合約到期</label>
+            <div class="hint">依據合約到期日填寫，口約到期日為填表日期往後推算1年，如：116年11月10日</div>
+            <input type="text" data-label="合約到期" placeholder="例：116年11月10日">
+          </div>
+        </div>
+        <div class="field">
+          <label class="required">委託人姓名</label>
+          <input type="text" data-label="委託人姓名">
+        </div>
+        <div class="field">
+          <label class="required">身份證字號或統編</label>
+          <input type="text" data-label="身份證字號或統編">
+        </div>
+        <div class="field">
+          <label class="required">委託人連絡電話</label>
+          <input type="text" data-label="委託人連絡電話">
+        </div>
+        <div class="field">
+          <label class="required">委託人聯絡地址</label>
+          <div class="row2">
+            <select id="clientAddrCounty"></select>
+            <select id="clientAddrTown"></select>
+          </div>
+          <input type="text" id="clientAddrDetail" placeholder="請輸入詳細地址（路名、巷弄門牌號等）" style="margin-top:8px;">
+        </div>
+      </div>
+
+      <!-- 地段連動選單，拆成「地號」「建號」兩部分各自可新增多筆，
+           送出時分別組合成 Form_Responses 的地段/地段+地號/地段+建號 三個欄位 -->
+      <div class="card">
+        <h2 id="districtSectionTitle">三、地段資訊</h2>
+        <div class="field">
+          <label>地號</label>
+          <div id="lotEntries"></div>
+          <button type="button" class="add-district-btn" id="addLotBtn">＋ 新增一筆地號</button>
+        </div>
+        <div class="field" id="buildingSection">
+          <label>建號</label>
+          <div id="buildingEntries"></div>
+          <button type="button" class="add-district-btn" id="addBuildingBtn">＋ 新增一筆建號</button>
+        </div>
+      </div>
+
+      <!-- 三、物件資訊（依類型切換） -->
+      <div class="card">
+        <h2>四、物件資訊</h2>
+        <div id="typeFields"></div>
+      </div>
+
+      <!-- 五、上傳照片 -->
+      <div class="card">
+        <h2>五、上傳照片</h2>
+        <div class="field">
+          <label>上傳照片／文件</label>
+          <input type="file" id="photoInput" accept="image/*,application/pdf" multiple>
+          <div class="hint">如果照片分散在不同資料夾，可以按好幾次「選擇檔案」，每次選一個資料夾的照片，會自動累加，不會蓋掉前面選的。如果數量比較多，也可以直接傳給秘書。</div>
+          <div id="photoList" style="margin-top:8px;"></div>
+        </div>
+        <div class="hint" id="docChecklistNote"></div>
+      </div>
+
+      <button type="submit" class="submit" id="submitBtn">送出</button>
+      <div class="msg" id="msgBox"></div>
+    </form>
+  </div>
+
+<script>
+// 後端（Apps Script 網頁應用程式）網址；重新「新增部署作業」網址會變，要同步更新這裡
+var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
+// ============================================================
+// 欄位設定：每個類型要顯示哪些欄位、用什麼輸入方式，順序對應
+// Form_Responses 實際欄位順序（詳見 .gs 檔頭的欄位位置對照表）。
+// type: 'text' | 'number' | 'textarea' | 'select' | 'checkbox'
+// ============================================================
+var DOC_CHECKLIST_TEXT =
+  '確認以下資料是否有準備\n' +
+  '1.委託契約書(含現況說明書)\n' +
+  '2.物件的各類謄本(土地謄本、建物謄本、地籍圖…等)  ※如未申調請找祕書申調\n' +
+  '3.土地使用分區證明(申調之後再提供)  ※廠房跟土地案件必調\n' +
+  '4.其他有關案件的資料(如：賣方/出租方提供的建築執照或使用執照、工廠登記證、權狀…等)\n' +
+  '填完表單後請將上述資料提供給秘書，謝謝d(`･∀･)b\n' +
+  '如為電子檔可以直接提供電子檔\n' +
+  '越早提供完成可以越早完成案件資料\n' +
+  '※六都專屬線上申請系統（支援線上即時或電子領件）\n' +
+  '臺北市：https://zone.udd.gov.taipei/\n' +
+  '新北市：https://urban.planning.ntpc.gov.tw/NtpcURInfo/\n' +
+  '桃園市：https://landuse.tycg.gov.tw/\n' +
+  '臺中市：https://urbanland.taichung.gov.tw/\n' +
+  '臺南市：https://onestop.tainan.gov.tw/eservice/apply_mode_directions2?itemId=1423\n' +
+  '高雄市：https://urban-web.kcg.gov.tw/KDA/web_page/KDAN030100.jsp?PK01=KDA010400\n' +
+  '※非六都縣市土地使用分區申調\n' +
+  '非六都縣市有些為內政部國土管理署維護，可以在線上填寫資料，但部分縣市仍可能需要完成線上繳費後，親自到地方公所領件。\n' +
+  '彰化縣：https://up.nlma.gov.tw/urn/\n' +
+  '屏東縣：https://up.nlma.gov.tw/urt/\n' +
+  '雲林縣：https://eservice.yunlin.gov.tw/ApplyCase/Agree/187/201907938?gomydata=true\n' +
+  '(僅所有權人可以網路申請)';
+
+var DIRECTIONS = ['東','西','南','北','西北','東北','西南','東南'];
+var YES_NO = ['是','否'];
+// 經濟部產業園區管理局轄下園區清單（不含科學園區管理局、縣市政府、公民營事業
+// 等其他機關管理的工業區/園區），用於「產業園區名稱」欄位的自動完成建議。
+// 非管理局轄下的園區，業務可以直接打字填「區外」或該園區實際名稱。
+// 管理局轄下產業園區依縣市分組，「產業園區名稱」欄位依「三、地段地號及
+// 建號資訊」第一筆地號選的縣市，動態顯示對應縣市的園區選項（見
+// updateParkNameOptions）。每個縣市都會有「區外」可以選。
+var PARK_BY_COUNTY = {
+  '台北市': ['南港軟體工業園區'],
+  '新北市': ['林口特定區(工二)', '瑞芳產業園區', '樹林產業園區', '新北產業園區', '土城產業園區'],
+  '基隆市': ['大武崙產業園區'],
+  '桃園市': ['大園產業園區', '林口特定區(工三)', '桃園幼獅產業園區', '龜山產業園區', '平鎮產業園區', '中壢產業園區', '觀音產業園區'],
+  '新竹市': ['新竹產業園區'],
+  '苗栗縣': ['竹南產業園區', '銅鑼產業園區', '頭份產業園區'],
+  '台中市': ['台中產業園區', '大甲幼獅產業園區', '台中港關連產業園區', '大里產業園區', '臺中港科技產業園區', '潭子科技產業園區', '台中軟體園區'],
+  '彰化縣': ['田中產業園區', '芳苑產業園區', '埤頭產業園區', '福興產業園區', '全興產業園區', '彰濱產業園區', '社頭織襪產業園區'],
+  '南投縣': ['南崗產業園區', '竹山產業園區'],
+  '雲林縣': ['元長產業園區', '豐田產業園區', '斗六產業園區', '雲林產業園區', '雲林離島式基礎產業園區'],
+  '嘉義縣': ['民雄產業園區', '朴子產業園區', '義竹產業園區', '頭橋產業園區', '嘉太產業園區', '馬稠後產業園區', '中埔產業園區', '水上產業園區'],
+  '台南市': ['安平產業園區', '台南產業園區', '永康產業園區', '官田產業園區', '新營產業園區', '新市產業園區'],
+  '高雄市': ['高雄臨海產業園區', '前鎮科技產業園區', '楠梓科技產業園區', '高雄軟體園區', '成功物流園區', '臨廣科技產業園區', '大發產業園區', '仁武產業園區', '永安產業園區', '鳳山產業園區', '林園產業園區', '大社產業園區', '北高雄產業園區'],
+  '屏東縣': ['屏南產業園區', '內埔產業園區', '屏東產業園區', '屏東科技產業園區'],
+  '宜蘭縣': ['龍德產業園區', '利澤產業園區'],
+  '花蓮縣': ['光華產業園區', '和平產業園區', '美崙產業園區', '豐樂產業園區'],
+};
+
+// 送出成功/失敗後跳出的明顯提示，固定在畫面最上方，不管使用者當時滾動到哪個位置
+// 都看得到，避免像之前那樣訊息顯示在表單最下面被忽略。
+var toastTimer_;
+function showToast(message, type) {
+  var toast = document.getElementById('toastNotice');
+  toast.className = type === 'error' ? 'error' : 'success';
+  toast.textContent = message;
+  toast.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  clearTimeout(toastTimer_);
+  toastTimer_ = setTimeout(function() { toast.style.display = 'none'; }, 5000);
+}
+
+// 把純文字說明裡的網址轉成可以點擊的連結（先跳脫 HTML 特殊字元，避免說明文字
+// 本身含有 < > & 之類符號時被誤判成標籤），保留原本的換行（white-space:
+// pre-line 這個 CSS 屬性會讓純文字裡的換行符號照樣顯示成換行）。
+function linkify(text) {
+  var escaped = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+}
+// 「一、基本資料」「二、委託內容」是固定寫死在 HTML 裡的共用欄位（不是從
+// FIELD_CONFIG 動態產生的），這幾個必填的標題要另外列在這裡，送出前檢查用。
+var STATIC_REQUIRED_LABELS = ['契約編號', '委託種類', '合約起始', '合約到期',
+  '委託人姓名', '身份證字號或統編', '委託人連絡電話', '委託人聯絡地址'];
+var LAND_ZONE_OPTIONS = [
+  '國土保育地區第1類(敏感度較高)', '國土保育地區第2類(敏感度次高)',
+  '國土保育地區第3類(國家公園)', '國土保育地區第4類(都市計畫保護區)',
+  '海洋資源地區第1-1類(保護區)', '海洋資源地區第1-2類(排他性)',
+  '海洋資源地區第1-3類(儲備用地)', '海洋資源地區第2類(相容性)', '海洋資源地區第3類(待定區)',
+  '農業發展地區第1類(優良農地)', '農業發展地區第2類(良好農地)', '農業發展地區第3類(坡地農地)',
+  '農業發展地區第4類(鄉村區、原民聚落)', '農業發展地區第5類(都市計畫農業區)',
+  '城鄉發展地區第1類(都市計畫區)', '城鄉發展地區第2-1類(鄉村區等)',
+  '城鄉發展地區第2-2類(開發許可)', '城鄉發展地區第2-3類(重大計畫)',
+  '城鄉發展地區第3類(原民鄉村區)',
+];
+
+var FIELD_CONFIG = {
+  '廠房': [
+    { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
+    { label: '單價', type: 'text', required: true, hint: '請填寫單位。範例：8萬/坪、30元/坪/月、10萬/月' },
+    { label: '總價', type: 'text', required: true, hint: '請填寫單位，盡量取整數。範例：2380萬' },
+    { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
+    { label: '使用狀態補充說明(廠房)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
+    { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
+    { label: '使用分區', type: 'checkbox-other-conditional', required: true,
+      hint: '1.都市計畫請依據土地實際都市計畫分區填寫\n2.非都市計畫請填寫使用分區+用地類別\n有其他分區可以另外填寫\n★請記得申調使用分區證明!!',
+      optionsByPlan: {
+        '都市計畫': ['都計-甲種工業區','都計-乙種工業區','都計-特種工業區','都計-零星工業區','都計-農業區'],
+        '非都市計畫': ['非都-工業區丁種建築用地','非都-一般農業區丁種建築用地','非都-特定農業區丁種建築用地',
+          '非都-一般農業區農牧用地','非都-特定農業區農牧用地'],
+      } },
+    { label: '都市計畫細部計畫', type: 'textarea', required: true, group: 'urbanPlan',
+      hint: '如果為都市計畫請查詢土地是什麼細部計畫並填寫\n例如：擬定谷關風景特定區計畫細部計畫案、變更臺中市都市計畫(新市政中心專用區南側)細部計畫(配合醫療專用區變更附帶條件修訂土地使用分區管制要點)\n★要注意特定非都有另外的細部計畫規定!!(如：嘉義大埔美)\n※各縣市細部計畫查詢(有些縣市不包含，台中的請點下面的網址)\nhttps://ngis.nlma.gov.tw/TCDPageD2.aspx\n※台中市細部計畫查詢\nhttps://www.ud.taichung.gov.tw/2878076/post' },
+    { label: '國土功能分區', type: 'checkbox', options: LAND_ZONE_OPTIONS, required: true, hint: '國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
+    { label: '產業園區名稱', type: 'select-other', required: true, options: [], extraDetailFor: ['區外'], skipOtherOption: true, dynamicParkOptions: true,
+      hint: '先在下面「三、地段地號及建號資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
+    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區' },
+    { label: '詳細地址', type: 'address-detail', required: true },
+    { label: '土地面積(m²)', type: 'number', required: true, showPing: true },
+    { label: '主建物面積(m²)', type: 'number', required: true, showPing: true },
+    { label: '附屬建物面積(m²)', type: 'number', required: true, showPing: true },
+    { label: '加蓋面積(m²)', type: 'number', showPing: true },
+    { label: '加蓋面積位於何處(廠房)', type: 'multi-text', hint: '如果加蓋不只一處，可能有多筆資料，點「新增一筆」逐項填寫。' },
+    { label: '建蔽率', type: 'text', required: true },
+    { label: '容積率', type: 'text', required: true },
+    { label: '基地深度', type: 'text', required: true },
+    { label: '基地面寬', type: 'text', required: true },
+    { label: '面臨路寬', type: 'text', required: true },
+    { label: '建築完成日', type: 'text', required: true, placeholder: '例：90年10月4日' },
+    { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總樓層數，例如：4；如果只提供其中一層樓，請填該樓層，例如：3F(僅提供3樓)；如果基地上有好幾棟不同樓層的建物，請簡短列出，例如：廠房2F、倉庫1F、宿舍3F' },
+    { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)；如果好幾棟都有地下室，請簡短列出，例如：廠房B1、宿舍B1' },
+    { label: '物件格局(廠房)', type: 'room-layout', required: true },
+    { label: '建物類別', type: 'checkbox-other', required: true, options: ['廠房','廠辦','農地工廠','倉庫'] },
+    { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
+    { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
+    { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
+    { label: '土地朝向(廠房)', type: 'select', options: DIRECTIONS, required: true },
+    { label: '簷高(滴水高度)', type: 'per-floor-height', hint: '按「＋新增一棟」，打棟別名稱+地上/地下幾層，會自動展開每層的簷高欄位分別填寫；基地上不只一棟就一棟一棟新增。可以對照上面「地段地號及建號資訊」填了幾筆建號，這裡至少也要有對應的棟數；未保存登記的建物沒有建號，請自行額外新增。(滴水高度：雨水離開廠房屋頂，開始下墜時離地面的高度)' },
+    { label: '樓地板載重', type: 'multi-text', hint: '有資訊者填寫。指樓地板(公斤/平方公尺)、貨梯(公斤或公噸)...、天車(公斤或公噸)...等載重，可能不只一種，點「新增一筆」逐項填寫。' },
+    { label: '可供用水量', type: 'text', hint: '數值+單位。範例：80立方米/日' },
+    { label: '可供用電量', type: 'text', hint: '數值+單位。範例：100hp/kw' },
+    { label: '是否有汙水處理廠', type: 'select', options: YES_NO, required: true },
+    { label: '有無車位', type: 'select', options: YES_NO, required: true, controlsGroup: 'parking', showWhen: '是' },
+    { label: '是否有廠登', type: 'select', options: YES_NO, required: true },
+    { label: '附屬設備', type: 'checkbox-other', quantityFor: ['天車','吊車','客梯','貨梯'],
+      options: ['天車','吊車','客梯','貨梯','卸貨碼頭','汙水處理設備','蓄水池','瓦斯','辦公室','空調系統','電力設備','無塵室','消防設備','會議室','水井'] },
+    { label: '半徑300公尺是否有嫌惡設施', type: 'textarea', required: true,
+      hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
+    { label: '特色說明', type: 'textarea', required: true,
+      hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！(如: 工業區生活機能高、出入方便免倒車/貨櫃車迴轉空間大、近交流道/學校/市場/高鐵站、屋況佳、鋼骨結構、大面寬/前後有路、獨棟行政大樓/適合企業總部、可分割、角地、體地無汙染整治公告......等。)' },
+    { label: '其他備註說明', type: 'textarea', hint: '如產權、帶看注意事項等' },
+    { label: '建物及周圍環境其他說明(廠房)', type: 'textarea', required: true,
+      hint: '如：廠房為凶宅、隔壁為高汙染行業、附近有公告汙染場址、廠房位於斷層帶等\n※土地汙染查詢\nhttps://sgw.moenv.gov.tw/SgwSiteInfo/SituationMap/\n※土地參考資訊檔查詢\nhttps://moiref.moi.gov.tw/pubref/\n※地質敏感查詢\nhttps://eland.nlma.gov.tw/seportal (正式申調平台)\nhttps://gsa.gsmma.gov.tw/gwh/gsb97-1/sys_2014b_pg/index.cfm (地質敏感區查詢系統)\nhttps://dmap.ncdr.nat.gov.tw/1109/map/ (3D潛勢地圖)' },
+    { label: '車位編號', type: 'text', placeholder: '請填寫編號，若無請填寫無', group: 'parking', required: true },
+    { label: '車位數量', type: 'text', placeholder: '沒辦法計算請填0', group: 'parking', required: true },
+    { label: '車位產權', type: 'select', options: ['無產權','獨立產權','主附建物內含','公設內含'], group: 'parking', required: true },
+    { label: '車位型態', type: 'select', options: ['固定車位','車位另租','抽籤決定','先到先停','排隊等候','停自有地'], group: 'parking', required: true },
+    { label: '停車方式', type: 'select', options: ['坡道/平面','坡道/機械','昇降/平面','昇降/機械','平移/機械','庭院','獨立車庫','機械循環式車位'], group: 'parking', required: true },
+    { label: '車位管理費', type: 'text', group: 'parking', required: true },
+    { label: '車位說明', type: 'text', group: 'parking', required: true },
+  ],
+  '土地': [
+    { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
+    { label: '單價', type: 'text', required: true, hint: '請填寫單位。範例：8萬/坪、30元/坪/月、10萬/月' },
+    { label: '總價', type: 'text', required: true, hint: '請填寫單位，盡量取整數。範例：2380萬' },
+    { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
+    { label: '使用狀態補充說明(土地)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
+    { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
+    { label: '使用分區', type: 'checkbox-other-conditional', required: true,
+      hint: '1.都市計畫請依據土地實際都市計畫分區填寫\n2.非都市計畫請填寫使用分區+用地類別\n有其他分區可以另外填寫\n★請記得申調使用分區證明!!',
+      optionsByPlan: {
+        '都市計畫': ['都計-甲種工業區','都計-乙種工業區','都計-特種工業區','都計-零星工業區','都計-農業區'],
+        '非都市計畫': ['非都-工業區丁種建築用地','非都-一般農業區丁種建築用地','非都-特定農業區丁種建築用地',
+          '非都-一般農業區農牧用地','非都-特定農業區農牧用地'],
+      } },
+    { label: '都市計畫細部計畫', type: 'textarea', required: true, group: 'urbanPlan',
+      hint: '如果為都市計畫請查詢土地是什麼細部計畫並填寫\n例如：擬定谷關風景特定區計畫細部計畫案、變更臺中市都市計畫(新市政中心專用區南側)細部計畫(配合醫療專用區變更附帶條件修訂土地使用分區管制要點)\n★要注意特定非都有另外的細部計畫規定!!(如：嘉義大埔美)\n※各縣市細部計畫查詢(有些縣市不包含，台中的請點下面的網址)\nhttps://ngis.nlma.gov.tw/TCDPageD2.aspx\n※台中市細部計畫查詢\nhttps://www.ud.taichung.gov.tw/2878076/post' },
+    { label: '國土功能分區', type: 'checkbox', options: LAND_ZONE_OPTIONS, required: true, hint: '國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
+    { label: '產業園區名稱(土地)', type: 'select-other', options: [], extraDetailFor: ['區外', '非園區'], skipOtherOption: true, dynamicParkOptions: true, dynamicParkExtraOption: '非園區',
+      hint: '先在下面「地段地號資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」；不是產業用地（例如農地、建地）請選「非園區」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
+    { label: '案件坐落', type: 'text', autoFromDistrict: true },
+    { label: '土地面積(m²)', type: 'number', required: true, showPing: true, hint: '從權狀本填寫，無需填單位。範例：13000' },
+    { label: '建蔽率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
+    { label: '容積率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
+    { label: '基地深度', type: 'text', required: true, hint: '無需填單位。範例：150' },
+    { label: '基地面寬', type: 'text', required: true, hint: '無需填單位。範例：60' },
+    { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
+    { label: '土地朝向(土地)', type: 'select', options: DIRECTIONS, required: true },
+    { label: '半徑300公尺是否有嫌惡設施', type: 'textarea', required: true,
+      hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
+    { label: '特色說明', type: 'textarea', required: true,
+      hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！' },
+    { label: '其他備註說明', type: 'textarea', hint: '如產權、帶看注意事項等' },
+    { label: '周圍環境其他說明(土地)', type: 'textarea', required: true,
+      hint: '如：土地為凶宅、鄰地為高汙染行業、附近有公告汙染場址、土地位於斷層帶等\n※土地汙染查詢\nhttps://sgw.moenv.gov.tw/SgwSiteInfo/SituationMap/\n※土地參考資訊檔查詢\nhttps://moiref.moi.gov.tw/pubref/\n※地質敏感查詢\nhttps://eland.nlma.gov.tw/seportal (正式申調平台)\nhttps://gsa.gsmma.gov.tw/gwh/gsb97-1/sys_2014b_pg/index.cfm (地質敏感區查詢系統)\nhttps://dmap.ncdr.nat.gov.tw/1109/map/ (3D潛勢地圖)' },
+  ],
+  '房屋': [
+    { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
+    { label: '單價', type: 'text', required: true, hint: '請填寫單位。範例：8萬/坪、30元/坪/月、10萬/月' },
+    { label: '總價', type: 'text', required: true, hint: '請填寫單位，盡量取整數。範例：2380萬' },
+    { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
+    { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
+    { label: '使用狀態補充說明(房屋)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
+    { label: '使用分區', type: 'checkbox-other-conditional', required: true,
+      hint: '1.都市計畫請依據土地實際都市計畫分區填寫\n2.非都市計畫請填寫使用分區+用地類別\n有其他分區可以另外填寫\n★請記得申調使用分區證明!!',
+      optionsByPlan: {
+        '都市計畫': ['都計-住宅區','都計-商業區'],
+        '非都市計畫': ['非都-鄉村區甲種建築用地','非都-鄉村區乙種建築用地','非都-鄉村區丙種建築用地'],
+      } },
+    { label: '國土功能分區', type: 'checkbox', options: LAND_ZONE_OPTIONS, required: true, hint: '國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
+    { label: '社區大樓名稱', type: 'text', required: true },
+    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區' },
+    { label: '詳細地址', type: 'address-detail', required: true },
+    { label: '土地面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
+    { label: '主建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
+    { label: '附屬建物面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。如無附屬建物請填0，範例：500', showPing: true },
+    { label: '加蓋面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
+    { label: '共同使用面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。如無共同使用面積請填0，範例：13000', showPing: true },
+    { label: '建蔽率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
+    { label: '容積率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
+    { label: '建物類別', type: 'checkbox-other', required: true, options: ['透天厝','公寓','華廈','電梯大樓'] },
+    { label: '基地深度', type: 'text', hint: '無需填單位。範例：150' },
+    { label: '基地面寬', type: 'text', hint: '無需填單位。範例：60' },
+    { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
+    { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
+    { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
+    { label: '建築完成日', type: 'text', required: true, hint: '請填寫民國年，如：115年11月10日' },
+    { label: '所在樓別', type: 'text', required: true, hint: '物件位於幾樓' },
+    { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫' },
+    { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)' },
+    { label: '有無車位', type: 'select', options: ['有','無'], required: true, controlsGroup: 'parking', showWhen: '有' },
+    { label: '車位編號', type: 'text', placeholder: '請填寫編號，若無請填寫無', group: 'parking', required: true },
+    { label: '車位數量', type: 'text', placeholder: '沒辦法計算請填0', group: 'parking', required: true },
+    { label: '車位產權', type: 'select', options: ['無產權','獨立產權','主附建物內含','公設內含'], group: 'parking', required: true },
+    { label: '車位型態', type: 'select', options: ['固定車位','車位另租','抽籤決定','先到先停','排隊等候','停自有地'], group: 'parking', required: true },
+    { label: '停車方式', type: 'select', options: ['坡道/平面','坡道/機械','昇降/平面','昇降/機械','平移/機械','庭院','獨立車庫','機械循環式車位'], group: 'parking', required: true },
+    { label: '車位管理費', type: 'text', group: 'parking', required: true },
+    { label: '車位說明', type: 'text', group: 'parking', required: true },
+    { label: '屋主是否一年內取得', type: 'select', options: YES_NO, required: true },
+    { label: '資訊為實價登錄或屋主提供?', type: 'select', options: ['實價登錄','屋主提供'], required: true },
+    { label: '取得年月', type: 'text', required: true },
+    { label: '取得成交價格', type: 'text', required: true },
+    { label: '小學', type: 'text' },
+    { label: '國中', type: 'text' },
+    { label: '高中', type: 'text' },
+    { label: '大學', type: 'text' },
+    { label: '市場購物', type: 'text' },
+    { label: '公園綠地', type: 'text' },
+    { label: '醫療機構', type: 'text' },
+    { label: '鄰近交通', type: 'text' },
+    { label: '電梯數', type: 'text' },
+    { label: '每層戶數', type: 'text' },
+    { label: '物件格局', type: 'room-layout', required: true },
+    { label: '加蓋格局', type: 'room-layout' },
+    { label: '是否有留鑰匙', type: 'select', options: YES_NO, required: true },
+    { label: '管理方式', type: 'checkbox', options: ['無','保全公司','管理員','守衛室','固定巡邏','社區人員','保全設施'], required: true },
+    { label: '管理費', type: 'select', options: ['有','無'], required: true },
+    { label: '管理費用', type: 'text', hint: '有請寫管理費用金額，無請填0', requiredIf: { label: '管理費', value: '有' } },
+    { label: '繳費方式', type: 'select', options: ['月繳','雙月繳','季繳','半年繳','年繳','一次繳'], required: true },
+    { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
+    { label: '大門朝向', type: 'select', options: DIRECTIONS, required: true },
+    { label: '落地窗朝向', type: 'select', options: DIRECTIONS, required: true },
+    { label: '附屬設備', type: 'checkbox-other',
+      options: ['冷氣','洗衣機','冰箱','熱水器','瓦斯爐','床組','衣櫃','沙發','餐桌','電視','網路','對講機','保全系統','電梯'] },
+    { label: '半徑300公尺是否有嫌惡設施', type: 'textarea', required: true,
+      hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
+    { label: '特色說明', type: 'textarea', required: true,
+      hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！' },
+    { label: '其他備註說明', type: 'textarea', hint: '如產權、帶看注意事項等' },
+  ],
+};
+
+var personList = [];
+var districtData = {};
+var currentType = '廠房';
+
+// ------------------------------------------------------------
+// 初始化：向後端要業務清單、地段資料。加上失敗處理，避免後端版本沒更新
+// 或呼叫出錯時，整頁安靜地空白、看不出原因。
+// ------------------------------------------------------------
+runServer('getListingFormOptions')
+  .then(function(options) {
+    personList = options.personList || [];
+    districtData = options.districtData || {};
+    renderPersonCheckboxes();
+    renderTypeFields(currentType);
+    rebuildDistrictEntries();
+    setupClientAddressSelectors();
+  })
+  .catch(function(err) {
+    var msgBox = document.getElementById('msgBox');
+    msgBox.className = 'msg error';
+    msgBox.textContent = '表單初始化失敗，請確認 Apps Script 已部署最新版本（管理部署作業→編輯→版本選「新版本」）。錯誤訊息：' + err.message;
+    msgBox.style.display = 'block';
+    // 就算初始化失敗，還是先把物件資訊欄位畫出來（沒有下拉選單資料沒關係，
+    // 至少業務姓名/地段連動選單以外的欄位可以正常填寫，不用整頁卡死）
+    renderTypeFields(currentType);
+  })
+  ;
+
+// 「委託人聯絡地址」縣市/鄉鎮區連動選單（沿用地段資料裡的縣市/鄉鎮清單，
+// 不需要「段」，選好之後跟後面的詳細地址文字框一起在送出時組合成一個欄位）
+function setupClientAddressSelectors() {
+  var countySelect = document.getElementById('clientAddrCounty');
+  var townSelect = document.getElementById('clientAddrTown');
+  if (!countySelect || !townSelect) return;
+
+  var blank = document.createElement('option');
+  blank.value = ''; blank.textContent = '請選擇縣市';
+  countySelect.appendChild(blank);
+  Object.keys(districtData).forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    countySelect.appendChild(o);
+  });
+
+  countySelect.addEventListener('change', function() {
+    townSelect.innerHTML = '<option value="">請選擇鄉鎮區</option>';
+    var towns = districtData[countySelect.value] || {};
+    Object.keys(towns).forEach(function(t) {
+      var o = document.createElement('option');
+      o.value = t; o.textContent = t;
+      townSelect.appendChild(o);
+    });
+  });
+  townSelect.innerHTML = '<option value="">請選擇鄉鎮區</option>';
+}
+
+function renderPersonCheckboxes() {
+  var container = document.getElementById('businessPersonGroup');
+  container.innerHTML = '';
+  personList.forEach(function(name) {
+    var lbl = document.createElement('label');
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = name;
+    cb.className = 'businessPersonCheckbox';
+    cb.addEventListener('change', function() { updateRatioRows(); });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(name));
+    container.appendChild(lbl);
+  });
+
+  // 「其他」選項：名單裡沒有的人，勾選後可以新增多筆姓名（不限一位）
+  var otherLbl = document.createElement('label');
+  var otherCb = document.createElement('input');
+  otherCb.type = 'checkbox';
+  otherCb.value = '其他';
+  otherCb.className = 'businessPersonCheckbox businessPersonOtherCheckbox';
+  otherLbl.appendChild(otherCb);
+  otherLbl.appendChild(document.createTextNode('其他'));
+  container.appendChild(otherLbl);
+
+  var otherNamesWrap = document.createElement('div');
+  otherNamesWrap.className = 'business-other-names-wrap';
+  otherNamesWrap.style.display = 'none';
+  otherNamesWrap.style.marginTop = '6px';
+
+  function addOtherNameRow() {
+    var row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.gap = '6px';
+    row.style.marginBottom = '4px';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'businessPersonOtherInput other-input';
+    input.placeholder = '請輸入姓名';
+    input.style.width = '140px';
+    input.addEventListener('input', function() { updateRatioRows(); });
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '刪除';
+    removeBtn.addEventListener('click', function() {
+      row.remove();
+      updateRatioRows();
+    });
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    otherNamesWrap.appendChild(row);
+  }
+  addOtherNameRow(); // 預設先給一筆
+
+  var addOtherBtn = document.createElement('button');
+  addOtherBtn.type = 'button';
+  addOtherBtn.className = 'add-district-btn';
+  addOtherBtn.textContent = '＋ 新增一位';
+  addOtherBtn.addEventListener('click', addOtherNameRow);
+  otherNamesWrap.appendChild(addOtherBtn);
+
+  otherCb.addEventListener('change', function() {
+    otherNamesWrap.style.display = otherCb.checked ? 'block' : 'none';
+    updateRatioRows();
+  });
+
+  container.appendChild(otherNamesWrap);
+
+  updateRatioRows();
+}
+
+// 目前勾選的業務姓名清單（DOM 順序），「其他」勾選時改用文字框裡填的姓名
+// （可能有好幾筆，每一筆非空白的都算一位）
+function getCheckedPersonNames() {
+  var names = [];
+  Array.prototype.slice.call(document.querySelectorAll('.businessPersonCheckbox:checked')).forEach(function(cb) {
+    if (cb.classList.contains('businessPersonOtherCheckbox')) {
+      Array.prototype.slice.call(document.querySelectorAll('.businessPersonOtherInput')).forEach(function(input) {
+        var v = input.value.trim();
+        if (v) names.push(v);
+      });
+    } else {
+      names.push(cb.value);
+    }
+  });
+  return names;
+}
+
+// 依目前勾選的業務名單，重新畫出對應數量的比例輸入格（一人一格），
+// 順序跟勾選順序（DOM 順序）一致。已經輸入過的比例值，換人勾選時盡量保留
+// （用姓名對應，不會因為重新畫格子就消失）。送出時再依比例高低分主要/次要。
+function updateRatioRows() {
+  var rowsContainer = document.getElementById('businessRatioRows');
+
+  var existingValues = {};
+  rowsContainer.querySelectorAll('.ratio-row').forEach(function(row) {
+    existingValues[row.getAttribute('data-name')] = row.querySelector('input').value;
+  });
+
+  var checkedNames = getCheckedPersonNames();
+  rowsContainer.innerHTML = '';
+
+  if (checkedNames.length === 0) {
+    var emptyHint = document.createElement('div');
+    emptyHint.className = 'ratio-empty-hint';
+    emptyHint.textContent = '尚未勾選業務名單';
+    rowsContainer.appendChild(emptyHint);
+    return;
+  }
+
+  checkedNames.forEach(function(name) {
+    var row = document.createElement('div');
+    row.className = 'ratio-row';
+    row.setAttribute('data-name', name);
+    var nameSpan = document.createElement('span');
+    nameSpan.className = 'ratio-name';
+    nameSpan.textContent = name;
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.placeholder = '例如 70';
+    if (existingValues[name] !== undefined) input.value = existingValues[name];
+    var unit = document.createElement('span');
+    unit.className = 'ratio-unit';
+    unit.textContent = '%';
+    row.appendChild(nameSpan);
+    row.appendChild(input);
+    row.appendChild(unit);
+    rowsContainer.appendChild(row);
+  });
+}
+
+// 依「比例最高的算主要業務，其他算次要業務」的規則，把目前勾選的業務名單
+// 拆成 { primaryNames, primaryRatios, secondaryNames, secondaryRatios } 四個
+// 陣列（都是依原本勾選順序排列，只是分成兩組）。比例並列最高的，全部算主要。
+function splitPrimarySecondaryByRatio() {
+  var rowsContainer = document.getElementById('businessRatioRows');
+  var entries = Array.prototype.slice.call(rowsContainer.querySelectorAll('.ratio-row')).map(function(row) {
+    return { name: row.getAttribute('data-name'), ratio: row.querySelector('input').value };
+  });
+  if (entries.length === 0) {
+    return { primaryNames: [], primaryRatios: [], secondaryNames: [], secondaryRatios: [] };
+  }
+
+  var maxRatio = Math.max.apply(null, entries.map(function(e) { return parseFloat(e.ratio) || -Infinity; }));
+
+  var primaryNames = [], primaryRatios = [], secondaryNames = [], secondaryRatios = [];
+  entries.forEach(function(e) {
+    var num = parseFloat(e.ratio);
+    if (!isNaN(num) && num === maxRatio) {
+      primaryNames.push(e.name);
+      primaryRatios.push(e.ratio);
+    } else {
+      secondaryNames.push(e.name);
+      secondaryRatios.push(e.ratio);
+    }
+  });
+  return { primaryNames: primaryNames, primaryRatios: primaryRatios, secondaryNames: secondaryNames, secondaryRatios: secondaryRatios };
+}
+
+// ------------------------------------------------------------
+// 類型切換
+// ------------------------------------------------------------
+document.querySelectorAll('input[name="typeTab"]').forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    currentType = this.value;
+    document.querySelectorAll('.type-switch label').forEach(function(l) { l.classList.remove('active'); });
+    document.getElementById('typeLabel-' + currentType).classList.add('active');
+    renderTypeFields(currentType);
+    rebuildDistrictEntries();
+  });
+});
+document.getElementById('typeLabel-廠房').classList.add('active');
+
+function renderTypeFields(typeTab) {
+  var container = document.getElementById('typeFields');
+  container.innerHTML = '';
+  var fields = FIELD_CONFIG[typeTab] || [];
+  var urbanPlanSelectRef = null; // 「都市或非都市計畫」的 select 元素，「使用分區」用它決定選項
+  var landUseRebuildFn = null; // 「使用分區」選項的重建函式，plan select 改變時呼叫
+  var WIDE_FIELD_TYPES = ['textarea', 'checkbox', 'checkbox-other', 'checkbox-other-conditional', 'multi-text', 'address-detail'];
+  fields.forEach(function(f) {
+    var wrap = document.createElement('div');
+    wrap.className = 'field' + (WIDE_FIELD_TYPES.indexOf(f.type) !== -1 ? ' field-wide' : '');
+    if (f.group) wrap.setAttribute('data-group', f.group);
+
+    var lbl = document.createElement('label');
+    if (f.required) lbl.className = 'required';
+    lbl.textContent = f.label;
+    wrap.appendChild(lbl);
+
+    // 說明文字放在題目正下方、輸入框正上方（跟原本 Google 表單版面一致），
+    // 網址會轉成可以點擊的連結
+    if (f.hint) {
+      var hintElTop = document.createElement('div');
+      hintElTop.className = 'hint';
+      hintElTop.innerHTML = linkify(f.hint);
+      wrap.appendChild(hintElTop);
+    }
+
+    var el;
+    if (f.type === 'select') {
+      el = document.createElement('select');
+      el.setAttribute('data-label', f.label);
+      var blankOpt = document.createElement('option');
+      blankOpt.value = ''; blankOpt.textContent = '請選擇';
+      el.appendChild(blankOpt);
+      f.options.forEach(function(opt) {
+        var o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        el.appendChild(o);
+      });
+      if (f.controlsGroup) {
+        el.addEventListener('change', function() {
+          toggleGroup(f.controlsGroup, el.value === f.showWhen);
+        });
+      }
+      if (f.isPlanTypeSelect) {
+        urbanPlanSelectRef = el;
+        el.addEventListener('change', function() {
+          if (landUseRebuildFn) landUseRebuildFn(el.value);
+        });
+      }
+    } else if (f.type === 'select-other') {
+      el = document.createElement('select');
+      el.setAttribute('data-label', f.label);
+      var blankOpt2 = document.createElement('option');
+      blankOpt2.value = ''; blankOpt2.textContent = '請選擇';
+      el.appendChild(blankOpt2);
+      f.options.forEach(function(opt) {
+        var o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        el.appendChild(o);
+      });
+      if (!f.skipOtherOption) {
+        var otherOpt = document.createElement('option');
+        otherOpt.value = '其他'; otherOpt.textContent = '其他';
+        el.appendChild(otherOpt);
+      }
+
+      // 除了「其他」，有些選項本身也需要補充說明才夠具體（例如「產業園區名稱」
+      // 選「區外」時，還是要另外講是什麼用地/哪個園區），用 f.extraDetailFor
+      // 列出這些選項；「其他」的補充文字會整個取代選到的值，其他選項的補充
+      // 文字則是接在選到的值後面（例如「區外(南屯工業區)」）。
+      var extraDetailOptions = (f.extraDetailFor || []).concat(['其他']);
+      var otherInput = document.createElement('input');
+      otherInput.type = 'text';
+      otherInput.className = 'other-input';
+      otherInput.placeholder = '請說明';
+      otherInput.style.display = 'none';
+      el.addEventListener('change', function() {
+        var needsDetail = extraDetailOptions.indexOf(el.value) !== -1;
+        otherInput.style.display = needsDetail ? '' : 'none';
+        otherInput.placeholder = (el.value === '其他') ? '請說明' : ('請說明是什麼用地或哪個園區');
+      });
+      wrap.appendChild(el);
+      wrap.appendChild(otherInput);
+      container.appendChild(wrap);
+      return;
+    } else if (f.type === 'multi-text') {
+      var multiWrap = document.createElement('div');
+      multiWrap.setAttribute('data-multi-label', f.label);
+      var entriesDiv = document.createElement('div');
+      multiWrap.appendChild(entriesDiv);
+
+      function addMultiRow() {
+        var row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '8px';
+        row.style.marginBottom = '6px';
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'multi-text-input';
+        input.style.flex = '1';
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = '刪除';
+        removeBtn.addEventListener('click', function() { row.remove(); });
+        row.appendChild(input);
+        row.appendChild(removeBtn);
+        entriesDiv.appendChild(row);
+      }
+      addMultiRow();
+
+      var addMultiBtn = document.createElement('button');
+      addMultiBtn.type = 'button';
+      addMultiBtn.className = 'add-district-btn';
+      addMultiBtn.textContent = '＋ 新增一筆';
+      addMultiBtn.addEventListener('click', addMultiRow);
+      multiWrap.appendChild(addMultiBtn);
+
+      wrap.appendChild(multiWrap);
+      container.appendChild(wrap);
+      return;
+    } else if (f.type === 'per-floor-height') {
+      // 直接用「棟別」的方式填簷高：新增一棟、打棟別名稱+地上/地下幾層，
+      // 系統自動展開那幾層的高度欄位。單一建物就新增一棟就好，
+      // 好幾棟不同樓層數的話，一棟一棟新增即可。
+      var extraFloorWrap = document.createElement('div');
+      extraFloorWrap.setAttribute('data-extra-floor-label', f.label);
+
+      var extraFloorHint = document.createElement('div');
+      extraFloorHint.className = 'ratio-empty-hint';
+      extraFloorHint.style.marginBottom = '4px';
+      extraFloorHint.textContent = '按下面「＋新增一棟」，打棟別名稱+層數，就會自動展開每層的簷高欄位；如果只有一棟，新增一棟填就好。';
+      extraFloorWrap.appendChild(extraFloorHint);
+
+
+      var buildingBlocksDiv = document.createElement('div');
+      extraFloorWrap.appendChild(buildingBlocksDiv);
+
+      function addBuildingBlock(prefillName, prefillAbove, prefillBelow, prefillHeights) {
+        var block = document.createElement('div');
+        block.className = 'building-block';
+        block.style.border = '1px dashed var(--line)';
+        block.style.borderRadius = '8px';
+        block.style.padding = '10px';
+        block.style.marginBottom = '10px';
+
+        var headerRow = document.createElement('div');
+        headerRow.style.display = 'flex';
+        headerRow.style.flexWrap = 'wrap';
+        headerRow.style.gap = '6px';
+        headerRow.style.alignItems = 'center';
+        headerRow.style.marginBottom = '6px';
+
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'building-name-input';
+        nameInput.placeholder = '棟別名稱，例如 廠房';
+        nameInput.style.width = '110px';
+        if (prefillName) nameInput.value = prefillName;
+
+        var aboveInput = document.createElement('input');
+        aboveInput.type = 'number';
+        aboveInput.min = '0';
+        aboveInput.className = 'building-above-input';
+        aboveInput.placeholder = '地上幾層';
+        aboveInput.style.width = '80px';
+        if (prefillAbove) aboveInput.value = prefillAbove;
+
+        var belowInput = document.createElement('input');
+        belowInput.type = 'number';
+        belowInput.min = '0';
+        belowInput.className = 'building-below-input';
+        belowInput.placeholder = '地下幾層';
+        belowInput.style.width = '80px';
+        if (prefillBelow) belowInput.value = prefillBelow;
+
+        var removeBlockBtn = document.createElement('button');
+        removeBlockBtn.type = 'button';
+        removeBlockBtn.className = 'remove-btn';
+        removeBlockBtn.textContent = '刪除整棟';
+        removeBlockBtn.addEventListener('click', function() { block.remove(); });
+
+        headerRow.appendChild(nameInput);
+        headerRow.appendChild(aboveInput);
+        headerRow.appendChild(document.createTextNode('樓(地上)'));
+        headerRow.appendChild(belowInput);
+        headerRow.appendChild(document.createTextNode('樓(地下)'));
+        headerRow.appendChild(removeBlockBtn);
+        block.appendChild(headerRow);
+
+        var floorsDiv = document.createElement('div');
+        block.appendChild(floorsDiv);
+
+        function regenerateBuildingFloors() {
+          var name = nameInput.value.trim() || '(未命名棟別)';
+          var above = Math.min(parseInt(aboveInput.value, 10) || 0, 30);
+          var below = Math.min(parseInt(belowInput.value, 10) || 0, 30);
+
+          var existing = {};
+          floorsDiv.querySelectorAll('.building-floor-row').forEach(function(row) {
+            existing[row.getAttribute('data-floor-key')] = row.querySelector('input').value;
+          });
+          if (prefillHeights) { Object.keys(prefillHeights).forEach(function(k) { if (existing[k] === undefined) existing[k] = prefillHeights[k]; }); prefillHeights = null; }
+
+          floorsDiv.innerHTML = '';
+          var floorKeys = [];
+          for (var i = 1; i <= above; i++) floorKeys.push(name + i + 'F');
+          for (var j = 1; j <= below; j++) floorKeys.push(name + 'B' + j);
+
+          floorKeys.forEach(function(floorKey) {
+            var row = document.createElement('div');
+            row.className = 'ratio-row building-floor-row';
+            row.setAttribute('data-floor-key', floorKey);
+            var nameSpan = document.createElement('span');
+            nameSpan.className = 'ratio-name';
+            nameSpan.textContent = floorKey;
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = '例如 5';
+            if (existing[floorKey] !== undefined) input.value = existing[floorKey];
+            var unitSpan = document.createElement('span');
+            unitSpan.className = 'ratio-unit';
+            unitSpan.textContent = '米';
+            row.appendChild(nameSpan);
+            row.appendChild(input);
+            row.appendChild(unitSpan);
+            floorsDiv.appendChild(row);
+          });
+        }
+
+        nameInput.addEventListener('input', regenerateBuildingFloors);
+        aboveInput.addEventListener('input', regenerateBuildingFloors);
+        belowInput.addEventListener('input', regenerateBuildingFloors);
+
+        buildingBlocksDiv.appendChild(block);
+        if (prefillAbove || prefillBelow) regenerateBuildingFloors();
+      }
+
+      var addExtraFloorBtn = document.createElement('button');
+      addExtraFloorBtn.type = 'button';
+      addExtraFloorBtn.className = 'add-district-btn';
+      addExtraFloorBtn.textContent = '＋ 新增一棟';
+      addExtraFloorBtn.addEventListener('click', function() { addBuildingBlock(); });
+      extraFloorWrap.appendChild(addExtraFloorBtn);
+
+      addBuildingBlock(); // 預設先給一棟，單一建物的案件填這一棟就好
+
+      wrap.appendChild(extraFloorWrap);
+      container.appendChild(wrap);
+      return;
+    } else if (f.type === 'room-layout') {
+      // 格局題：選「開放式格局」直接算完成；選「有格局」會跳出
+      // 房/廳/衛三個小數字框，送出時組合成「3房2廳2衛」這種格式。
+      el = document.createElement('select');
+      el.setAttribute('data-label', f.label);
+      el.className = 'room-layout-select';
+      var blankOptRL = document.createElement('option');
+      blankOptRL.value = ''; blankOptRL.textContent = '請選擇';
+      el.appendChild(blankOptRL);
+      ['有格局', '開放式格局'].forEach(function(opt) {
+        var o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        el.appendChild(o);
+      });
+
+      var roomWrap = document.createElement('div');
+      roomWrap.className = 'room-layout-inputs';
+      roomWrap.style.display = 'none';
+      roomWrap.style.marginTop = '8px';
+      ['房', '廳', '衛'].forEach(function(unit) {
+        var miniWrap = document.createElement('span');
+        miniWrap.style.display = 'inline-flex';
+        miniWrap.style.alignItems = 'center';
+        miniWrap.style.gap = '3px';
+        miniWrap.style.marginRight = '12px';
+        var numInput = document.createElement('input');
+        numInput.type = 'number';
+        numInput.min = '0';
+        numInput.className = 'room-count-input';
+        numInput.setAttribute('data-unit', unit);
+        numInput.style.width = '55px';
+        var unitLabel = document.createElement('span');
+        unitLabel.textContent = unit;
+        unitLabel.style.fontSize = '13px';
+        miniWrap.appendChild(numInput);
+        miniWrap.appendChild(unitLabel);
+        roomWrap.appendChild(miniWrap);
+      });
+
+      el.addEventListener('change', function() {
+        roomWrap.style.display = (el.value === '有格局') ? 'block' : 'none';
+      });
+
+      wrap.appendChild(el);
+      wrap.appendChild(roomWrap);
+      container.appendChild(wrap);
+      return;
+    } else if (f.type === 'address-detail') {
+      var prefixDiv = document.createElement('div');
+      prefixDiv.className = 'hint';
+      prefixDiv.id = 'detailAddressPrefix';
+      prefixDiv.textContent = '（請先在「三、地段地號及建號資訊」選好第一筆地號的縣市／鄉鎮區）';
+      wrap.appendChild(prefixDiv);
+
+      var detailInput = document.createElement('input');
+      detailInput.type = 'text';
+      detailInput.id = 'detailAddressInput';
+      detailInput.placeholder = '請輸入詳細地址（路名、巷弄門牌號等）';
+      wrap.appendChild(detailInput);
+
+      container.appendChild(wrap);
+      return;
+    } else if (f.type === 'checkbox-other-conditional') {
+      // 選項依「都市或非都市計畫」的選擇而不同（都市計畫/非都市計畫兩組選項），
+      // 還沒選之前顯示提示文字；plan select 改變時整組重新畫過。
+      var groupWrap = document.createElement('div');
+      groupWrap.className = 'checkbox-group';
+      groupWrap.setAttribute('data-checkbox-label', f.label);
+
+      var otherWrapEl = document.createElement('input');
+      otherWrapEl.type = 'text';
+      otherWrapEl.className = 'other-input';
+      otherWrapEl.style.display = 'none';
+      otherWrapEl.style.marginTop = '6px';
+
+      var noticeEl = document.createElement('div');
+      noticeEl.className = 'ratio-empty-hint';
+      noticeEl.textContent = '請先選擇上面的「都市或非都市計畫」';
+
+      function rebuildLandUseOptions(planValue) {
+        groupWrap.innerHTML = '';
+        var opts = f.optionsByPlan[planValue];
+        if (!opts) {
+          groupWrap.appendChild(noticeEl);
+          otherWrapEl.style.display = 'none';
+          return;
+        }
+        opts.forEach(function(opt) {
+          var cl = document.createElement('label');
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = opt;
+          cb.className = 'typeCheckbox-' + f.label;
+          cl.appendChild(cb);
+          cl.appendChild(document.createTextNode(opt));
+          groupWrap.appendChild(cl);
+        });
+        var otherLbl2 = document.createElement('label');
+        var otherCb2 = document.createElement('input');
+        otherCb2.type = 'checkbox';
+        otherCb2.value = '其他';
+        otherCb2.className = 'typeCheckbox-' + f.label + ' otherCheckbox';
+        otherCb2.addEventListener('change', function() {
+          otherWrapEl.style.display = otherCb2.checked ? '' : 'none';
+        });
+        otherLbl2.appendChild(otherCb2);
+        otherLbl2.appendChild(document.createTextNode('其他'));
+        groupWrap.appendChild(otherLbl2);
+      }
+
+      landUseRebuildFn = rebuildLandUseOptions;
+      rebuildLandUseOptions(urbanPlanSelectRef ? urbanPlanSelectRef.value : '');
+
+      wrap.appendChild(groupWrap);
+      wrap.appendChild(otherWrapEl);
+      container.appendChild(wrap);
+      return;
+    } else if (f.type === 'textarea') {
+      el = document.createElement('textarea');
+      el.setAttribute('data-label', f.label);
+      if (f.placeholder) el.placeholder = f.placeholder;
+    } else if (f.type === 'checkbox' || f.type === 'checkbox-other') {
+      el = document.createElement('div');
+      el.className = 'checkbox-group';
+      el.setAttribute('data-checkbox-label', f.label);
+      f.options.forEach(function(opt) {
+        var cl = document.createElement('label');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = opt;
+        cb.className = 'typeCheckbox-' + f.label;
+        cl.appendChild(cb);
+        cl.appendChild(document.createTextNode(opt));
+
+        // 有些選項本身需要補一個數量（例如貨梯/天車幾部/幾座），
+        // 勾選了才顯示這個小數字輸入框，跟選項放在同一個 label 裡面
+        if (f.quantityFor && f.quantityFor.indexOf(opt) !== -1) {
+          var qtyInput = document.createElement('input');
+          qtyInput.type = 'number';
+          qtyInput.className = 'qty-input';
+          qtyInput.setAttribute('data-qty-for', opt);
+          qtyInput.placeholder = '幾部/幾座';
+          qtyInput.style.width = '70px';
+          qtyInput.style.marginLeft = '4px';
+          qtyInput.style.display = 'none';
+          cb.addEventListener('change', function() {
+            qtyInput.style.display = cb.checked ? 'inline-block' : 'none';
+          });
+          cl.appendChild(qtyInput);
+        }
+
+        el.appendChild(cl);
+      });
+      if (f.type === 'checkbox-other') {
+        var otherLbl = document.createElement('label');
+        var otherCb = document.createElement('input');
+        otherCb.type = 'checkbox';
+        otherCb.value = '其他';
+        otherCb.className = 'typeCheckbox-' + f.label + ' otherCheckbox';
+        otherLbl.appendChild(otherCb);
+        otherLbl.appendChild(document.createTextNode('其他'));
+        el.appendChild(otherLbl);
+        var otherTextInput = document.createElement('input');
+        otherTextInput.type = 'text';
+        otherTextInput.className = 'other-input';
+        otherTextInput.style.display = 'none';
+        otherTextInput.style.marginTop = '6px';
+        otherCb.addEventListener('change', function() {
+          otherTextInput.style.display = otherCb.checked ? '' : 'none';
+        });
+        wrap.appendChild(el);
+        wrap.appendChild(otherTextInput);
+        container.appendChild(wrap);
+        return;
+      }
+    } else {
+      el = document.createElement('input');
+      el.type = (f.type === 'number') ? 'number' : 'text';
+      el.setAttribute('data-label', f.label);
+      if (f.placeholder) el.placeholder = f.placeholder;
+      if (f.maxlength) el.maxLength = f.maxlength;
+      if (f.type === 'text-suggest' && f.options) {
+        var listId = 'datalist-' + f.label.replace(/[^a-zA-Z0-9]/g, '');
+        el.setAttribute('list', listId);
+        var dl = document.createElement('datalist');
+        dl.id = listId;
+        f.options.forEach(function(opt) {
+          var o = document.createElement('option');
+          o.value = opt;
+          dl.appendChild(o);
+        });
+        wrap.appendChild(dl);
+      }
+    }
+    wrap.appendChild(el);
+
+    if (f.showPing) {
+      var pingSpan = document.createElement('div');
+      pingSpan.className = 'hint';
+      el.addEventListener('input', function() {
+        var num = parseFloat(el.value);
+        pingSpan.textContent = (el.value === '' || isNaN(num)) ? '' : ('≈ ' + (num / 3.305785).toFixed(2) + ' 坪');
+      });
+      wrap.appendChild(pingSpan);
+    }
+
+    container.appendChild(wrap);
+  });
+
+  // 有「有無車位」欄位的類型，車位相關欄位預設先隱藏，等選「是」才展開
+  var controlGroups = {};
+  fields.forEach(function(f) { if (f.controlsGroup) controlGroups[f.controlsGroup] = true; });
+  Object.keys(controlGroups).forEach(function(g) { toggleGroup(g, false); });
+}
+
+// 依「有無車位」等控制欄位的選擇，顯示或隱藏對應分組的欄位
+// （例如選「否」就把車位編號、車位數量…等欄位整組收起來，不用業務多看）
+function toggleGroup(groupName, show) {
+  document.querySelectorAll('[data-group="' + groupName + '"]').forEach(function(el) {
+    el.style.display = show ? '' : 'none';
+  });
+}
+
+// ------------------------------------------------------------
+// 地段連動選單：縣市 → 鄉鎮 → 段，拆成「地號」「建號」兩份各自的清單
+// （kind: 'lot' 或 'building'），共用同一套縣市/鄉鎮/段選單邏輯。
+// 第一筆「地號」項目選好縣市/鄉鎮區時，會自動把值帶進「案件坐落」欄位
+// （縣市+鄉鎮區），業務不用再手動打一次。
+// ------------------------------------------------------------
+// 依選好的縣市，重新畫出「產業園區名稱」下拉選單的選項（區外/非園區
+// 固定排在最前面，該縣市管理局轄下的園區接在後面）。這個欄位目前是
+// 「廠房」跟「土地」在用，字面上的標籤（data-label）不太一樣（廠房是
+// 「產業園區名稱」，土地是「產業園區名稱(土地)」），所以從 FIELD_CONFIG
+// 找出目前這個類型裡「有標記 dynamicParkOptions」的欄位，用它實際的
+// label 去抓對應的 DOM 元素，兩邊共用同一套邏輯。
+function updateParkNameOptions(countyValue) {
+  var fieldDef = (FIELD_CONFIG[currentType] || []).find(function(f) { return f.dynamicParkOptions; });
+  if (!fieldDef) return; // 這個類型沒有這一題（例如房屋），不用處理
+
+  var el = document.querySelector('#typeFields [data-label="' + fieldDef.label.replace(/"/g, '\\"') + '"]');
+  if (!el || el.tagName !== 'SELECT') return;
+
+  var currentValue = el.value;
+  el.innerHTML = '';
+  var blankOpt = document.createElement('option');
+  blankOpt.value = ''; blankOpt.textContent = '請選擇';
+  el.appendChild(blankOpt);
+
+  var opt1 = document.createElement('option');
+  opt1.value = '區外'; opt1.textContent = '區外';
+  el.appendChild(opt1);
+
+  if (fieldDef.dynamicParkExtraOption) {
+    var opt2 = document.createElement('option');
+    opt2.value = fieldDef.dynamicParkExtraOption; opt2.textContent = fieldDef.dynamicParkExtraOption;
+    el.appendChild(opt2);
+  }
+
+  (PARK_BY_COUNTY[countyValue] || []).forEach(function(parkName) {
+    var o = document.createElement('option');
+    o.value = parkName; o.textContent = parkName;
+    el.appendChild(o);
+  });
+
+  // 縣市改變後，原本選的園區如果不在新縣市的清單裡，就清空重選；
+  // 「區外」「非園區」這兩個不管哪個縣市都有，可以保留
+  var stillValid = Array.prototype.slice.call(el.options).some(function(o) { return o.value === currentValue; });
+  el.value = stillValid ? currentValue : '';
+  el.dispatchEvent(new Event('change'));
+}
+
+function createLocationRow(kind, isFirstLot, prefill) {
+  var row = document.createElement('div');
+  row.className = 'district-entry';
+
+  var countyWrap = document.createElement('div');
+  countyWrap.innerHTML = '<div class="mini-label">縣市</div>';
+  var countySelect = document.createElement('select');
+  countySelect.className = 'countySelect';
+  var blankCounty = document.createElement('option');
+  blankCounty.value = ''; blankCounty.textContent = '請選擇';
+  countySelect.appendChild(blankCounty);
+  Object.keys(districtData).forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    countySelect.appendChild(o);
+  });
+  countyWrap.appendChild(countySelect);
+
+  var townWrap = document.createElement('div');
+  townWrap.innerHTML = '<div class="mini-label">鄉鎮區</div>';
+  var townSelect = document.createElement('select');
+  townSelect.className = 'townSelect';
+  townWrap.appendChild(townSelect);
+
+  var districtWrap = document.createElement('div');
+  districtWrap.innerHTML = '<div class="mini-label">段</div>';
+  var districtSelect = document.createElement('select');
+  districtSelect.className = 'districtSelect';
+  districtWrap.appendChild(districtSelect);
+
+  countySelect.addEventListener('change', function() {
+    townSelect.innerHTML = '';
+    districtSelect.innerHTML = '';
+    var towns = districtData[countySelect.value] || {};
+    Object.keys(towns).forEach(function(t) {
+      var o = document.createElement('option');
+      o.value = t; o.textContent = t;
+      townSelect.appendChild(o);
+    });
+    townSelect.dispatchEvent(new Event('change'));
+  });
+
+  townSelect.addEventListener('change', function() {
+    districtSelect.innerHTML = '';
+    var towns = districtData[countySelect.value] || {};
+    var list = towns[townSelect.value] || [];
+    list.forEach(function(d) {
+      var o = document.createElement('option');
+      o.value = d; o.textContent = d;
+      districtSelect.appendChild(o);
+    });
+    // 第一筆「地號」項目：縣市/鄉鎮區選好後，自動帶進「案件坐落」欄位
+    // （只有標記 autoFromDistrict 的欄位才會被帶入）以及「詳細地址」的
+    // 縣市區前綴（type: 'address-detail' 的欄位）
+    if (isFirstLot && countySelect.value && townSelect.value) {
+      var prefix = countySelect.value + townSelect.value;
+      var caseLocationEl = document.querySelector('#typeFields [data-label="案件坐落"]');
+      if (caseLocationEl) caseLocationEl.value = prefix;
+      var detailPrefixEl = document.getElementById('detailAddressPrefix');
+      if (detailPrefixEl) detailPrefixEl.textContent = prefix;
+    }
+    if (isFirstLot && countySelect.value) {
+      updateParkNameOptions(countySelect.value);
+    }
+  });
+
+  // 新增第 2、3...筆地號/建號時，自動帶入前一筆已經選好的縣市/鄉鎮區/段
+  // （通常同一案件的地號/建號都在同一個段，業務不用每筆都重選一次，
+  // 只要填地號/建號本身就好；縣市/鄉鎮區/段都還是可以自己改）
+  if (prefill && prefill.county) {
+    countySelect.value = prefill.county;
+    countySelect.dispatchEvent(new Event('change'));
+    if (prefill.town) {
+      // countySelect 的 change 事件是非同步展開 town 選項後才 dispatch town 的
+      // change，這裡再手動設一次 town 的值、觸發它自己的 change 去展開段清單
+      townSelect.value = prefill.town;
+      townSelect.dispatchEvent(new Event('change'));
+      if (prefill.district) {
+        // 同樣道理，段的選項是 town 的 change 事件展開的，這裡再手動設一次段的值
+        districtSelect.value = prefill.district;
+      }
+    }
+  }
+
+  var valueWrap = document.createElement('div');
+  valueWrap.innerHTML = '<div class="mini-label">' + (kind === 'building' ? '建號' : '地號') + '</div>';
+  var valueInput = document.createElement('input');
+  valueInput.type = 'text';
+  valueInput.className = (kind === 'building' ? 'buildingValueInput' : 'lotValueInput');
+  valueInput.placeholder = '選填';
+  valueWrap.appendChild(valueInput);
+
+  row.appendChild(countyWrap);
+  row.appendChild(townWrap);
+  row.appendChild(districtWrap);
+  row.appendChild(valueWrap);
+
+  var removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'remove-btn';
+  removeBtn.textContent = '刪除';
+  removeBtn.addEventListener('click', function() { row.remove(); });
+  row.appendChild(removeBtn);
+
+  return row;
+}
+
+function getLastRowPrefill_(container) {
+  var rows = container.querySelectorAll('.district-entry');
+  if (rows.length === 0) return null;
+  var lastRow = rows[rows.length - 1];
+  var countySelect = lastRow.querySelector('.countySelect');
+  var townSelect = lastRow.querySelector('.townSelect');
+  var districtSelect = lastRow.querySelector('.districtSelect');
+  if (!countySelect || !countySelect.value) return null;
+  return {
+    county: countySelect.value,
+    town: townSelect ? townSelect.value : '',
+    district: districtSelect ? districtSelect.value : '',
+  };
+}
+
+function addLotEntry() {
+  var container = document.getElementById('lotEntries');
+  var isFirst = container.children.length === 0;
+  var prefill = getLastRowPrefill_(container);
+  container.appendChild(createLocationRow('lot', isFirst, prefill));
+}
+
+function addBuildingEntry() {
+  var container = document.getElementById('buildingEntries');
+  var prefill = getLastRowPrefill_(container);
+  container.appendChild(createLocationRow('building', false, prefill));
+}
+
+function rebuildDistrictEntries() {
+  // 切換類型時，保留規則很單純：直接整批重建（使用者剛切換類型時
+  // 地段通常還沒填，影響很小）。土地沒有「建號」，把整塊建號區隱藏。
+  document.getElementById('lotEntries').innerHTML = '';
+  document.getElementById('buildingEntries').innerHTML = '';
+  addLotEntry();
+  document.getElementById('buildingSection').style.display = (currentType === '土地') ? 'none' : '';
+  if (currentType !== '土地') addBuildingEntry();
+  document.getElementById('districtSectionTitle').textContent =
+    (currentType === '土地') ? '三、地段資訊' : '三、地段地號及建號資訊';
+}
+
+document.getElementById('addLotBtn').addEventListener('click', addLotEntry);
+document.getElementById('addBuildingBtn').addEventListener('click', addBuildingEntry);
+
+// ------------------------------------------------------------
+// 草稿暫存（存在瀏覽器的 localStorage 裡，不用登入 Google 帳號）：
+// 填到一半離開或關掉分頁，重新打開同一個網址會問要不要接著繼續。
+// 照片沒辦法存進草稿（localStorage 放不下檔案本身），恢復後要重新選。
+// ------------------------------------------------------------
+var DRAFT_STORAGE_KEY = 'ruiheListingFormDraft';
+
+function collectDraft_() {
+  var draft = { type: currentType, fields: {}, otherInputs: {}, checkboxGroups: {},
+    multiGroups: {}, extraFloorGroups: {}, businessEntries: [], lotEntries: [], buildingEntries: [],
+    clientAddress: null, detailAddressInputValue: '' };
+
+  document.querySelectorAll('#listingForm [data-label]').forEach(function(el) {
+    var label = el.getAttribute('data-label');
+    draft.fields[label] = el.value;
+    var otherInput = el.parentElement.querySelector('.other-input');
+    if (otherInput) draft.otherInputs[label] = otherInput.value;
+  });
+
+  document.querySelectorAll('#listingForm [data-checkbox-label]').forEach(function(group) {
+    var label = group.getAttribute('data-checkbox-label');
+    var checkedValues = Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]:checked')).map(function(cb) { return cb.value; });
+    var otherInput = group.parentElement.querySelector('.other-input');
+    var qty = {};
+    group.querySelectorAll('.qty-input').forEach(function(q) { qty[q.getAttribute('data-qty-for')] = q.value; });
+    draft.checkboxGroups[label] = { checked: checkedValues, otherText: otherInput ? otherInput.value : '', qty: qty };
+  });
+
+  document.querySelectorAll('#listingForm [data-multi-label]').forEach(function(group) {
+    var label = group.getAttribute('data-multi-label');
+    draft.multiGroups[label] = Array.prototype.slice.call(group.querySelectorAll('.multi-text-input')).map(function(i) { return i.value; });
+  });
+
+  document.querySelectorAll('#listingForm [data-extra-floor-label]').forEach(function(extraGroup) {
+    var label = extraGroup.getAttribute('data-extra-floor-label');
+    draft.extraFloorGroups[label] = Array.prototype.slice.call(extraGroup.querySelectorAll('.building-block')).map(function(block) {
+      var heights = {};
+      block.querySelectorAll('.building-floor-row').forEach(function(row) {
+        heights[row.getAttribute('data-floor-key')] = row.querySelector('input').value;
+      });
+      return {
+        name: block.querySelector('.building-name-input').value,
+        above: block.querySelector('.building-above-input').value,
+        below: block.querySelector('.building-below-input').value,
+        heights: heights,
+      };
+    });
+  });
+
+  document.querySelectorAll('#businessRatioRows .ratio-row').forEach(function(row) {
+    draft.businessEntries.push({ name: row.getAttribute('data-name'), ratio: row.querySelector('input').value });
+  });
+
+  document.querySelectorAll('#lotEntries .district-entry').forEach(function(row) {
+    draft.lotEntries.push({
+      county: row.querySelector('.countySelect').value,
+      town: row.querySelector('.townSelect').value,
+      district: row.querySelector('.districtSelect').value,
+      value: row.querySelector('.lotValueInput').value,
+    });
+  });
+  document.querySelectorAll('#buildingEntries .district-entry').forEach(function(row) {
+    draft.buildingEntries.push({
+      county: row.querySelector('.countySelect').value,
+      town: row.querySelector('.townSelect').value,
+      district: row.querySelector('.districtSelect').value,
+      value: row.querySelector('.buildingValueInput').value,
+    });
+  });
+
+  var clientCounty = document.getElementById('clientAddrCounty');
+  if (clientCounty) {
+    draft.clientAddress = {
+      county: clientCounty.value,
+      town: document.getElementById('clientAddrTown') ? document.getElementById('clientAddrTown').value : '',
+      detail: document.getElementById('clientAddrDetail') ? document.getElementById('clientAddrDetail').value : '',
+    };
+  }
+  var detailAddrInput = document.getElementById('detailAddressInput');
+  if (detailAddrInput) draft.detailAddressInputValue = detailAddrInput.value;
+
+  return draft;
+}
+
+function saveDraftToLocalStorage_() {
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(collectDraft_()));
+  } catch (err) {
+    // localStorage 被瀏覽器擋掉或滿了，暫存失敗就算了，不影響正常填寫
+  }
+}
+
+function clearDraft_() {
+  try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch (err) {}
+}
+
+function restoreDraft_(draft) {
+  // 1. 先切換到草稿當時的類型，重建對應的物件資訊欄位
+  currentType = draft.type || '廠房';
+  document.querySelectorAll('input[name="typeTab"]').forEach(function(radio) {
+    radio.checked = (radio.value === currentType);
+  });
+  document.querySelectorAll('.type-switch label').forEach(function(l) { l.classList.remove('active'); });
+  var typeLabelEl = document.getElementById('typeLabel-' + currentType);
+  if (typeLabelEl) typeLabelEl.classList.add('active');
+  renderTypeFields(currentType);
+
+  // 2. 地號／建號：清空重建時的預設空白列，換成草稿裡實際筆數
+  document.getElementById('lotEntries').innerHTML = '';
+  (draft.lotEntries && draft.lotEntries.length ? draft.lotEntries : [{}]).forEach(function() { addLotEntry(); });
+  var lotRows = document.querySelectorAll('#lotEntries .district-entry');
+  (draft.lotEntries || []).forEach(function(entry, idx) {
+    var row = lotRows[idx];
+    if (!row) return;
+    row.querySelector('.countySelect').value = entry.county || '';
+    row.querySelector('.countySelect').dispatchEvent(new Event('change'));
+    row.querySelector('.townSelect').value = entry.town || '';
+    row.querySelector('.townSelect').dispatchEvent(new Event('change'));
+    row.querySelector('.districtSelect').value = entry.district || '';
+    row.querySelector('.lotValueInput').value = entry.value || '';
+  });
+
+  document.getElementById('buildingSection').style.display = (currentType === '土地') ? 'none' : '';
+  if (currentType !== '土地') {
+    document.getElementById('buildingEntries').innerHTML = '';
+    (draft.buildingEntries && draft.buildingEntries.length ? draft.buildingEntries : [{}]).forEach(function() { addBuildingEntry(); });
+    var buildingRows = document.querySelectorAll('#buildingEntries .district-entry');
+    (draft.buildingEntries || []).forEach(function(entry, idx) {
+      var row = buildingRows[idx];
+      if (!row) return;
+      row.querySelector('.countySelect').value = entry.county || '';
+      row.querySelector('.countySelect').dispatchEvent(new Event('change'));
+      row.querySelector('.townSelect').value = entry.town || '';
+      row.querySelector('.townSelect').dispatchEvent(new Event('change'));
+      row.querySelector('.districtSelect').value = entry.district || '';
+      row.querySelector('.buildingValueInput').value = entry.value || '';
+    });
+  }
+  document.getElementById('districtSectionTitle').textContent =
+    (currentType === '土地') ? '三、地段資訊' : '三、地段地號及建號資訊';
+
+  // 3. 一般欄位（text/number/select/select-other/text-suggest）
+  Object.keys(draft.fields || {}).forEach(function(label) {
+    var el = document.querySelector('#listingForm [data-label="' + label.replace(/"/g, '\\"') + '"]');
+    if (!el) return;
+    el.value = draft.fields[label];
+    if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change'));
+    el.dispatchEvent(new Event('input')); // 讓「地上樓層」「地下樓層」這類有監聽 input 事件的欄位（例如簷高會依此重新長出樓層格子）正確反應還原的值
+    var otherInput = el.parentElement.querySelector('.other-input');
+    if (otherInput && draft.otherInputs && draft.otherInputs[label] !== undefined) {
+      otherInput.value = draft.otherInputs[label];
+    }
+  });
+
+  // 4. 複選題（含「其他」跟數量子欄位）
+  Object.keys(draft.checkboxGroups || {}).forEach(function(label) {
+    var group = document.querySelector('#listingForm [data-checkbox-label="' + label.replace(/"/g, '\\"') + '"]');
+    if (!group) return;
+    var saved = draft.checkboxGroups[label];
+    Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]')).forEach(function(cb) {
+      if (saved.checked.indexOf(cb.value) !== -1) cb.checked = true;
+    });
+    if (saved.checked.indexOf('其他') !== -1) {
+      var otherCb = group.querySelector('.otherCheckbox');
+      if (otherCb) otherCb.dispatchEvent(new Event('change'));
+    }
+    var otherInput = group.parentElement.querySelector('.other-input');
+    if (otherInput) otherInput.value = saved.otherText || '';
+    Object.keys(saved.qty || {}).forEach(function(optVal) {
+      var qtyInput = null;
+      group.querySelectorAll('.qty-input').forEach(function(q) {
+        if (q.getAttribute('data-qty-for') === optVal) qtyInput = q;
+      });
+      if (qtyInput) {
+        qtyInput.value = saved.qty[optVal];
+        qtyInput.style.display = 'inline-block';
+      }
+    });
+  });
+
+  // 5. multi-text（例如樓地板載重可能有好幾筆）
+  Object.keys(draft.multiGroups || {}).forEach(function(label) {
+    var group = document.querySelector('#listingForm [data-multi-label="' + label.replace(/"/g, '\\"') + '"]');
+    if (!group) return;
+    var values = draft.multiGroups[label];
+    var addBtn = group.querySelector('.add-district-btn');
+    for (var i = 1; i < values.length; i++) { if (addBtn) addBtn.click(); }
+    var inputs = group.querySelectorAll('.multi-text-input');
+    inputs.forEach(function(input, idx) { input.value = values[idx] || ''; });
+  });
+
+  // 5b. 依樓層動態產生的欄位（例如簷高）：先確認地上/地下樓層的值已經套用
+  // （上面第3步已經處理過一般欄位，此時地上/地下樓層應該已經有值了），
+  // 樓層欄位的 input 事件會自動重新長出正確數量的格子，這裡再把值填回去
+  Object.keys(draft.extraFloorGroups || {}).forEach(function(label) {
+    var extraEntries = draft.extraFloorGroups[label] || [];
+    var extraGroup = document.querySelector('#listingForm [data-extra-floor-label="' + label.replace(/"/g, '\\"') + '"]');
+    if (!extraGroup || extraEntries.length === 0) return;
+
+    // 這個欄位一開始就會自動先放一棟空白的，先清掉，換成草稿裡實際的棟數
+    var blocksContainer = extraGroup.querySelector('.building-block').parentElement;
+    blocksContainer.innerHTML = '';
+    var addExtraBtn = extraGroup.querySelector('.add-district-btn');
+    for (var k = 0; k < extraEntries.length; k++) { if (addExtraBtn) addExtraBtn.click(); }
+
+    var blocks = extraGroup.querySelectorAll('.building-block');
+    extraEntries.forEach(function(entry, idx) {
+      var block = blocks[idx];
+      if (!block) return;
+      block.querySelector('.building-name-input').value = entry.name || '';
+      block.querySelector('.building-above-input').value = entry.above || '';
+      block.querySelector('.building-below-input').value = entry.below || '';
+      block.querySelector('.building-above-input').dispatchEvent(new Event('input'));
+      // 樓層格子展開後（above 的 input 事件已經觸發過一次重新展開），
+      // 把每一層原本填過的高度值填回去
+      Object.keys(entry.heights || {}).forEach(function(floorKey) {
+        var floorRow = null;
+        block.querySelectorAll('.building-floor-row').forEach(function(r) {
+          if (r.getAttribute('data-floor-key') === floorKey) floorRow = r;
+        });
+        if (floorRow) floorRow.querySelector('input').value = entry.heights[floorKey];
+      });
+    });
+  });
+
+  // 6. 業務名單＋比例
+  var otherNamesToRestore = [];
+  (draft.businessEntries || []).forEach(function(entry) {
+    var found = false;
+    document.querySelectorAll('.businessPersonCheckbox').forEach(function(cb) {
+      if (!cb.classList.contains('businessPersonOtherCheckbox') && cb.value === entry.name) {
+        cb.checked = true; found = true;
+      }
+    });
+    if (!found) otherNamesToRestore.push(entry.name);
+  });
+  if (otherNamesToRestore.length > 0) {
+    var otherCb = document.querySelector('.businessPersonOtherCheckbox');
+    var otherNamesWrap = document.querySelector('.business-other-names-wrap');
+    if (otherCb && otherNamesWrap) {
+      otherCb.checked = true;
+      otherNamesWrap.style.display = 'block';
+      // 預設已經有一筆空白列，先補到跟需要還原的筆數一樣多
+      var addOtherBtn = otherNamesWrap.querySelector('.add-district-btn');
+      for (var i = 1; i < otherNamesToRestore.length; i++) { if (addOtherBtn) addOtherBtn.click(); }
+      var otherInputs = otherNamesWrap.querySelectorAll('.businessPersonOtherInput');
+      otherInputs.forEach(function(input, idx) { input.value = otherNamesToRestore[idx] || ''; });
+    }
+  }
+  updateRatioRows();
+  (draft.businessEntries || []).forEach(function(entry) {
+    var row = null;
+    document.querySelectorAll('#businessRatioRows .ratio-row').forEach(function(r) {
+      if (r.getAttribute('data-name') === entry.name) row = r;
+    });
+    if (row) row.querySelector('input').value = entry.ratio;
+  });
+
+  // 7. 委託人聯絡地址 + 詳細地址
+  if (draft.clientAddress) {
+    var clientCounty = document.getElementById('clientAddrCounty');
+    if (clientCounty) {
+      clientCounty.value = draft.clientAddress.county || '';
+      clientCounty.dispatchEvent(new Event('change'));
+      var clientTown = document.getElementById('clientAddrTown');
+      if (clientTown) clientTown.value = draft.clientAddress.town || '';
+      var clientDetail = document.getElementById('clientAddrDetail');
+      if (clientDetail) clientDetail.value = draft.clientAddress.detail || '';
+    }
+  }
+  var detailAddrInput = document.getElementById('detailAddressInput');
+  if (detailAddrInput) detailAddrInput.value = draft.detailAddressInputValue || '';
+}
+
+// 頁面一打開就檢查有沒有草稿，有的話先顯示提示橫幅（不自動套用，等使用者按按鈕）
+var pendingDraft_ = null;
+try {
+  var savedDraftRaw_ = localStorage.getItem(DRAFT_STORAGE_KEY);
+  if (savedDraftRaw_) pendingDraft_ = JSON.parse(savedDraftRaw_);
+} catch (err) { pendingDraft_ = null; }
+if (pendingDraft_) {
+  document.getElementById('draftBanner').style.display = 'block';
+}
+document.getElementById('restoreDraftBtn').addEventListener('click', function() {
+  if (pendingDraft_) restoreDraft_(pendingDraft_);
+  document.getElementById('draftBanner').style.display = 'none';
+});
+document.getElementById('discardDraftBtn').addEventListener('click', function() {
+  clearDraft_();
+  document.getElementById('draftBanner').style.display = 'none';
+});
+
+// 自動暫存：欄位有變動時（防抖，停止輸入1秒後才存），加上每15秒定期存一次保險
+var draftSaveTimer_ = null;
+['input', 'change'].forEach(function(evtName) {
+  document.getElementById('listingForm').addEventListener(evtName, function() {
+    clearTimeout(draftSaveTimer_);
+    draftSaveTimer_ = setTimeout(saveDraftToLocalStorage_, 1000);
+  });
+});
+setInterval(saveDraftToLocalStorage_, 15000);
+
+// 上傳照片下方的資料準備清單提示，網址轉成可點擊連結
+document.getElementById('docChecklistNote').innerHTML = linkify(DOC_CHECKLIST_TEXT);
+
+// 選好照片後累加起來（不是取代），這樣可以分好幾次、從不同資料夾選檔案。
+// 每次選完都清空 input 本身的值，這樣同一個檔名再選一次也能正常觸發
+// change 事件（瀏覽器對同一個檔案不會重複觸發 change，要清空才行）。
+var selectedPhotoFiles = [];
+
+function renderPhotoList() {
+  var list = document.getElementById('photoList');
+  list.innerHTML = '';
+  if (selectedPhotoFiles.length === 0) return;
+
+  var summary = document.createElement('div');
+  summary.style.fontSize = '12px';
+  summary.style.color = '#555';
+  summary.style.marginBottom = '4px';
+  summary.textContent = '已選 ' + selectedPhotoFiles.length + ' 個檔案：';
+  list.appendChild(summary);
+
+  selectedPhotoFiles.forEach(function(file, idx) {
+    var row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '8px';
+    row.style.fontSize = '12px';
+    row.style.color = '#555';
+    row.style.marginBottom = '3px';
+
+    var nameSpan = document.createElement('span');
+    nameSpan.textContent = file.name;
+    nameSpan.style.flex = '1';
+    nameSpan.style.overflow = 'hidden';
+    nameSpan.style.textOverflow = 'ellipsis';
+    nameSpan.style.whiteSpace = 'nowrap';
+
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '移除';
+    removeBtn.addEventListener('click', function() {
+      selectedPhotoFiles.splice(idx, 1);
+      renderPhotoList();
+    });
+
+    row.appendChild(nameSpan);
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('photoInput').addEventListener('change', function() {
+  var newFiles = Array.prototype.slice.call(this.files);
+  selectedPhotoFiles = selectedPhotoFiles.concat(newFiles);
+  this.value = ''; // 清空，讓同一個檔案下次也能被選到、也能繼續累加
+  renderPhotoList();
+});
+
+// ------------------------------------------------------------
+// 送出
+// ------------------------------------------------------------
+// 用 fetch 呼叫後端，包成 Promise，方便用 async/await 依序處理
+// （例如：先把每張照片一張一張上傳完，再送出整筆表單資料）
+function runServer(fnName) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fnName, args: args }) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.ok) throw new Error(res.message || '後端發生錯誤');
+      return res.result;
+    });
+}
+
+// 把 File 物件讀成 base64 文字（去掉開頭的 data:xxx;base64, 前綴）
+function readFileAsBase64(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function() {
+      var result = reader.result;
+      var base64 = result.substring(result.indexOf(',') + 1);
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('listingForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  var submitBtn = document.getElementById('submitBtn');
+  var msgBox = document.getElementById('msgBox');
+  msgBox.style.display = 'none';
+
+  // 蒐集業務名單，依比例高低自動分成主要/次要業務
+  // （比例最高的算主要業務，並列最高的全部算主要；其他人算次要業務）
+  var allBusinessNames = getCheckedPersonNames();
+  var split = splitPrimarySecondaryByRatio();
+
+  if (allBusinessNames.length === 0) {
+    msgBox.className = 'msg error';
+    msgBox.textContent = '請至少勾選一位業務名單。';
+    msgBox.style.display = 'block';
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  var fieldValues = {};
+  fieldValues['主要業務名稱'] = split.primaryNames.join('、');
+  fieldValues['主要業務人員比例'] = split.primaryRatios.join('、');
+  fieldValues['次要業務名稱'] = split.secondaryNames.join('、');
+  fieldValues['次要業務人員比例'] = split.secondaryRatios.join('、');
+
+  // 一般 text/select/textarea/number 欄位（common 區塊 + 該類型專屬欄位）。
+  // 「其他」選單：選到「其他」時，整個改讀旁邊自訂文字框的內容；
+  // 選到「區外」這類「本身有意義、但還要補充說明」的選項時，
+  // 文字框內容接在後面組合成「區外(南屯工業區)」這種格式，不會整個蓋掉。
+  document.querySelectorAll('#listingForm [data-label]').forEach(function(el) {
+    var value = el.value;
+    if (el.classList.contains('room-layout-select')) {
+      if (value === '有格局') {
+        var roomWrap2 = el.parentElement.querySelector('.room-layout-inputs');
+        var parts = [];
+        if (roomWrap2) {
+          roomWrap2.querySelectorAll('.room-count-input').forEach(function(inp) {
+            var n = inp.value.trim();
+            if (n) parts.push(n + inp.getAttribute('data-unit'));
+          });
+        }
+        value = parts.join('');
+      }
+    } else if (el.tagName === 'SELECT') {
+      var otherInput = el.parentElement.querySelector('.other-input');
+      if (otherInput && otherInput.style.display !== 'none') {
+        var detailText = otherInput.value.trim();
+        if (value === '其他') {
+          value = detailText;
+        } else if (detailText) {
+          value = value + '(' + detailText + ')';
+        }
+      }
+    }
+    fieldValues[el.getAttribute('data-label')] = value;
+  });
+
+  // checkbox 群組欄位（例如房屋的「管理方式」，多選用頓號相接）。
+  // 如果勾了「其他」，用旁邊自訂文字框的內容取代「其他」這兩個字。
+  document.querySelectorAll('#listingForm [data-checkbox-label]').forEach(function(group) {
+    var label = group.getAttribute('data-checkbox-label');
+    var checked = Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]:checked')).map(function(cb) { return cb.value; });
+    // 有補數量的選項（例如貨梯、天車），把填的數量接在後面，例如「貨梯x2」
+    checked = checked.map(function(val) {
+      var qtyInput = group.querySelector('.qty-input[data-qty-for="' + val + '"]');
+      var qty = qtyInput ? qtyInput.value.trim() : '';
+      return qty ? (val + 'x' + qty) : val;
+    });
+    var otherIdx = checked.indexOf('其他');
+    if (otherIdx !== -1) {
+      var otherTextInput = group.parentElement.querySelector('.other-input');
+      var otherText = otherTextInput ? otherTextInput.value.trim() : '';
+      if (otherText) checked[otherIdx] = otherText; else checked.splice(otherIdx, 1);
+    }
+    fieldValues[label] = checked.join('、');
+  });
+
+  // multi-text 欄位（例如廠房的「樓地板載重」，可能有好幾筆資料），
+  // 每一筆非空白的輸入值用「、」相接
+  document.querySelectorAll('#listingForm [data-multi-label]').forEach(function(group) {
+    var label = group.getAttribute('data-multi-label');
+    var values = Array.prototype.slice.call(group.querySelectorAll('.multi-text-input'))
+      .map(function(input) { return input.value.trim(); })
+      .filter(function(v) { return v; });
+    fieldValues[label] = values.join('、');
+  });
+
+  // 依棟別新增的簷高欄位，組合成「廠房1F:5米、廠房2F:4.5米、倉庫1F:4米」這種
+  // 格式，沒填的樓層不會出現在裡面
+  document.querySelectorAll('#listingForm [data-extra-floor-label]').forEach(function(extraGroup) {
+    var label = extraGroup.getAttribute('data-extra-floor-label');
+    var parts = [];
+    extraGroup.querySelectorAll('.building-floor-row').forEach(function(row) {
+      var height = row.querySelector('input').value.trim();
+      if (height) parts.push(row.getAttribute('data-floor-key') + ':' + height + '米');
+    });
+    fieldValues[label] = parts.join('、');
+  });
+
+  // 「詳細地址」欄位：縣市區前綴（從地段第一筆地號自動帶入）+ 業務自己打的詳細部分
+  var detailAddressInput = document.getElementById('detailAddressInput');
+  if (detailAddressInput) {
+    var prefixText = document.getElementById('detailAddressPrefix').textContent;
+    var isRealPrefix = prefixText.indexOf('（') === -1; // 還沒選地段時前綴是提示文字（括號開頭），不算真的前綴
+    fieldValues['詳細地址'] = (isRealPrefix ? prefixText : '') + detailAddressInput.value.trim();
+  }
+
+  // 「委託人聯絡地址」：縣市/鄉鎮區下拉 + 詳細地址文字框，組合成一個欄位
+  var clientAddrCounty = document.getElementById('clientAddrCounty');
+  var clientAddrTown = document.getElementById('clientAddrTown');
+  var clientAddrDetail = document.getElementById('clientAddrDetail');
+  if (clientAddrCounty) {
+    fieldValues['委託人聯絡地址'] =
+      (clientAddrCounty.value || '') + (clientAddrTown.value || '') + (clientAddrDetail.value || '').trim();
+  }
+
+  // 送出前完整檢查必填欄位：固定共用欄位（STATIC_REQUIRED_LABELS）+ 該類型
+  // FIELD_CONFIG 裡標記 required:true 的欄位。車位那組欄位就算標記必填，
+  // 如果目前「有無車位」沒選「是」而被收起來看不到，也不會強制要求填寫
+  // （看不到的題目不該擋住送出）。缺的欄位全部列出來，不是只擋第一個。
+  var missingLabels = [];
+  if (!allBusinessNames.length) missingLabels.push('業務名單');
+  // 每人比例是必填：只要有任何一位業務的比例格是空的，就視為缺漏
+  // （不能只看整串接起來的字串是否為空，那樣會漏抓「70、」這種只填了一半的情況）
+  var allRatiosFilled = Array.prototype.slice.call(document.querySelectorAll('#businessRatioRows .ratio-row input'))
+    .every(function(input) { return input.value.trim(); });
+  if (allBusinessNames.length && !allRatiosFilled) {
+    missingLabels.push('每人比例');
+  }
+  STATIC_REQUIRED_LABELS.forEach(function(label) {
+    if (!fieldValues[label] || !String(fieldValues[label]).trim()) missingLabels.push(label);
+  });
+  (FIELD_CONFIG[currentType] || []).forEach(function(f) {
+    var isRequired = f.required;
+    // 有條件必填：例如「管理費用」只有在「管理費」選「有」的時候才必填
+    if (f.requiredIf) {
+      isRequired = fieldValues[f.requiredIf.label] === f.requiredIf.value;
+    }
+    if (!isRequired) return;
+    if (f.group) {
+      var wrapEl = document.querySelector('#typeFields [data-group="' + f.group + '"]');
+      if (wrapEl && wrapEl.style.display === 'none') return; // 目前被收起來，不強制檢查
+    }
+    var val = fieldValues[f.label];
+    if (!val || !String(val).trim()) missingLabels.push(f.label);
+  });
+  missingLabels = missingLabels.filter(function(l, idx) { return missingLabels.indexOf(l) === idx; });
+
+  if (missingLabels.length > 0) {
+    msgBox.className = 'msg error';
+    msgBox.textContent = '以下必填欄位還沒填寫，請補齊後再送出：' + missingLabels.join('、');
+    msgBox.style.display = 'block';
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  // 地段區塊：「地號」「建號」各自獨立蒐集，縣市/鄉鎮只是輔助篩選，
+  // 最終只取段名本身。這裡直接在前端組合好 Form_Responses 要的三個欄位：
+  //   地段 → 地號清單+建號清單裡出現過的段名，去重後用「；」相接
+  //   地段+地號 → 只從「地號」清單組合，用「；」相接
+  //   地段+建號 → 只從「建號」清單組合（土地類型沒有這欄）
+  var districtSet = [];
+  function addDistrictName(d) { if (d && districtSet.indexOf(d) === -1) districtSet.push(d); }
+
+  var lotParts = [];
+  document.querySelectorAll('#lotEntries .district-entry').forEach(function(entry) {
+    var d = entry.querySelector('.districtSelect') ? entry.querySelector('.districtSelect').value : '';
+    if (!d) return;
+    addDistrictName(d);
+    var lotVal = entry.querySelector('.lotValueInput').value.trim();
+    lotParts.push(lotVal ? (d + lotVal) : d);
+  });
+
+  var buildingParts = [];
+  document.querySelectorAll('#buildingEntries .district-entry').forEach(function(entry) {
+    var d = entry.querySelector('.districtSelect') ? entry.querySelector('.districtSelect').value : '';
+    if (!d) return;
+    addDistrictName(d);
+    var buildingVal = entry.querySelector('.buildingValueInput').value.trim();
+    buildingParts.push(buildingVal ? (d + buildingVal) : d);
+  });
+
+  if (districtSet.length > 0) fieldValues['地段'] = districtSet.join('；');
+  if (lotParts.length > 0) fieldValues['地段+地號'] = lotParts.join('；');
+  if (buildingParts.length > 0) fieldValues['地段+建號'] = buildingParts.join('；');
+
+  submitBtn.disabled = true;
+
+  // 先把選好的照片一張一張上傳到雲端硬碟，收集每張的連結，
+  // 上傳完再送出整筆表單資料（照片欄位跟系統原本表單產生的連結格式一致，
+  // 送出後既有的「案件照片分類」流程會自動處理，不用另外改動）。
+  var photoUrls = [];
+  if (selectedPhotoFiles.length > 0) {
+    var files = selectedPhotoFiles;
+    for (var i = 0; i < files.length; i++) {
+      submitBtn.textContent = '上傳照片中（' + (i + 1) + '/' + files.length + '）…';
+      try {
+        var base64 = await readFileAsBase64(files[i]);
+        var uploadResult = await runServer('uploadListingPhoto', base64, files[i].type || 'application/octet-stream', files[i].name);
+        if (uploadResult && uploadResult.success) {
+          photoUrls.push(uploadResult.url);
+        } else {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '送出';
+          msgBox.className = 'msg error';
+          msgBox.textContent = (uploadResult && uploadResult.message) || ('「' + files[i].name + '」上傳失敗，請重試。');
+          msgBox.style.display = 'block';
+          window.scrollTo(0, 0);
+          return;
+        }
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '送出';
+        msgBox.className = 'msg error';
+        msgBox.textContent = '照片上傳時發生錯誤：' + (err.message || err);
+        msgBox.style.display = 'block';
+        window.scrollTo(0, 0);
+        return;
+      }
+    }
+  }
+  if (photoUrls.length > 0) fieldValues['上傳照片'] = photoUrls.join(', ');
+
+  submitBtn.textContent = '送出中…';
+
+  // 保險機制：手機瀏覽器在等回應時如果被切到背景、螢幕鎖定，連線有時候會
+  // 被系統暫停，導致伺服器其實處理完了、但回應傳不回網頁，畫面卡在
+  // 「送出中」不會消失。這裡設一個逾時，超過時間還沒收到回應就主動提示，
+  // 不會讓人一直卡在不確定有沒有成功的狀態。真的收到回應時會取消這個計時。
+  var responseTimedOut = false;
+  var timeoutHandle = setTimeout(function() {
+    responseTimedOut = true;
+    msgBox.className = 'msg error';
+    msgBox.textContent = '沒有在預期時間內收到伺服器回應（手機切到背景或螢幕鎖定時偶爾會這樣）。' +
+      '資料很可能已經送出成功，請重新整理這個頁面確認，不用擔心重複送出——真的沒送出的話，' +
+      '重新填一次就好。';
+    msgBox.style.display = 'block';
+    showToast('沒有在預期時間內收到回應，請重新整理頁面確認是否已送出成功', 'error');
+    window.scrollTo(0, 0);
+  }, 45000);
+
+  runServer('submitListingForm', currentType, fieldValues, [])
+    .then(function(result) {
+      clearTimeout(timeoutHandle);
+      if (responseTimedOut) return; // 逾時訊息已經顯示過，避免再蓋一次造成混淆
+      submitBtn.disabled = false;
+      submitBtn.textContent = '送出';
+      if (result && result.success) {
+        msgBox.className = 'msg success';
+        msgBox.textContent = result.message || '送出成功！';
+        msgBox.style.display = 'block';
+        showToast(result.message || '送出成功！', 'success');
+        document.getElementById('listingForm').reset();
+        renderTypeFields(currentType);
+        rebuildDistrictEntries();
+        updateRatioRows();
+        selectedPhotoFiles = [];
+        renderPhotoList();
+        clearDraft_();
+      } else {
+        msgBox.className = 'msg error';
+        msgBox.textContent = (result && result.message) || '送出失敗，請重試。';
+        msgBox.style.display = 'block';
+        showToast((result && result.message) || '送出失敗，請重試。', 'error');
+      }
+      window.scrollTo(0, 0);
+    })
+    .catch(function(err) {
+      clearTimeout(timeoutHandle);
+      if (responseTimedOut) return;
+      submitBtn.disabled = false;
+      submitBtn.textContent = '送出';
+      msgBox.className = 'msg error';
+      msgBox.textContent = '送出時發生錯誤：' + err.message;
+      msgBox.style.display = 'block';
+      showToast('送出時發生錯誤：' + err.message, 'error');
+      window.scrollTo(0, 0);
+    })
+    ;
+});
+</script>
+</body>
+</html>
