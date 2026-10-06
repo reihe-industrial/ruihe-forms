@@ -49,6 +49,9 @@
     background-repeat: no-repeat; background-position: right 10px center; background-size: 18px; padding-right: 34px;
   }
   textarea { min-height: 60px; resize: vertical; }
+  .field-missing { background: var(--danger-soft) !important; box-shadow: 0 0 0 2px var(--danger); border-radius: 8px; }
+  .missing-msg { color: var(--danger); font-size: 12.5px; font-weight: 600; margin: 0 0 8px; }
+  .district-entry > .missing-msg { grid-column: 1 / -1; }
   .hint { font-size: 12.5px; color: var(--muted); margin-top: 4px; white-space: pre-wrap; line-height: 1.55; }
   .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -116,15 +119,39 @@ function runServer(fnName) {
 }
 
 var toastTimer_;
-function showToast(message, type) {
+function showToast(message, type, noScroll) {
   var toast = document.getElementById('toastNotice');
   toast.className = type === 'error' ? 'error' : 'success';
   toast.textContent = message;
   toast.style.display = 'block';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (!noScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   clearTimeout(toastTimer_);
   toastTimer_ = setTimeout(function() { toast.style.display = 'none'; }, 5000);
 }
+// 必填沒填：把缺的區塊用紅框標出並寫明原因，自動捲到第一個；改到那個區塊紅框就消失
+function clearMissingMarks_() {
+  document.querySelectorAll('.field-missing').forEach(function(f) { f.classList.remove('field-missing'); });
+  document.querySelectorAll('.missing-msg').forEach(function(m) { m.remove(); });
+}
+function markEl_(el, msg) {
+  el.classList.add('field-missing');
+  var m = document.createElement('div');
+  m.className = 'missing-msg';
+  m.textContent = msg;
+  var lab = Array.prototype.slice.call(el.children).filter(function(c) { return c.tagName === 'LABEL'; })[0];
+  if (lab) lab.insertAdjacentElement('afterend', m); else el.insertBefore(m, el.firstChild);
+}
+function scrollToFirstMissing_() {
+  var first = document.querySelector('.field-missing');
+  if (!first) return;
+  if (first.scrollIntoView) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+['input', 'change'].forEach(function(evt) {
+  document.querySelector('.container').addEventListener(evt, function(e) {
+    var box = e.target.closest('.district-entry, .card');
+    if (box) { box.classList.remove('field-missing'); var m = box.querySelector(':scope > .missing-msg'); if (m) m.remove(); }
+  });
+});
 var DISTRICT_DATA = {};
 var TRANSCRIPT_TYPES = [];
 var entryCount = 0;
@@ -344,9 +371,13 @@ document.getElementById('submitBtn').addEventListener('click', function() {
   if (businessName === '其他') {
     businessName = document.getElementById('businessNameOtherInput').value.trim();
   }
+  clearMissingMarks_();
   if (!businessName) {
     msgBox.className = 'msg error';
     msgBox.textContent = '請選擇業務名稱。';
+    markEl_(document.getElementById('businessNameSelect').closest('.card'), '請選擇業務名稱');
+    scrollToFirstMissing_();
+    showToast('請選擇業務名稱', 'error', true);
     return;
   }
 
@@ -362,8 +393,10 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     var checkedTypes = Array.prototype.slice.call(entryEl.querySelectorAll('.transcriptTypeCheckbox:checked'))
       .map(function(cb) { return cb.value; });
 
-    if (!county || !town || !district) missingParts.push('第 ' + (idx + 1) + ' 筆：縣市/鄉鎮市區/段名');
-    if (checkedTypes.length === 0) missingParts.push('第 ' + (idx + 1) + ' 筆：謄本種類（至少勾選一項）');
+    var entryProblems = [];
+    if (!county || !town || !district) { missingParts.push('第 ' + (idx + 1) + ' 筆：縣市/鄉鎮市區/段名'); entryProblems.push('縣市／鄉鎮市區／段名還沒選完'); }
+    if (checkedTypes.length === 0) { missingParts.push('第 ' + (idx + 1) + ' 筆：謄本種類（至少勾選一項）'); entryProblems.push('謄本種類至少要勾選一項'); }
+    if (entryProblems.length) markEl_(entryEl, entryProblems.join('；'));
 
     entries.push({ county: county, town: town, district: district, lot: lot, building: building,
       transcriptTypes: checkedTypes, note: note });
@@ -372,7 +405,8 @@ document.getElementById('submitBtn').addEventListener('click', function() {
   if (missingParts.length > 0) {
     msgBox.className = 'msg error';
     msgBox.textContent = '請填寫以下必填欄位：\n' + missingParts.join('\n');
-    showToast('請填寫必填欄位（詳見下方紅字說明）', 'error');
+    scrollToFirstMissing_();
+    showToast('還有 ' + missingParts.length + ' 項必填沒填，已用紅框標出，並捲到第一個', 'error', true);
     return;
   }
 

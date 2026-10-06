@@ -98,6 +98,21 @@
     }
     .checkbox-group input { width: auto; accent-color: var(--brand); }
 
+    .field.field-missing { background: var(--danger-soft); border-radius: 8px; box-shadow: 0 0 0 2px var(--danger); padding: 8px 10px; }
+    .missing-msg { color: var(--danger); font-size: 12.5px; font-weight: 600; margin: 0 0 6px; }
+
+    /* 送出前確認摘要 */
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .confirm-box { background: #fff; border-radius: 12px; max-width: 520px; width: 100%; max-height: 88vh; overflow: auto; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.25); }
+    .confirm-box h3 { margin: 0 0 4px; font-size: 17px; color: var(--brand-dark); }
+    .confirm-box .confirm-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+    .confirm-row { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+    .confirm-row .k { color: var(--muted); font-weight: 600; }
+    .confirm-row .v { word-break: break-word; white-space: pre-line; }
+    .confirm-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .confirm-actions button { flex: 1; padding: 12px; font-size: 15px; font-weight: 700; border-radius: 8px; border: none; cursor: pointer; }
+    .confirm-actions .confirm-back { background: #eee; color: #333; }
+    .confirm-actions .confirm-ok { background: var(--brand); color: #fff; }
     .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; white-space: pre-line; line-height: 1.55; }
     .other-input { margin-top: 8px; }
 
@@ -456,14 +471,97 @@ var INDUSTRY_LIST = ['08 食品製造業', '09 飲料製造業', '10 菸草製�
 var regionEntryCount = 0;
 
 var toastTimer_;
-function showToast(message, type) {
+function showToast(message, type, noScroll) {
   var toast = document.getElementById('toastNotice');
   toast.className = type === 'error' ? 'error' : 'success';
   toast.textContent = message;
   toast.style.display = 'block';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (!noScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   clearTimeout(toastTimer_);
   toastTimer_ = setTimeout(function() { toast.style.display = 'none'; }, 5000);
+}
+
+// 必填欄位沒填：用紅框標出缺的欄位，並自動捲到第一個；改到那一題紅框就會消失
+function clearMissingMarks_() {
+  document.querySelectorAll('.field-missing').forEach(function(f) { f.classList.remove('field-missing'); });
+  document.querySelectorAll('.missing-msg').forEach(function(m) { m.remove(); });
+}
+function fieldLabelEl_(fieldEl) {
+  return Array.prototype.slice.call(fieldEl.children).filter(function(c) { return c.tagName === 'LABEL'; })[0] || null;
+}
+function findFieldByLabel_(labelText) {
+  var fields = Array.prototype.slice.call(document.querySelectorAll('.container .field'));
+  var exact = fields.filter(function(f) { var l = fieldLabelEl_(f); return l && l.textContent.trim() === labelText; })[0];
+  if (exact) return exact;
+  return fields.filter(function(f) {
+    var l = fieldLabelEl_(f);
+    var t = l ? l.textContent.trim() : '';
+    return t.length >= 2 && (t.indexOf(labelText) === 0 || labelText.indexOf(t) === 0);
+  })[0] || null;
+}
+function markMissingFields_(labels) {
+  clearMissingMarks_();
+  var found = [];
+  labels.forEach(function(raw) {
+    var detail = (raw.match(/（(.+)）$/) || [])[1];
+    var f = findFieldByLabel_(raw.replace(/（.*$/, ''));
+    if (!f || found.indexOf(f) !== -1) return;
+    f.classList.add('field-missing');
+    var msg = document.createElement('div');
+    msg.className = 'missing-msg';
+    msg.textContent = detail || '這一題還沒填寫';
+    var lab = fieldLabelEl_(f);
+    if (lab) lab.insertAdjacentElement('afterend', msg); else f.insertBefore(msg, f.firstChild);
+    found.push(f);
+  });
+  if (!found.length) return false;
+  found.sort(function(a, b) { return (a.compareDocumentPosition(b) & 4) ? -1 : 1; });
+  var first = found[0];
+  if (first.scrollIntoView) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  var focusable = first.querySelector('input:not([type=checkbox]):not([type=hidden]), select, textarea');
+  if (focusable) { try { focusable.focus({ preventScroll: true }); } catch (err) {} }
+  return true;
+}
+['input', 'change'].forEach(function(evt) {
+  document.querySelector('.container').addEventListener(evt, function(e) {
+    var f = e.target.closest('.field');
+    if (f) { f.classList.remove('field-missing'); var m = f.querySelector('.missing-msg'); if (m) m.remove(); }
+  });
+});
+
+
+// ------------------------------------------------------------
+// 送出前確認摘要：把這次填的重點整理成一張清單，讓業務最後看一眼再按「確認送出」，
+// 填錯可以直接按「回去修改」，不用等送出後才發現。回傳 Promise<boolean>。
+// ------------------------------------------------------------
+function showConfirmDialog_(title, rows) {
+  return new Promise(function(resolve) {
+    var overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    var box = document.createElement('div');
+    box.className = 'confirm-box';
+    var h = document.createElement('h3'); h.textContent = title; box.appendChild(h);
+    var sub = document.createElement('div'); sub.className = 'confirm-sub'; sub.textContent = '請確認以下內容有沒有填錯，沒問題再按「確認送出」。'; box.appendChild(sub);
+    rows.forEach(function(r) {
+      if (!r[1] || !String(r[1]).trim()) return;
+      var row = document.createElement('div'); row.className = 'confirm-row';
+      var k = document.createElement('div'); k.className = 'k'; k.textContent = r[0];
+      var v = document.createElement('div'); v.className = 'v'; v.textContent = r[1];
+      row.appendChild(k); row.appendChild(v); box.appendChild(row);
+    });
+    var actions = document.createElement('div'); actions.className = 'confirm-actions';
+    var back = document.createElement('button'); back.type = 'button'; back.className = 'confirm-back'; back.textContent = '回去修改';
+    var ok = document.createElement('button'); ok.type = 'button'; ok.className = 'confirm-ok'; ok.textContent = '確認送出';
+    function close(result) { document.removeEventListener('keydown', onKey); overlay.remove(); resolve(result); }
+    function onKey(e) { if (e.key === 'Escape') close(false); }
+    back.addEventListener('click', function() { close(false); });
+    ok.addEventListener('click', function() { close(true); });
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) close(false); });
+    document.addEventListener('keydown', onKey);
+    actions.appendChild(back); actions.appendChild(ok); box.appendChild(actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  });
 }
 
 function setupOtherSelect(selectId, otherInputId) {
@@ -690,9 +788,11 @@ document.getElementById('submitBtn').addEventListener('click', function() {
   if (missing.length > 0) {
     msgBox.className = 'msg error';
     msgBox.textContent = '請填寫以下必填欄位：\n' + missing.join('\n');
-    showToast('請填寫必填欄位（詳見下方紅字說明）', 'error');
+    markMissingFields_(missing);
+    showToast('還有 ' + missing.length + ' 個必填欄位沒填，已用紅框標出，並捲到第一個', 'error', true);
     return;
   }
+  clearMissingMarks_();
 
   var industryList = Array.prototype.slice.call(document.querySelectorAll('.industryCheckbox:checked')).map(function(cb) {
     if (cb.value === '其他') return document.getElementById('industryOtherInput').value.trim();
@@ -789,6 +889,23 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     finalNote: document.getElementById('finalNoteInput').value.trim(),
   };
 
+  var demandParts_ = [];
+  if (data.propertyTypes.indexOf('廠房') !== -1) demandParts_.push('廠房：' + [data.factoryAreaBuy && ('買' + data.factoryAreaBuy + '坪'), data.factoryPriceBuy && ('總價上限' + data.factoryPriceBuy + '萬'), data.factoryAreaRent && ('租' + data.factoryAreaRent + '坪'), data.factoryRent && ('租金上限' + data.factoryRent), data.factoryHeight && ('淨高' + data.factoryHeight), data.factoryPower && ('電力' + data.factoryPower)].filter(Boolean).join('、'));
+  if (data.propertyTypes.indexOf('土地') !== -1) demandParts_.push('土地：' + [data.landAreaBuy && ('買' + data.landAreaBuy + '坪'), data.landPriceBuy && ('總價上限' + data.landPriceBuy + '萬'), data.landAreaRent && ('租' + data.landAreaRent + '坪'), data.landRent && ('租金上限' + data.landRent), data.landUse && ('種類' + data.landUse)].filter(Boolean).join('、'));
+  if (data.propertyTypes.indexOf('房屋') !== -1) demandParts_.push('房屋：' + [data.houseAreaBuy && ('買' + data.houseAreaBuy + '坪'), data.housePriceBuy && ('總價上限' + data.housePriceBuy + '萬'), data.houseAreaRent && ('租' + data.houseAreaRent + '坪'), data.houseRent && ('租金上限' + data.houseRent), data.houseLayout && ('房型' + data.houseLayout)].filter(Boolean).join('、'));
+  showConfirmDialog_('送出前確認（客需）', [
+    ['負責業務', data.business],
+    ['客戶', [data.clientName, data.contactPerson, data.contactPhone].filter(Boolean).join('｜')],
+    ['物件／需求', data.propertyTypes + '｜' + data.demandType],
+    ['需求內容', demandParts_.join('\n')],
+    ['目標區域', data.region],
+    ['進駐／急迫', [data.moveInTime, data.urgency].filter(Boolean).join('｜')],
+  ]).then(function(confirmed) {
+    if (!confirmed) return;
+    doSubmit_();
+  });
+
+  function doSubmit_() {
   var submitBtn = document.getElementById('submitBtn');
   submitBtn.disabled = true;
   submitBtn.textContent = '送出中...';
@@ -829,6 +946,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     showToast('送出失敗：' + (err && err.message ? err.message : err), 'error');
     window.scrollTo(0, 0);
   });
+  }
 });
 
 // ------------------------------------------------------------
