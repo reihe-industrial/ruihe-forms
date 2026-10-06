@@ -171,6 +171,14 @@
   <h1>客需資料填寫表</h1>
   <div class="subtitle">業務拜訪或電話聯繫客戶後填寫，記錄客戶購買／承租需求</div>
 
+  <div id="draftBanner" style="display:none; background:#fff8e1; border:1px solid #e0c341; border-radius:10px; padding:14px; margin-bottom:16px; font-size:14px; color:#5a4a00;">
+    偵測到瀏覽器裡有尚未送出的草稿，要繼續剛才填到一半的內容嗎？
+    <div style="margin-top:10px; display:flex; gap:8px;">
+      <button type="button" id="restoreDraftBtn" style="flex:1; padding:9px; background:#2f6f4e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">繼續使用草稿</button>
+      <button type="button" id="discardDraftBtn" style="flex:1; padding:9px; background:#eee; color:#333; border:none; border-radius:8px; cursor:pointer;">捨棄，重新開始</button>
+    </div>
+  </div>
+
   <!-- 一、客戶資料 -->
   <div class="card">
     <h2>一、客戶資料</h2>
@@ -650,6 +658,7 @@ fetch(API_URL + '?action=options').then(function(r) { return r.json(); }).then(f
 
   var today = new Date();
   document.getElementById('fillDate').value = today.toISOString().slice(0, 10);
+  initDraftBanner_();
 }).catch(function(err) {
   var msgBox = document.getElementById('msgBox');
   msgBox.className = 'msg error';
@@ -791,6 +800,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
       msgBox.className = 'msg success';
       msgBox.textContent = result.message || '送出成功！';
       showToast(result.message || '送出成功！', 'success');
+      clearDraft_();
       document.querySelectorAll('input[type=text], input[type=number], textarea').forEach(function(el) { el.value = ''; });
       document.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
       document.querySelectorAll('input[type=checkbox]').forEach(function(el) { el.checked = false; });
@@ -820,6 +830,127 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     window.scrollTo(0, 0);
   });
 });
+
+// ------------------------------------------------------------
+// 草稿暫存（存在這台電腦／手機瀏覽器的 localStorage，不用登入 Google 帳號）：
+// 填到一半離開或關掉分頁，重新打開同一個網址會問要不要接著繼續。
+// 草稿只存在你自己的瀏覽器裡，換裝置或換瀏覽器看不到；送出成功後草稿會自動清掉。
+// ------------------------------------------------------------
+var DRAFT_STORAGE_KEY = 'ruiheClientNeedsDraft';
+var DRAFT_SKIP_IDS = { fillDate: true, submitBtn: true };
+
+function collectDraft_() {
+  var draft = { fields: {}, checked: [], regions: [] };
+  document.querySelectorAll('.container input[id], .container select[id], .container textarea[id]').forEach(function(el) {
+    if (DRAFT_SKIP_IDS[el.id] || el.type === 'checkbox' || el.type === 'button') return;
+    draft.fields[el.id] = el.value;
+  });
+  document.querySelectorAll('.container input[type=checkbox]:checked').forEach(function(cb) {
+    draft.checked.push({ cls: cb.className, value: cb.value });
+  });
+  document.querySelectorAll('.region-entry').forEach(function(entry) {
+    var county = entry.querySelector('.countySelect').value;
+    var towns = Array.prototype.slice.call(entry.querySelectorAll('.townCheckbox:checked')).map(function(c) { return c.value; });
+    draft.regions.push({ county: county, towns: towns });
+  });
+  return draft;
+}
+
+function draftIsEmpty_(draft) {
+  var hasField = Object.keys(draft.fields).some(function(k) { return String(draft.fields[k]).trim() !== ''; });
+  var hasRegion = draft.regions.some(function(r) { return r.county; });
+  return !hasField && !draft.checked.length && !hasRegion;
+}
+
+function saveDraftToLocalStorage_() {
+  try {
+    var draft = collectDraft_();
+    if (draftIsEmpty_(draft)) localStorage.removeItem(DRAFT_STORAGE_KEY);
+    else localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch (err) {
+    // localStorage 被瀏覽器擋掉或滿了，暫存失敗就算了，不影響正常填寫
+  }
+}
+
+function clearDraft_() {
+  try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch (err) {}
+}
+
+function fireChange_(el) { el.dispatchEvent(new Event('change', { bubbles: true })); }
+
+function restoreDraft_(draft) {
+  // 1. 先還原勾選（物件類型、業務、產業類別、土地種類…），並觸發連動顯示
+  var wanted = {};
+  (draft.checked || []).forEach(function(c) { wanted[c.cls + '||' + c.value] = true; });
+  document.querySelectorAll('.container input[type=checkbox]').forEach(function(cb) {
+    var shouldCheck = !!wanted[cb.className + '||' + cb.value];
+    if (cb.checked !== shouldCheck) { cb.checked = shouldCheck; fireChange_(cb); }
+  });
+
+  // 2. 還原一般欄位，下拉選單改完要觸發連動（買／租欄位、天車噸數、房型、其他…）
+  Object.keys(draft.fields || {}).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.value = draft.fields[id];
+    if (el.tagName === 'SELECT') fireChange_(el);
+  });
+  updatePropertyTypeBlocks();
+  updateDemandTypeFields();
+
+  // 3. 目標區域：逐筆重建，縣市選好後再把鄉鎮勾回去
+  var regions = (draft.regions || []).filter(function(r) { return r.county; });
+  document.getElementById('regionEntries').innerHTML = '';
+  if (!regions.length) createRegionEntry();
+  regions.forEach(function(r) {
+    createRegionEntry();
+    var entries = document.querySelectorAll('.region-entry');
+    var entry = entries[entries.length - 1];
+    var countySel = entry.querySelector('.countySelect');
+    countySel.value = r.county;
+    fireChange_(countySel);
+    (r.towns || []).forEach(function(t) {
+      Array.prototype.slice.call(entry.querySelectorAll('.townCheckbox')).forEach(function(cb) {
+        if (cb.value === t) cb.checked = true;
+      });
+    });
+  });
+}
+
+// 載入完成後檢查有沒有草稿，有的話顯示提示橫幅（不自動套用，等使用者按按鈕）
+var pendingDraft_ = null;
+function initDraftBanner_() {
+  try {
+    var raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (raw) pendingDraft_ = JSON.parse(raw);
+  } catch (err) { pendingDraft_ = null; }
+  if (pendingDraft_ && !draftIsEmpty_(pendingDraft_)) {
+    document.getElementById('draftBanner').style.display = 'block';
+  }
+}
+document.getElementById('restoreDraftBtn').addEventListener('click', function() {
+  if (pendingDraft_) restoreDraft_(pendingDraft_);
+  document.getElementById('draftBanner').style.display = 'none';
+});
+document.getElementById('discardDraftBtn').addEventListener('click', function() {
+  clearDraft_();
+  pendingDraft_ = null;
+  document.getElementById('draftBanner').style.display = 'none';
+});
+
+// 自動暫存：欄位有變動時（停止輸入 1 秒後才存），加上每 15 秒定期存一次保險。
+// 草稿橫幅還在、尚未決定要不要還原時先不存，避免把舊草稿蓋成空白。
+var draftSaveTimer_ = null;
+['input', 'change'].forEach(function(evtName) {
+  document.querySelector('.container').addEventListener(evtName, function() {
+    if (document.getElementById('draftBanner').style.display === 'block') return;
+    clearTimeout(draftSaveTimer_);
+    draftSaveTimer_ = setTimeout(saveDraftToLocalStorage_, 1000);
+  });
+});
+setInterval(function() {
+  if (document.getElementById('draftBanner').style.display === 'block') return;
+  saveDraftToLocalStorage_();
+}, 15000);
 </script>
 </body>
 </html>
