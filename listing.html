@@ -78,7 +78,7 @@
     label { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
     label.required::after { content: " *"; color: var(--danger); font-weight: 700; }
 
-    /* 「四、物件資訊」欄位最多、最重複，排成兩欄比較不用一直滑動。
+    /* 「三、物件資訊」欄位最多、最重複，排成兩欄比較不用一直滑動。
        用多欄流版（columns）取代表格式網格（grid）：每個欄位各自往下
        接續排列，不會因為左右兩格說明文字長短不一，被迫拉齊同一列高度、
        造成輸入框高高低低對不齊；說明文字長的、複選/文字區域這些
@@ -167,6 +167,8 @@
     .confirm-actions button { flex: 1; padding: 12px; font-size: 15px; font-weight: 700; border-radius: 8px; border: none; cursor: pointer; }
     .confirm-actions .confirm-back { background: #eee; color: #333; }
     .confirm-actions .confirm-ok { background: var(--brand); color: #fff; }
+    .district-block { border: 1px dashed var(--line); border-radius: 8px; padding: 14px; background: #fbfaf6; }
+    .district-block-title { font-weight: 700; font-size: 14px; color: var(--brand-dark); margin-bottom: 10px; }
     .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; white-space: pre-line; line-height: 1.55; }
     .hint a { color: var(--brand); }
     .other-input { margin-top: 8px; }
@@ -304,35 +306,39 @@
       </div>
 
       <!-- 地段連動選單，拆成「地號」「建號」兩部分各自可新增多筆，
-           送出時分別組合成 Form_Responses 的地段/地段+地號/地段+建號 三個欄位 -->
-      <div class="card">
-        <h2 id="districtSectionTitle">三、地段資訊</h2>
-        <div class="field">
-          <label class="required">地號</label>
-          <div class="hint">同一段別的地號可以寫在同一格，用逗號分隔，例如：375,376,377
+           送出時分別組合成 Form_Responses 的地段/地段+地號/地段+建號 三個欄位。
+           這一塊平常放在這個隱藏的暫存區；渲染「三、物件資訊」時（renderTypeFields），
+           會依 FIELD_CONFIG 裡 district-block 的位置（土地面積(m²) 的上面）搬進去顯示 -->
+      <div id="districtBlockHolder" style="display:none;">
+        <div class="field field-wide district-block" id="districtBlock">
+          <div class="district-block-title" id="districtSectionTitle">地段地號及建號資訊</div>
+          <div class="field">
+            <label class="required">地號</label>
+            <div class="hint">同一段別的地號可以寫在同一格，用逗號分隔，例如：375,376,377
 不同段別請按「＋新增一筆地號」分開填寫</div>
-          <div id="lotEntries"></div>
-          <button type="button" class="add-district-btn" id="addLotBtn">＋ 新增一筆地號</button>
-        </div>
-        <div class="field" id="buildingSection">
-          <label class="required">建號</label>
-          <div class="hint">同一段別的建號可以寫在同一格，用逗號分隔，例如：595-1,595
+            <div id="lotEntries"></div>
+            <button type="button" class="add-district-btn" id="addLotBtn">＋ 新增一筆地號</button>
+          </div>
+          <div class="field" id="buildingSection">
+            <label class="required">建號</label>
+            <div class="hint">同一段別的建號可以寫在同一格，用逗號分隔，例如：595-1,595
 不同段別請按「＋新增一筆建號」分開填寫
 沒有建號（未保存登記）請填「未保存登記」</div>
-          <div id="buildingEntries"></div>
-          <button type="button" class="add-district-btn" id="addBuildingBtn">＋ 新增一筆建號</button>
+            <div id="buildingEntries"></div>
+            <button type="button" class="add-district-btn" id="addBuildingBtn">＋ 新增一筆建號</button>
+          </div>
         </div>
       </div>
 
-      <!-- 三、物件資訊（依類型切換） -->
+      <!-- 三、物件資訊（依類型切換，地段地號及建號也在這裡） -->
       <div class="card">
-        <h2>四、物件資訊</h2>
+        <h2>三、物件資訊</h2>
         <div id="typeFields"></div>
       </div>
 
-      <!-- 五、上傳照片 -->
+      <!-- 四、上傳照片 -->
       <div class="card">
-        <h2>五、上傳照片</h2>
+        <h2>四、上傳照片</h2>
         <div class="field">
           <label>上傳照片／文件</label>
           <div class="hint">選好檔案後會自動在背景上傳，可以繼續填其他欄位；如果照片分散在不同資料夾，可以按好幾次「選擇檔案」，會自動累加。
@@ -385,7 +391,7 @@ var YES_NO = ['是','否'];
 // 經濟部產業園區管理局轄下園區清單（不含科學園區管理局、縣市政府、公民營事業
 // 等其他機關管理的工業區/園區），用於「產業園區名稱」欄位的自動完成建議。
 // 非管理局轄下的園區，業務可以直接打字填「區外」或該園區實際名稱。
-// 管理局轄下產業園區依縣市分組，「產業園區名稱」欄位依「三、地段地號及
+// 管理局轄下產業園區依縣市分組，「產業園區名稱」欄位依「地段地號及
 // 建號資訊」第一筆地號選的縣市，動態顯示對應縣市的園區選項（見
 // updateParkNameOptions）。每個縣市都會有「區外」可以選。
 var PARK_BY_COUNTY = {
@@ -663,8 +669,9 @@ var FIELD_CONFIG = {
       hint: '如果為都市計畫請查詢土地是什麼細部計畫並填寫\n例如：擬定谷關風景特定區計畫細部計畫案、變更臺中市都市計畫(新市政中心專用區南側)細部計畫(配合醫療專用區變更附帶條件修訂土地使用分區管制要點)\n★要注意特定非都有另外的細部計畫規定!!(如：嘉義大埔美)\n※各縣市細部計畫查詢(有些縣市不包含，台中的請點下面的網址)\nhttps://ngis.nlma.gov.tw/TCDPageD2.aspx\n※台中市細部計畫查詢\nhttps://www.ud.taichung.gov.tw/2878076/post' },
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
     { label: '產業園區名稱', type: 'select-other', required: true, options: [], extraDetailFor: ['區外'], skipOtherOption: true, dynamicParkOptions: true,
-      hint: '先在下面「三、地段地號及建號資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
-    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '選好上面「三、地段」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
+      hint: '先在下面「地段地號及建號資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
+    { label: '地段地號及建號', type: 'district-block' },
+    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '選好上面「地段地號及建號資訊」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
     { label: '詳細地址', type: 'address-detail', required: true },
     { label: '土地面積(m²)', type: 'number', required: true, showPing: true },
     { label: '主建物面積(m²)', type: 'number', required: true, showPing: true },
@@ -727,8 +734,9 @@ var FIELD_CONFIG = {
       hint: '如果為都市計畫請查詢土地是什麼細部計畫並填寫\n例如：擬定谷關風景特定區計畫細部計畫案、變更臺中市都市計畫(新市政中心專用區南側)細部計畫(配合醫療專用區變更附帶條件修訂土地使用分區管制要點)\n★要注意特定非都有另外的細部計畫規定!!(如：嘉義大埔美)\n※各縣市細部計畫查詢(有些縣市不包含，台中的請點下面的網址)\nhttps://ngis.nlma.gov.tw/TCDPageD2.aspx\n※台中市細部計畫查詢\nhttps://www.ud.taichung.gov.tw/2878076/post' },
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
     { label: '產業園區名稱(土地)', type: 'select-other', options: [], extraDetailFor: ['區外', '非園區'], skipOtherOption: true, dynamicParkOptions: true, dynamicParkExtraOption: '非園區',
-      hint: '先在下面「地段地號資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」；不是產業用地（例如農地、建地）請選「非園區」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
-    { label: '案件坐落', type: 'text', autoFromDistrict: true, hint: '選好上面「三、地段」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
+      hint: '先在下面「地段資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」；不是產業用地（例如農地、建地）請選「非園區」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
+    { label: '地段地號及建號', type: 'district-block' },
+    { label: '案件坐落', type: 'text', autoFromDistrict: true, hint: '選好上面「地段地號及建號資訊」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
     { label: '土地面積(m²)', type: 'number', required: true, showPing: true, hint: '從權狀本填寫，無需填單位。範例：13000' },
     { label: '建蔽率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
     { label: '容積率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
@@ -759,7 +767,8 @@ var FIELD_CONFIG = {
       } },
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
     { label: '社區大樓名稱', type: 'text', required: true },
-    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '選好上面「三、地段」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
+    { label: '地段地號及建號', type: 'district-block' },
+    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '選好上面「地段地號及建號資訊」第一筆地號的縣市/鄉鎮區，這裡就會自動顯示，也可以自己修改。\n範例：台中市南屯區' },
     { label: '詳細地址', type: 'address-detail', required: true },
     { label: '土地面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
     { label: '主建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
@@ -1050,14 +1059,18 @@ document.querySelectorAll('input[name="typeTab"]').forEach(function(radio) {
 });
 document.getElementById('typeLabel-廠房').classList.add('active');
 
+var districtBlockEl_ = document.getElementById('districtBlock');
 function renderTypeFields(typeTab) {
   var container = document.getElementById('typeFields');
+  // 先把地段區塊搬回暫存區，不然清空欄位時它會跟著被清掉
+  document.getElementById('districtBlockHolder').appendChild(districtBlockEl_);
   container.innerHTML = '';
   var fields = FIELD_CONFIG[typeTab] || [];
   var urbanPlanSelectRef = null; // 「都市或非都市計畫」的 select 元素，「使用分區」用它決定選項
   var landUseRebuildFn = null; // 「使用分區」選項的重建函式，plan select 改變時呼叫
   var WIDE_FIELD_TYPES = ['textarea', 'per-floor-height', 'checkbox', 'checkbox-region', 'checkbox-other', 'checkbox-other-conditional', 'multi-text', 'address-detail'];
   fields.forEach(function(f) {
+    if (f.type === 'district-block') { container.appendChild(districtBlockEl_); return; }
     var wrap = document.createElement('div');
     wrap.className = 'field' + (WIDE_FIELD_TYPES.indexOf(f.type) !== -1 ? ' field-wide' : '');
     if (f.group) wrap.setAttribute('data-group', f.group);
@@ -1376,7 +1389,7 @@ function renderTypeFields(typeTab) {
       var prefixDiv = document.createElement('div');
       prefixDiv.className = 'hint';
       prefixDiv.id = 'detailAddressPrefix';
-      prefixDiv.textContent = '（請先在「三、地段地號及建號資訊」選好第一筆地號的縣市／鄉鎮區）';
+      prefixDiv.textContent = '（請先在上面「地段地號及建號資訊」選好第一筆地號的縣市／鄉鎮區）';
       wrap.appendChild(prefixDiv);
 
       var detailInput = document.createElement('input');
@@ -1804,7 +1817,7 @@ function rebuildDistrictEntries() {
   document.getElementById('buildingSection').style.display = (currentType === '土地') ? 'none' : '';
   if (currentType !== '土地') addBuildingEntry();
   document.getElementById('districtSectionTitle').textContent =
-    (currentType === '土地') ? '三、地段資訊' : '三、地段地號及建號資訊';
+    (currentType === '土地') ? '地段資訊' : '地段地號及建號資訊';
 }
 
 document.getElementById('addLotBtn').addEventListener('click', addLotEntry);
@@ -1963,7 +1976,7 @@ function restoreDraft_(draft) {
     });
   }
   document.getElementById('districtSectionTitle').textContent =
-    (currentType === '土地') ? '三、地段資訊' : '三、地段地號及建號資訊';
+    (currentType === '土地') ? '地段資訊' : '地段地號及建號資訊';
 
   // 3. 一般欄位（text/number/select/select-other/text-suggest）
   Object.keys(draft.fields || {}).forEach(function(label) {
