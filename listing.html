@@ -616,6 +616,46 @@ function attachRocPreview_(inputEl) {
   rocInputs_.push(inputEl);
   update();
 }
+// 好幾棟建物、完成日各不相同時，一個日期選擇器放不下，改成文字欄位，
+// 依棟別列出，例如「A廠房110年2月1日、B倉庫108年5月3日」
+function makeDateFieldText_(el) {
+  if (el.type === 'text') return;
+  el.type = 'text';
+  el.placeholder = '例：A廠房110年2月1日、B倉庫108年5月3日';
+  if (el._dateToggleBtn) el._dateToggleBtn.textContent = '改回日期選擇';
+}
+function makeDateFieldDate_(el) {
+  var m = String(el.value).trim().match(/^(\d{1,3})年(\d{1,2})月(\d{1,2})日$/);
+  el.type = 'date';
+  el.placeholder = '';
+  el.value = m ? ((parseInt(m[1], 10) + 1911) + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2)) : '';
+  if (el._dateToggleBtn) el._dateToggleBtn.textContent = '各棟完成日不同？改用文字填寫';
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+// 建築完成日下面的切換鈕：好幾棟、完成日不同時，改成文字欄位自己依棟別填寫
+function attachDateTextToggle_(inputEl) {
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'date-text-toggle';
+  btn.style.cssText = 'background:none;border:none;color:var(--brand-dark);font-size:12.5px;text-decoration:underline;cursor:pointer;padding:2px 0;text-align:left;';
+  btn.textContent = '各棟完成日不同？改用文字填寫';
+  inputEl._dateToggleBtn = btn;
+  btn.addEventListener('click', function() {
+    if (inputEl.type === 'date') {
+      var iso = inputEl.value;
+      makeDateFieldText_(inputEl);
+      inputEl.value = iso ? toRocText_(iso, inputEl.getAttribute('data-label')) : '';
+      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+      inputEl.focus();
+    } else {
+      var single = /^(\d{1,3})年(\d{1,2})月(\d{1,2})日$/.test(String(inputEl.value).trim());
+      if (String(inputEl.value).trim() && !single && !confirm('改回日期選擇會清掉目前填的文字，確定嗎？')) return;
+      makeDateFieldDate_(inputEl);
+    }
+  });
+  var anchor = inputEl.nextElementSibling && inputEl.nextElementSibling.classList.contains('roc-preview') ? inputEl.nextElementSibling : inputEl;
+  anchor.insertAdjacentElement('afterend', btn);
+}
 function refreshRocPreviews_() { rocInputs_.forEach(function(el) { if (el.updateRocPreview) el.updateRocPreview(); }); }
 
 // 契約編號填「口約」時，合約起始自動帶入今天、合約到期帶入一年後（只在欄位還是空的時候帶入，
@@ -712,7 +752,7 @@ var FIELD_CONFIG = {
     { label: '基地深度', type: 'text', required: true },
     { label: '基地面寬', type: 'text', required: true },
     { label: '面臨路寬', type: 'text', required: true },
-    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期。年份可以輸入民國年（例如 113）或西元年（例如 2024）；1912 年以前的老建築請輸入西元年（例如 1895）' },
+    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期。年份可以輸入民國年（例如 113）或西元年（例如 2024）；1912 年以前的老建築請輸入西元年（例如 1895）。有好幾棟、完成日不同時，請按下面「各棟完成日不同？改用文字填寫」，依棟別填寫，例如：A廠房110年2月1日、B倉庫108年5月3日' },
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總樓層數，例如：4；如果只提供其中一層樓，請填該樓層，例如：3F(僅提供3樓)；如果基地上有好幾棟不同樓層的建物，請簡短列出，例如：廠房2F、倉庫1F、宿舍3F' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)；如果好幾棟都有地下室，請簡短列出，例如：廠房B1、宿舍B1' },
     { label: '物件格局(廠房)', type: 'room-layout', required: true },
@@ -721,7 +761,7 @@ var FIELD_CONFIG = {
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
     { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
     { label: '土地朝向(廠房)', type: 'select', options: DIRECTIONS, required: true },
-    { label: '簷高(滴水高度)', type: 'per-floor-height', hint: '按「＋新增一棟」，打棟別名稱+地上/地下幾層，會自動展開每層的簷高欄位分別填寫；基地上不只一棟就一棟一棟新增。可以對照上面「地段地號及建號資訊」填了幾筆建號，這裡至少也要有對應的棟數；未保存登記的建物沒有建號，請自行額外新增。(滴水高度：雨水離開廠房屋頂，開始下墜時離地面的高度)' },
+    { label: '簷高(滴水高度)', type: 'per-floor-height', hint: '選填。按「＋新增一棟」，輸入棟別名稱和地上／地下幾層，下面會出現每一層的簷高欄位，分別填寫；基地上不只一棟就一棟一棟新增。(滴水高度：雨水離開廠房屋頂，開始下墜時離地面的高度)' },
     { label: '樓地板載重', type: 'multi-text', hint: '有資訊者填寫。指樓地板(公斤/平方公尺)、貨梯(公斤或公噸)...、天車(公斤或公噸)...等載重，可能不只一種，點「新增一筆」逐項填寫。' },
     { label: '可供用水量', type: 'text', hint: '數值+單位。範例：80立方米/日' },
     { label: '可供用電量', type: 'text', hint: '數值+單位。範例：100hp/kw' },
@@ -812,7 +852,7 @@ var FIELD_CONFIG = {
     { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
-    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期。年份可以輸入民國年（例如 113）或西元年（例如 2024）；1912 年以前的老建築請輸入西元年（例如 1895）' },
+    { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期。年份可以輸入民國年（例如 113）或西元年（例如 2024）；1912 年以前的老建築請輸入西元年（例如 1895）。有好幾棟、完成日不同時，請按下面「各棟完成日不同？改用文字填寫」，依棟別填寫，例如：A廠房110年2月1日、B倉庫108年5月3日' },
     { label: '所在樓別', type: 'text', required: true, hint: '物件位於幾樓' },
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)' },
@@ -1626,6 +1666,7 @@ function renderTypeFields(typeTab) {
     }
     wrap.appendChild(el);
     if (f.type === 'roc-date' || f.type === 'roc-month') attachRocPreview_(el);
+    if (f.type === 'roc-date' && f.label === '建築完成日') attachDateTextToggle_(el);
 
     if (f.showPing) {
       var pingSpan = document.createElement('div');
@@ -2011,6 +2052,7 @@ function restoreDraft_(draft) {
   Object.keys(draft.fields || {}).forEach(function(label) {
     var el = document.querySelector('#listingForm [data-label="' + label.replace(/"/g, '\\"') + '"]');
     if (!el) return;
+    if ((el.type === 'date' || el.type === 'month') && draft.fields[label] && !/^\d{4}-\d{1,2}(-\d{1,2})?$/.test(draft.fields[label])) makeDateFieldText_(el);
     el.value = draft.fields[label];
     if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change'));
     el.dispatchEvent(new Event('input')); // 讓「地上樓層」「地下樓層」這類有監聽 input 事件的欄位（例如簷高會依此重新長出樓層格子）正確反應還原的值
@@ -3272,7 +3314,16 @@ function applyDeed_() {
   // 3. 建物
   if (blds.length && currentType !== '土地') {
     var b0 = blds[0];
-    if (blds.length > 1) res.notes.push('一共帶入 ' + blds.length + ' 筆建物：面積加總，門牌、完成日、樓層、建材以第一筆（建號 ' + b0.number + '）為主，請確認');
+    var multiFactory = currentType === '廠房' && blds.length > 1;
+    function bldName_(i) {
+      var use = String(blds[i].mainUse || '').split('、')[0].trim();
+      return (blds.length > 1 ? String.fromCharCode(65 + i) : '') + (use || (blds.length > 1 ? '建物' : '廠房'));
+    }
+    if (multiFactory) {
+      res.notes.push('一共帶入 ' + blds.length + ' 筆建物（' + blds.map(function(b, i) { return String.fromCharCode(65 + i) + '＝建號 ' + b.number; }).join('、') + '）：面積加總，樓層、簷高、建築完成日已依棟別列出，主要建材和建物類別合併勾選；門牌以第一筆為主，請確認');
+    } else if (blds.length > 1) {
+      res.notes.push('一共帶入 ' + blds.length + ' 筆建物：面積加總，主要建材合併勾選；門牌、完成日、樓層以第一筆（建號 ' + b0.number + '）為主，請確認');
+    }
     if (b0.address) deedSetInput_('詳細地址', b0.address, res) || (function() { var di = document.getElementById('detailAddressInput'); if (di && !di.value.trim()) { di.value = b0.address; deedFire_(di, ['input']); deedMark_(di); res.filled.push('詳細地址'); } })();
     var total = 0, attached = 0, shared = 0, hasShared = false;
     blds.forEach(function(b) { total += b.totalAreaM2 || 0; attached += b.attachedAreaM2 || 0; if (b.sharedAreaM2 !== null && b.sharedAreaM2 !== undefined) { shared += b.sharedAreaM2; hasShared = true; } });
@@ -3280,21 +3331,98 @@ function applyDeed_() {
     deedSetInput_('附屬建物面積(m²)', String(Math.round(attached * 100) / 100), res);
     if (hasShared) deedSetInput_('共同使用面積(m²)', String(Math.round(shared * 100) / 100), res);
     else if (deedField_('共同使用面積(m²)')) res.notes.push('這份謄本沒有列出共有部分的面積，「共同使用面積」請從權狀填寫');
-    if (b0.completion) {
+    function rocText_(c) { return c.rocYear + '年' + c.month + '月' + c.day + '日'; }
+    var dateKinds = {};
+    blds.forEach(function(b) { if (b.completion) dateKinds[rocText_(b.completion)] = true; });
+    if (multiFactory && Object.keys(dateKinds).length > 1) {
+      // 每棟完成日不同：依棟別列出，例如「A廠房110年2月1日、B倉庫108年5月3日」
+      var dateText = blds.map(function(b, i) { return b.completion ? (bldName_(i) + rocText_(b.completion)) : ''; }).filter(Boolean).join('、');
+      var dateEl = deedField_('建築完成日');
+      if (dateEl && String(dateEl.value).trim() === '') {
+        makeDateFieldText_(dateEl);
+        dateEl.value = dateText;
+        deedFire_(dateEl, ['input', 'change']);
+        deedMark_(dateEl); res.filled.push('建築完成日（各棟不同，已依棟別列出）');
+      } else if (dateEl) res.skipped.push('建築完成日');
+    } else if (b0.completion) {
       var y = b0.completion.rocYear + 1911, mm = ('0' + b0.completion.month).slice(-2), dd = ('0' + b0.completion.day).slice(-2);
       deedSetInput_('建築完成日', y + '-' + mm + '-' + dd, res);
     }
     var maxFloors = 0, maxBase = 0;
     blds.forEach(function(b) { if (b.floors > maxFloors) maxFloors = b.floors; if (b.basementCount > maxBase) maxBase = b.basementCount; });
-    if (maxFloors) deedSetInput_('地上樓層', String(maxFloors), res);
-    deedSetInput_('地下樓層', String(maxBase), res);
+    if (multiFactory) {
+      // 好幾棟：依棟別簡短列出，例如「A廠房4F、B倉庫3F」「A廠房B1」
+      var upText = blds.map(function(b, i) { return b.floors ? (bldName_(i) + b.floors + 'F') : ''; }).filter(Boolean).join('、');
+      var downText = blds.map(function(b, i) { return b.basementCount ? (bldName_(i) + 'B' + b.basementCount) : ''; }).filter(Boolean).join('、');
+      if (upText) deedSetInput_('地上樓層', upText, res);
+      deedSetInput_('地下樓層', downText || '0', res);
+    } else {
+      if (maxFloors) deedSetInput_('地上樓層', String(maxFloors), res);
+      deedSetInput_('地下樓層', String(maxBase), res);
+    }
+    // 簷高：依每一棟建立（棟別名稱、地上／地下層數），每層高度欄位會自動長出來讓業務填
+    var eaveGroup = document.querySelector('#typeFields [data-extra-floor-label="簷高(滴水高度)"]');
+    if (eaveGroup) {
+      var eaveBlocks = Array.prototype.slice.call(eaveGroup.querySelectorAll('.building-block'));
+      var eaveHasContent = eaveBlocks.some(function(blk) {
+        return blk.querySelector('.building-name-input').value.trim() || blk.querySelector('.building-above-input').value || blk.querySelector('.building-below-input').value;
+      });
+      if (eaveHasContent) {
+        res.skipped.push('簷高(滴水高度)');
+      } else {
+        eaveBlocks.forEach(function(blk) { var rb = blk.querySelector('.remove-btn'); if (rb) rb.click(); });
+        var addBtn = Array.prototype.slice.call(eaveGroup.querySelectorAll('button')).filter(function(btn) { return btn.textContent.indexOf('新增一棟') !== -1; })[0];
+        if (addBtn) {
+          blds.forEach(function(b, i) {
+            addBtn.click();
+            var blocks = eaveGroup.querySelectorAll('.building-block');
+            var blk = blocks[blocks.length - 1];
+            var nameIn = blk.querySelector('.building-name-input'), upIn = blk.querySelector('.building-above-input'), downIn = blk.querySelector('.building-below-input');
+            nameIn.value = bldName_(i); deedFire_(nameIn, ['input']);
+            upIn.value = b.floors || ''; deedFire_(upIn, ['input']);
+            downIn.value = b.basementCount || ''; deedFire_(downIn, ['input']);
+          });
+          deedMark_(eaveGroup);
+          res.filled.push('簷高(滴水高度)的棟別與樓層（每層高度請自行填寫）');
+        }
+      }
+    }
     var mats = [];
     blds.forEach(function(b) { (b.materials || []).forEach(function(m) { var o = deedMaterialOption_(m); if (mats.indexOf(o) === -1) mats.push(o); }); });
     if (mats.length) deedCheckGroup_('主要建材', mats, [], res);
-    if (currentType === '廠房' && deedField_ && document.querySelector('#typeFields [data-checkbox-label="建物類別"]')) {
-      var use = blds.map(function(b) { return b.mainUse || ''; }).join('、');
-      var cat = /廠房/.test(use) ? '廠房' : (/倉庫|儲藏/.test(use) ? '倉庫' : '');
-      if (cat) deedCheckGroup_('建物類別', [cat], [], res);
+    // 多棟廠房、各棟建材不同：勾選欄位只能合併，另外在「其他備註說明」補一行對照，例如「主要建材：A廠房：RC；B倉庫：SC」
+    if (multiFactory) {
+      var perBld = blds.map(function(b, i) {
+        var codes = [];
+        (b.materials || []).forEach(function(m) {
+          var o = deedMaterialOption_(m);
+          var short = (o.match(/^([A-Z]{2,3})\s/) || [])[1] || o;
+          if (codes.indexOf(short) === -1) codes.push(short);
+        });
+        return { name: bldName_(i), codes: codes };
+      }).filter(function(x) { return x.codes.length; });
+      var signatures = {};
+      perBld.forEach(function(x) { signatures[x.codes.slice().sort().join('+')] = true; });
+      if (perBld.length > 1 && Object.keys(signatures).length > 1) {
+        var matLine = '主要建材：' + perBld.map(function(x) { return x.name + '：' + x.codes.join('、'); }).join('；');
+        var noteEl = deedField_('其他備註說明');
+        if (noteEl && noteEl.value.indexOf(matLine) === -1) {
+          var cur = noteEl.value.replace(/\s+$/, '');
+          noteEl.value = cur ? (cur + '\n' + matLine) : matLine;
+          deedFire_(noteEl, ['input', 'change']);
+          deedMark_(noteEl); res.filled.push('其他備註說明（各棟建材對照）');
+        }
+      }
+    }
+    if (currentType === '廠房' && document.querySelector('#typeFields [data-checkbox-label="建物類別"]')) {
+      // 各棟的主要用途分別判斷，符合的類別全部勾選（例如一棟廠房、一棟倉庫就兩個都勾）
+      var cats = [];
+      blds.forEach(function(b) {
+        var use = b.mainUse || '';
+        if (/廠房/.test(use) && cats.indexOf('廠房') === -1) cats.push('廠房');
+        if (/倉庫|儲藏/.test(use) && cats.indexOf('倉庫') === -1) cats.push('倉庫');
+      });
+      if (cats.length) deedCheckGroup_('建物類別', cats, [], res);
     }
   }
 
