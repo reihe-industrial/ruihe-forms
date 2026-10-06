@@ -36,7 +36,7 @@
       color: var(--ink);
       line-height: 1.5;
     }
-    .container { max-width: 640px; margin: 0 auto; }
+    .container { max-width: 760px; margin: 0 auto; }
 
     h1 {
       font-family: "Noto Serif TC", "Noto Sans TC", serif;
@@ -110,16 +110,19 @@
     }
 
     .region-entry {
-      display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px;
-      align-items: end; margin-bottom: 12px;
-      padding-bottom: 12px; border-bottom: 1px dashed var(--line);
+      margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--line);
     }
     .region-entry:last-child { border-bottom: none; margin-bottom: 4px; padding-bottom: 0; }
-    .region-entry .mini-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 600; }
-    .region-entry select { padding: 8px 10px; font-size: 13.5px; }
-    @media (max-width: 480px) {
-      .region-entry { grid-template-columns: 1fr 1fr; }
-      .region-entry .remove-btn { grid-column: 1 / -1; }
+    .region-head { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+    .region-entry select { padding: 9px 10px; font-size: 14px; }
+    .region-towns { display: none; margin-top: 10px; }
+    .region-towns-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: var(--muted); margin-bottom: 6px;
+    }
+    .select-all-btn {
+      background: none; border: 1px solid var(--line); border-radius: 999px;
+      padding: 3px 10px; font-size: 12px; color: var(--brand-dark); cursor: pointer;
     }
 
     .remove-btn {
@@ -148,6 +151,18 @@
     }
     .msg.success { background: var(--brand-soft); color: var(--brand-dark); display: block; }
     .msg.error { background: var(--danger-soft); color: var(--danger); display: block; }
+
+    /* 兩欄緊湊排版 */
+    .card, .type-block { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+    .card > *:not(.field) { grid-column: 1 / -1; }
+    .type-block > .type-block-title { grid-column: 1 / -1; margin: 0; }
+    .card h2 { margin-bottom: 4px; }
+    .type-block { margin-top: 6px; }
+    .field, .field:last-child { margin-bottom: 0; }
+    .field:has(.checkbox-group), .field:has(textarea), .field:has(#houseLayoutDetail) { grid-column: 1 / -1; }
+    @media (max-width: 480px) {
+      .card, .type-block { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -160,9 +175,9 @@
   <div class="card">
     <h2>一、客戶資料</h2>
     <div class="field">
-      <label class="required">負責業務</label>
-      <select id="businessSelect"><option value="">請選擇</option></select>
-      <input type="text" id="businessOtherInput" class="other-input" placeholder="請輸入姓名" style="display:none;">
+      <label class="required">負責業務（可複選）</label>
+      <div class="checkbox-group" id="businessCheckGroup"></div>
+      <input type="text" id="businessOtherInput" class="other-input" placeholder="請輸入姓名（多位請用頓號「、」分隔）" style="display:none;">
     </div>
     <div class="field">
       <label class="required">填表日期</label>
@@ -185,7 +200,7 @@
       </select>
     </div>
     <div class="field">
-      <label class="required">公司／客戶名稱</label>
+      <label>公司／客戶名稱</label>
       <input type="text" id="clientNameInput">
     </div>
     <div class="field">
@@ -376,7 +391,7 @@
   <!-- 三、目標區域 -->
   <div class="card">
     <h2>三、目標區域</h2>
-    <div class="hint">可以新增好幾筆，各自選縣市/鄉鎮市區；鄉鎮市區留空代表整個縣市都可以</div>
+    <div class="hint">先選縣市，再勾選想要的鄉鎮市區（可複選）；不勾鄉鎮市區代表整個縣市都可以。要選別的縣市請按「新增一筆區域」</div>
     <div id="regionEntries"></div>
     <button type="button" class="add-row-btn" id="addRegionBtn">＋ 新增一筆區域</button>
   </div>
@@ -451,16 +466,28 @@ function setupOtherSelect(selectId, otherInputId) {
   });
 }
 
-function buildBusinessSelect(selectId) {
-  var sel = document.getElementById(selectId);
-  PERSON_LIST.forEach(function(name) {
-    var o = document.createElement('option');
-    o.value = name; o.textContent = name;
-    sel.appendChild(o);
+function buildBusinessChecklist() {
+  var group = document.getElementById('businessCheckGroup');
+  PERSON_LIST.concat(['其他']).forEach(function(name) {
+    var lbl = document.createElement('label');
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = name; cb.className = 'businessCheckbox';
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(name));
+    group.appendChild(lbl);
+    if (name === '其他') {
+      cb.addEventListener('change', function() {
+        document.getElementById('businessOtherInput').style.display = cb.checked ? 'block' : 'none';
+      });
+    }
   });
-  var otherOpt = document.createElement('option');
-  otherOpt.value = '其他'; otherOpt.textContent = '其他';
-  sel.appendChild(otherOpt);
+}
+
+function getBusinessList() {
+  return Array.prototype.slice.call(document.querySelectorAll('.businessCheckbox:checked')).map(function(cb) {
+    if (cb.value === '其他') return document.getElementById('businessOtherInput').value.trim();
+    return cb.value;
+  }).filter(function(v) { return v; });
 }
 
 function getBusinessValue(selectId, otherInputId) {
@@ -471,9 +498,9 @@ function getBusinessValue(selectId, otherInputId) {
 
 function updatePropertyTypeBlocks() {
   var checked = Array.prototype.slice.call(document.querySelectorAll('.propertyTypeCheckbox:checked')).map(function(cb) { return cb.value; });
-  document.getElementById('factoryBlock').style.display = checked.indexOf('廠房') !== -1 ? 'block' : 'none';
-  document.getElementById('landBlock').style.display = checked.indexOf('土地') !== -1 ? 'block' : 'none';
-  document.getElementById('houseBlock').style.display = checked.indexOf('房屋') !== -1 ? 'block' : 'none';
+  document.getElementById('factoryBlock').style.display = checked.indexOf('廠房') !== -1 ? 'grid' : 'none';
+  document.getElementById('landBlock').style.display = checked.indexOf('土地') !== -1 ? 'grid' : 'none';
+  document.getElementById('houseBlock').style.display = checked.indexOf('房屋') !== -1 ? 'grid' : 'none';
   document.getElementById('landKindBlock').style.display = checked.indexOf('土地') !== -1 ? 'block' : 'none';
   var landBuildFactory = checked.indexOf('土地') !== -1 && !!document.querySelector('.landKindCheckbox[value="建廠用"]:checked');
   document.getElementById('industryBlock').style.display = (checked.indexOf('廠房') !== -1 || landBuildFactory) ? 'block' : 'none';
@@ -527,51 +554,25 @@ function buildIndustryChecklist() {
   });
 }
 
-// 目標區域：新增一筆＝縣市→鄉鎮市區兩層選單，鄉鎮市區留空代表整個縣市
+// 目標區域：選縣市後，鄉鎮市區用勾選方式複選；一個都不勾代表整個縣市
 function createRegionEntry() {
   regionEntryCount++;
 
   var wrap = document.createElement('div');
   wrap.className = 'region-entry';
 
-  var countyWrap = document.createElement('div');
-  var countyLabel = document.createElement('div');
-  countyLabel.className = 'mini-label';
-  countyLabel.textContent = '縣市';
+  var head = document.createElement('div');
+  head.className = 'region-head';
+
   var countySelect = document.createElement('select');
   countySelect.className = 'countySelect';
   var blankCounty = document.createElement('option');
-  blankCounty.value = ''; blankCounty.textContent = '請選擇';
+  blankCounty.value = ''; blankCounty.textContent = '請選擇縣市';
   countySelect.appendChild(blankCounty);
   Object.keys(DISTRICT_DATA).forEach(function(county) {
     var o = document.createElement('option');
     o.value = county; o.textContent = county;
     countySelect.appendChild(o);
-  });
-  countyWrap.appendChild(countyLabel);
-  countyWrap.appendChild(countySelect);
-
-  var townWrap = document.createElement('div');
-  var townLabel = document.createElement('div');
-  townLabel.className = 'mini-label';
-  townLabel.textContent = '鄉鎮市區（可留空）';
-  var townSelect = document.createElement('select');
-  townSelect.className = 'townSelect';
-  var blankTown = document.createElement('option');
-  blankTown.value = ''; blankTown.textContent = '不限（整個縣市）';
-  townSelect.appendChild(blankTown);
-  townWrap.appendChild(townLabel);
-  townWrap.appendChild(townSelect);
-
-  countySelect.addEventListener('change', function() {
-    townSelect.innerHTML = '';
-    townSelect.appendChild(blankTown.cloneNode(true));
-    var towns = DISTRICT_DATA[countySelect.value] || {};
-    Object.keys(towns).forEach(function(town) {
-      var o = document.createElement('option');
-      o.value = town; o.textContent = town;
-      townSelect.appendChild(o);
-    });
   });
 
   var removeBtn = document.createElement('button');
@@ -579,24 +580,70 @@ function createRegionEntry() {
   removeBtn.className = 'remove-btn';
   removeBtn.textContent = '刪除';
   removeBtn.addEventListener('click', function() {
-    var allEntries = document.querySelectorAll('.region-entry');
-    if (allEntries.length <= 1) { alert('至少要保留一筆區域'); return; }
+    if (document.querySelectorAll('.region-entry').length <= 1) { alert('至少要保留一筆區域'); return; }
     wrap.remove();
   });
 
-  wrap.appendChild(countyWrap);
-  wrap.appendChild(townWrap);
-  wrap.appendChild(removeBtn);
+  head.appendChild(countySelect);
+  head.appendChild(removeBtn);
+  wrap.appendChild(head);
+
+  var townBox = document.createElement('div');
+  townBox.className = 'region-towns';
+  var bar = document.createElement('div');
+  bar.className = 'region-towns-bar';
+  var barText = document.createElement('span');
+  barText.textContent = '鄉鎮市區（可複選；都不勾＝整個縣市）';
+  var allBtn = document.createElement('button');
+  allBtn.type = 'button';
+  allBtn.className = 'select-all-btn';
+  allBtn.textContent = '全選';
+  bar.appendChild(barText);
+  bar.appendChild(allBtn);
+  var townGroup = document.createElement('div');
+  townGroup.className = 'checkbox-group';
+  townBox.appendChild(bar);
+  townBox.appendChild(townGroup);
+  wrap.appendChild(townBox);
+
+  countySelect.addEventListener('change', function() {
+    townGroup.innerHTML = '';
+    allBtn.textContent = '全選';
+    var towns = DISTRICT_DATA[countySelect.value] || {};
+    var names = Object.keys(towns);
+    names.forEach(function(town) {
+      var lbl = document.createElement('label');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = town; cb.className = 'townCheckbox';
+      lbl.appendChild(cb);
+      lbl.appendChild(document.createTextNode(town));
+      townGroup.appendChild(lbl);
+    });
+    townBox.style.display = names.length ? 'block' : 'none';
+  });
+
+  allBtn.addEventListener('click', function() {
+    var boxes = townGroup.querySelectorAll('.townCheckbox');
+    var allChecked = Array.prototype.every.call(boxes, function(b) { return b.checked; });
+    boxes.forEach(function(b) { b.checked = !allChecked; });
+    allBtn.textContent = allChecked ? '全選' : '取消全選';
+  });
+
   document.getElementById('regionEntries').appendChild(wrap);
 }
-document.getElementById('addRegionBtn').addEventListener('click', createRegionEntry);
+document.getElementById('addRegionBtn').addEventListener('click', function() {
+  if (!Object.keys(DISTRICT_DATA).length) {
+    showToast('縣市資料還沒載入成功，請重新整理頁面再試', 'error');
+    return;
+  }
+  createRegionEntry();
+});
 
 fetch(API_URL + '?action=options').then(function(r) { return r.json(); }).then(function(options) {
   PERSON_LIST = options.personList || [];
   DISTRICT_DATA = options.districtData || {};
 
-  buildBusinessSelect('businessSelect');
-  setupOtherSelect('businessSelect', 'businessOtherInput');
+  buildBusinessChecklist();
   setupOtherSelect('sourceSelect', 'sourceOtherInput');
   buildIndustryChecklist();
   createRegionEntry();
@@ -606,22 +653,22 @@ fetch(API_URL + '?action=options').then(function(r) { return r.json(); }).then(f
 }).catch(function(err) {
   var msgBox = document.getElementById('msgBox');
   msgBox.className = 'msg error';
-  msgBox.textContent = '載入資料失敗：' + (err && err.message ? err.message : err);
+  msgBox.textContent = '載入資料失敗：' + (err && err.message ? err.message : err) + '\n請重新整理頁面；如果一直失敗，請通知管理人員。';
+  showToast('載入資料失敗，請重新整理頁面', 'error');
 });
 
 document.getElementById('submitBtn').addEventListener('click', function() {
   var msgBox = document.getElementById('msgBox');
   msgBox.style.display = 'none';
 
-  var business = getBusinessValue('businessSelect', 'businessOtherInput');
+  var business = getBusinessList().join('、');
   var clientName = document.getElementById('clientNameInput').value.trim();
   var propertyTypes = Array.prototype.slice.call(document.querySelectorAll('.propertyTypeCheckbox:checked')).map(function(cb) { return cb.value; });
   var demandType = document.getElementById('demandTypeSelect').value;
 
   var missing = [];
-  if (!business) missing.push('負責業務');
+  if (!business) missing.push('負責業務（至少勾選一位）');
   if (!document.getElementById('fillDate').value) missing.push('填表日期');
-  if (!clientName) missing.push('公司／客戶名稱');
   if (propertyTypes.length === 0) missing.push('物件類型（至少勾選一項）');
   if (!demandType) missing.push('需求類型');
   if (propertyTypes.indexOf('廠房') !== -1) {
@@ -651,9 +698,13 @@ document.getElementById('submitBtn').addEventListener('click', function() {
   var regionList = [];
   document.querySelectorAll('.region-entry').forEach(function(entry) {
     var county = entry.querySelector('.countySelect').value;
-    var town = entry.querySelector('.townSelect').value;
     if (!county) return;
-    regionList.push(town ? (county + town) : county);
+    var towns = Array.prototype.slice.call(entry.querySelectorAll('.townCheckbox:checked')).map(function(cb) { return cb.value; });
+    if (towns.length) {
+      towns.forEach(function(t) { regionList.push(county + t); });
+    } else {
+      regionList.push(county);
+    }
   });
 
   var houseLayout = document.getElementById('houseLayoutSelect').value;
