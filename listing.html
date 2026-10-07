@@ -741,7 +741,7 @@ var FIELD_CONFIG = {
     { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '產業園區名稱', type: 'select-other', required: true, options: [], extraDetailFor: ['區外'], skipOtherOption: true, dynamicParkOptions: true,
       hint: '先在上面「地段地號及建號資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
-    { label: '詳細地址', type: 'address-detail', required: true },
+    { label: '詳細地址', type: 'address-detail', required: true, hint: '有兩個以上門牌時，用「；」分開，例如：環工九路7號；環工九路9號' },
     { label: '土地面積(m²)', type: 'number', required: true, showPing: true },
     { label: '主建物面積(m²)', type: 'number', required: true, showPing: true },
     { label: '附屬建物面積(m²)', type: 'number', required: true, showPing: true },
@@ -838,7 +838,7 @@ var FIELD_CONFIG = {
     { label: '社區大樓名稱', type: 'text', required: true },
     { label: '地段地號及建號', type: 'district-block' },
     { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
-    { label: '詳細地址', type: 'address-detail', required: true },
+    { label: '詳細地址', type: 'address-detail', required: true, hint: '有兩個以上門牌時，用「；」分開，例如：環工九路7號；環工九路9號' },
     { label: '土地面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
     { label: '主建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
     { label: '附屬建物面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。如無附屬建物請填0，範例：500', showPing: true },
@@ -2635,7 +2635,15 @@ document.getElementById('listingForm').addEventListener('submit', async function
   if (detailAddressInput) {
     var prefixText = document.getElementById('detailAddressPrefix').textContent;
     var isRealPrefix = prefixText.indexOf('（') === -1; // 還沒選地段時前綴是提示文字（括號開頭），不算真的前綴
-    fieldValues['詳細地址'] = (isRealPrefix ? prefixText : '') + detailAddressInput.value.trim();
+    var addrPrefix = isRealPrefix ? prefixText : '';
+    var addrRaw = detailAddressInput.value.trim();
+    var addrParts = addrRaw.split(/[；;]/).map(function(x) { return x.trim(); }).filter(Boolean);
+    if (addrParts.length > 1) {
+      // 好幾個門牌：每一個都補上縣市區前綴（已經自己打了前綴的不重複補）
+      fieldValues['詳細地址'] = addrParts.map(function(x) { return (addrPrefix && x.indexOf(addrPrefix) !== 0) ? (addrPrefix + x) : x; }).join('；');
+    } else {
+      fieldValues['詳細地址'] = addrPrefix + addrRaw;
+    }
   }
 
   // 「委託人聯絡地址」：縣市/鄉鎮區下拉 + 詳細地址文字框，組合成一個欄位
@@ -3025,6 +3033,22 @@ function parseDeedPages_(rawPages, districtData) {
       var basement = {};
       top.join('\n').replace(/地下\s*([一二三四五六七八九十\d]+)\s*層/g, function(_, n) { basement[n] = true; return ''; });
       rec.basementCount = Object.keys(basement).length;
+      // 層次：這筆建號位在地上第幾層（一層、二層…；地下層、突出物不算）。
+      // 同一棟大樓／廠房的不同樓層常常是不同的建號，靠這個才知道各筆建號分別是幾樓
+      rec.floorNums = [];
+      var cnNum = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+      function cnToNum_(t) {
+        if (/^\d+$/.test(t)) return parseInt(t, 10);
+        if (t === '十') return 10;
+        var m10 = t.match(/^十([一二三四五六七八九])$/); if (m10) return 10 + cnNum[m10[1]];
+        var m20 = t.match(/^([一二三四五六七八九])十([一二三四五六七八九])?$/); if (m20) return cnNum[m20[1]] * 10 + (m20[2] ? cnNum[m20[2]] : 0);
+        return cnNum[t] || null;
+      }
+      top.forEach(function(l) {
+        var fm = l.trim().match(/^(?:層\s*次\s*:?\s*)?([一二三四五六七八九十\d]+)\s*層\s+(?:層次面積\s*:?\s*)?\**\s*[\d,]+(?:\.\d+)?\s*平方公尺/);
+        if (fm) { var n = cnToNum_(fm[1]); if (n && rec.floorNums.indexOf(n) === -1) rec.floorNums.push(n); }
+      });
+      rec.floorNums.sort(function(a, b) { return a - b; });
       // 附屬建物：「用途  陽台  面積  15.21平方公尺」
       rec.attachedAreaM2 = 0;
       var inAttach = false;
@@ -3040,7 +3064,89 @@ function parseDeedPages_(rawPages, districtData) {
       rec.completion = dm ? { rocYear: parseInt(dm[1], 10), month: parseInt(dm[2], 10), day: parseInt(dm[3], 10) } : null;
       if (rec.totalAreaM2 === null) rec.warnings.push('找不到建物總面積');
     }
+    rec._headerIdx = h.i;
+    rec.ownership = { entries: [], rightTypes: [], restrictions: [] };
     records.push(rec);
+  });
+
+  // 第二輪：把「所有權部」「他項權利部」歸到對應的那筆土地／建物
+  //   電傳：每一頁標題下面的路徑會寫明是哪個地號／建號；電子謄本：接在它前面的標示部後面
+  var byKey = {};
+  records.forEach(function(r) { byKey[r.kind + '|' + r.number] = r; });
+  var lastByKind = {};
+  headerIdx.forEach(function(h, k) {
+    var kind = h.key.indexOf('土地') === 0 ? 'land' : 'building';
+    if (h.key === '土地標示部' || h.key === '建物標示部') {
+      records.forEach(function(r) { if (r._headerIdx === h.i) lastByKind[kind] = r; });
+      return;
+    }
+    if (h.key === '土地增值稅概算表') return;
+    var end = k + 1 < headerIdx.length ? headerIdx[k + 1].i : lines.length;
+    var body = lines.slice(h.i + 1, end).filter(function(l) { return !deedIsNoise_(l); });
+    var target = null;
+    for (var j = 0; j < Math.min(body.length, 3); j++) {
+      var bm = body[j].match(/(地號|建號)\s*(\d{3,5})-(\d{3,4})/);
+      if (bm) { target = byKey[kind + '|' + deedNumberText_(bm[2], bm[3])] || null; break; }
+    }
+    if (!target) target = lastByKind[kind] || null;
+    if (!target) return;
+    var own = target.ownership;
+
+    if (h.key.indexOf('所有權部') !== -1) {
+      // 一筆一筆的所有權登記：電子謄本用「(0001)登記次序」分段；電傳一頁就是一筆
+      var starts = [];
+      body.forEach(function(l, i) { if (/^\(\d{4}\)\s*登記次序/.test(l.trim())) starts.push(i); });
+      if (!starts.length) starts = [0];
+      starts.forEach(function(st, si) {
+        var seg = body.slice(st, si + 1 < starts.length ? starts[si + 1] : body.length);
+        var entry = { regDate: null, cause: '', occur: null, shareText: '', whole: true };
+        seg.forEach(function(l) {
+          var t = l.trim();
+          var rd = t.match(/^登記日期\s*:?\s*民國\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日(?:\s*登記原因\s*:?\s*(\S+))?/);
+          if (rd) { entry.regDate = { rocYear: +rd[1], month: +rd[2], day: +rd[3] }; entry.cause = rd[4] || ''; return; }
+          var od = t.match(/^原因發生日期\s*:?\s*民國\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
+          if (od) { entry.occur = { rocYear: +od[1], month: +od[2], day: +od[3] }; return; }
+          var sh = t.match(/^權利範圍\s*:?\s*(.+)$/);
+          if (sh) {
+            entry.shareText = sh[1].replace(/\*/g, '').replace(/\s+/g, '');
+            var fr = entry.shareText.match(/(\d+)分之(\d+)/);
+            entry.whole = fr ? (fr[1] === fr[2]) : /全部/.test(entry.shareText);
+          }
+        });
+        if (entry.regDate || entry.occur) own.entries.push(entry);
+      });
+    } else {
+      // 他項權利部：記「權利種類」、權利人（只收銀行、公司等機構名稱，自然人只標註不收姓名）、擔保債權總金額、設定日
+      own.rights = own.rights || [];
+      var rStarts = [];
+      body.forEach(function(l, i) { if (/權利種類\s*:?\s*\S+/.test(l)) rStarts.push(i); });
+      rStarts.forEach(function(st, ri) {
+        var seg = body.slice(st, ri + 1 < rStarts.length ? rStarts[ri + 1] : body.length);
+        var right = { type: '', holder: '', holderKind: '', amount: '', date: null };
+        seg.forEach(function(l) {
+          var t = l.trim();
+          var rt = t.match(/權利種類\s*:?\s*(\S+)/);
+          if (rt && !right.type) right.type = rt[1];
+          var hd = t.match(/^權\s*利\s*人\s*:?\s*(\S.*)$/);
+          if (hd && !right.holderKind) {
+            var nm = hd[1].split(/\s{2,}|統一編號|統編/)[0].trim();
+            if (/銀行|信用合作社|信用部|農會|漁會|合作金庫|郵政|保險|公司|基金|信託|資產管理|租賃|財團法人|社團法人|合作社|協會/.test(nm)) { right.holder = nm; right.holderKind = 'institution'; }
+            else right.holderKind = 'person';
+          }
+          var am = t.match(/擔保債權總金額?\s*:?\s*新台幣\s*\**\s*([\d,]+)\s*元/);
+          if (am && !right.amount) right.amount = am[1];
+          var dt = t.match(/^登記日期\s*:?\s*民國\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
+          if (dt && !right.date) right.date = { rocYear: +dt[1], month: +dt[2], day: +dt[3] };
+        });
+        if (right.type) {
+          own.rights.push(right);
+          if (own.rightTypes.indexOf(right.type) === -1) own.rightTypes.push(right.type);
+        }
+      });
+    }
+    // 查封、假扣押、預告登記等限制：只記關鍵字
+    var hit = body.join('\n').match(/查封|假扣押|假處分|假執行|預告登記|破產登記|限制登記/g) || [];
+    hit.forEach(function(w) { if (own.restrictions.indexOf(w) === -1) own.restrictions.push(w); });
   });
   return records;
 }
@@ -3238,6 +3344,17 @@ function deedClearBlankRows_(containerId, valueSel) {
   });
 }
 
+function deedRangeText_(nums) {
+  var out = [], i = 0;
+  while (i < nums.length) {
+    var j = i;
+    while (j + 1 < nums.length && nums[j + 1] === nums[j] + 1) j++;
+    out.push(j > i ? (nums[i] + '~' + nums[j]) : String(nums[i]));
+    i = j + 1;
+  }
+  return out.join('+');
+}
+
 function applyDeed_() {
   var out = document.getElementById('deedApplyResult');
   var chosen = deedState_.filter(function(x) { return x.include; });
@@ -3312,31 +3429,72 @@ function applyDeed_() {
   }
 
   // 3. 建物
+  //    以「門牌」分棟：同一個門牌的好幾筆建號，視為同一棟的不同樓層／單位；不同門牌才是不同棟（A、B…）
   if (blds.length && currentType !== '土地') {
+    var isFactory = currentType === '廠房';
     var b0 = blds[0];
-    var multiFactory = currentType === '廠房' && blds.length > 1;
-    function bldName_(i) {
-      var use = String(blds[i].mainUse || '').split('、')[0].trim();
-      return (blds.length > 1 ? String.fromCharCode(65 + i) : '') + (use || (blds.length > 1 ? '建物' : '廠房'));
-    }
-    if (multiFactory) {
-      res.notes.push('一共帶入 ' + blds.length + ' 筆建物（' + blds.map(function(b, i) { return String.fromCharCode(65 + i) + '＝建號 ' + b.number; }).join('、') + '）：面積加總，樓層、簷高、建築完成日已依棟別列出，主要建材和建物類別合併勾選；門牌以第一筆為主，請確認');
+    var groups = [];
+    blds.forEach(function(b) {
+      var key = String(b.address || '').replace(/\s+/g, '') || ('建號' + b.number);
+      var g = groups.filter(function(x) { return x.key === key; })[0];
+      if (!g) { g = { key: key, blds: [] }; groups.push(g); }
+      g.blds.push(b);
+    });
+    var multiBld = groups.length > 1;
+    groups.forEach(function(g, gi) {
+      g.address = ''; g.floorsTotal = 0; g.basement = 0;
+      var prov = {};
+      g.blds.forEach(function(b) {
+        if (!g.address && b.address) g.address = b.address;
+        if (b.floors > g.floorsTotal) g.floorsTotal = b.floors;
+        if (b.basementCount > g.basement) g.basement = b.basementCount;
+        (b.floorNums || []).forEach(function(n) { prov[n] = true; });
+      });
+      g.provided = Object.keys(prov).map(Number).sort(function(x, y) { return x - y; });
+      var maxProv = g.provided.length ? g.provided[g.provided.length - 1] : 0;
+      if (maxProv > g.floorsTotal) g.floorsTotal = maxProv;
+      g.whole = !!g.floorsTotal && g.provided.length === g.floorsTotal; // 提供的樓層涵蓋 1 樓到頂樓，等於整棟
+      var use = String(g.blds[0].mainUse || '').split('、')[0].trim();
+      g.name = (multiBld ? String.fromCharCode(65 + gi) : '') + (use || (multiBld ? '建物' : '廠房'));
+      g.rangeText = deedRangeText_(g.provided);
+      g.nums = g.blds.map(function(b) { return b.number; });
+      var withDate = g.blds.filter(function(b) { return b.completion; })[0];
+      g.completion = withDate ? withDate.completion : null;
+    });
+    var hasEave = !!document.querySelector('#typeFields [data-extra-floor-label="簷高(滴水高度)"]');
+    function groupMap_() { return groups.map(function(g, gi) { return String.fromCharCode(65 + gi) + '＝建號 ' + g.nums.join('、') + (g.address ? '（' + g.address + '）' : ''); }).join('；'); }
+    if (multiBld) {
+      res.notes.push('一共帶入 ' + blds.length + ' 筆建號，依門牌分成 ' + groups.length + ' 棟（' + groupMap_() + '）：面積加總；樓層、建築完成日' + (hasEave ? '、簷高' : '') + '已依棟別列出；門牌已用「；」分開列在詳細地址；主要建材合併勾選，請確認');
     } else if (blds.length > 1) {
-      res.notes.push('一共帶入 ' + blds.length + ' 筆建物：面積加總，主要建材合併勾選；門牌、完成日、樓層以第一筆（建號 ' + b0.number + '）為主，請確認');
+      var g1 = groups[0];
+      res.notes.push('這 ' + blds.length + ' 筆建號門牌相同' + (g1.address ? '（' + g1.address + '）' : '') + '，視為同一棟的不同樓層／單位：面積加總；' +
+        (isFactory
+          ? (g1.provided.length ? (g1.whole ? '樓層涵蓋整棟，地上樓層填總樓層' : '只涵蓋 ' + g1.rangeText.replace(/\+/g, '、') + ' 樓，地上樓層填成「僅提供」的寫法，如果是整棟請改成總樓層') : '謄本沒有列出層次，地上樓層填總樓層')
+          : (g1.provided.length ? '所在樓別填 ' + g1.rangeText.replace(/\+/g, '、') + ' 樓，地上樓層填總樓層' : '謄本沒有列出層次，所在樓別請自行填寫')) + '，請確認');
     }
-    if (b0.address) deedSetInput_('詳細地址', b0.address, res) || (function() { var di = document.getElementById('detailAddressInput'); if (di && !di.value.trim()) { di.value = b0.address; deedFire_(di, ['input']); deedMark_(di); res.filled.push('詳細地址'); } })();
+
+    // 詳細地址：各棟的門牌用「；」分開
+    var addrs = [];
+    groups.forEach(function(g) { if (g.address && addrs.indexOf(g.address) === -1) addrs.push(g.address); });
+    if (addrs.length) {
+      var addrText = addrs.join('；');
+      deedSetInput_('詳細地址', addrText, res) || (function() { var di = document.getElementById('detailAddressInput'); if (di && !di.value.trim()) { di.value = addrText; deedFire_(di, ['input']); deedMark_(di); res.filled.push('詳細地址'); } })();
+    }
+
+    // 面積（同一棟不同樓層的各筆建號也是加總）
     var total = 0, attached = 0, shared = 0, hasShared = false;
     blds.forEach(function(b) { total += b.totalAreaM2 || 0; attached += b.attachedAreaM2 || 0; if (b.sharedAreaM2 !== null && b.sharedAreaM2 !== undefined) { shared += b.sharedAreaM2; hasShared = true; } });
     deedSetInput_('主建物面積(m²)', String(Math.round(total * 100) / 100), res);
     deedSetInput_('附屬建物面積(m²)', String(Math.round(attached * 100) / 100), res);
     if (hasShared) deedSetInput_('共同使用面積(m²)', String(Math.round(shared * 100) / 100), res);
     else if (deedField_('共同使用面積(m²)')) res.notes.push('這份謄本沒有列出共有部分的面積，「共同使用面積」請從權狀填寫');
+
+    // 建築完成日
     function rocText_(c) { return c.rocYear + '年' + c.month + '月' + c.day + '日'; }
     var dateKinds = {};
-    blds.forEach(function(b) { if (b.completion) dateKinds[rocText_(b.completion)] = true; });
-    if (multiFactory && Object.keys(dateKinds).length > 1) {
-      // 每棟完成日不同：依棟別列出，例如「A廠房110年2月1日、B倉庫108年5月3日」
-      var dateText = blds.map(function(b, i) { return b.completion ? (bldName_(i) + rocText_(b.completion)) : ''; }).filter(Boolean).join('、');
+    groups.forEach(function(g) { if (g.completion) dateKinds[rocText_(g.completion)] = true; });
+    if (multiBld && Object.keys(dateKinds).length > 1) {
+      var dateText = groups.map(function(g) { return g.completion ? (g.name + rocText_(g.completion)) : ''; }).filter(Boolean).join('、');
       var dateEl = deedField_('建築完成日');
       if (dateEl && String(dateEl.value).trim() === '') {
         makeDateFieldText_(dateEl);
@@ -3344,23 +3502,41 @@ function applyDeed_() {
         deedFire_(dateEl, ['input', 'change']);
         deedMark_(dateEl); res.filled.push('建築完成日（各棟不同，已依棟別列出）');
       } else if (dateEl) res.skipped.push('建築完成日');
-    } else if (b0.completion) {
-      var y = b0.completion.rocYear + 1911, mm = ('0' + b0.completion.month).slice(-2), dd = ('0' + b0.completion.day).slice(-2);
-      deedSetInput_('建築完成日', y + '-' + mm + '-' + dd, res);
+    } else if (groups[0].completion) {
+      var c0 = groups[0].completion;
+      deedSetInput_('建築完成日', (c0.rocYear + 1911) + '-' + ('0' + c0.month).slice(-2) + '-' + ('0' + c0.day).slice(-2), res);
     }
-    var maxFloors = 0, maxBase = 0;
-    blds.forEach(function(b) { if (b.floors > maxFloors) maxFloors = b.floors; if (b.basementCount > maxBase) maxBase = b.basementCount; });
-    if (multiFactory) {
-      // 好幾棟：依棟別簡短列出，例如「A廠房4F、B倉庫3F」「A廠房B1」
-      var upText = blds.map(function(b, i) { return b.floors ? (bldName_(i) + b.floors + 'F') : ''; }).filter(Boolean).join('、');
-      var downText = blds.map(function(b, i) { return b.basementCount ? (bldName_(i) + 'B' + b.basementCount) : ''; }).filter(Boolean).join('、');
-      if (upText) deedSetInput_('地上樓層', upText, res);
-      deedSetInput_('地下樓層', downText || '0', res);
+
+    // 樓層
+    function spec_(g) { return g.rangeText.split('+').map(function(x) { return x + 'F'; }).join('+'); }
+    function partialNote_(g) { return '(僅提供' + g.rangeText.replace(/\+/g, '、') + '樓)'; }
+    var upText = '';
+    if (isFactory) {
+      // 廠房：整棟填總樓層；只有其中幾層就寫「2F(僅提供2樓)」，多棟依棟別列出
+      if (multiBld) {
+        upText = groups.map(function(g) {
+          if (!g.floorsTotal) return '';
+          return (g.whole || !g.provided.length) ? (g.name + g.floorsTotal + 'F') : (g.name + spec_(g) + partialNote_(g));
+        }).filter(Boolean).join('、');
+      } else {
+        var gg = groups[0];
+        upText = !gg.floorsTotal ? '' : ((gg.whole || !gg.provided.length) ? String(gg.floorsTotal) : (spec_(gg) + partialNote_(gg)));
+      }
     } else {
-      if (maxFloors) deedSetInput_('地上樓層', String(maxFloors), res);
-      deedSetInput_('地下樓層', String(maxBase), res);
+      // 房屋：地上樓層填建物總樓層，物件在幾樓填在「所在樓別」
+      upText = multiBld ? groups.map(function(g) { return g.floorsTotal ? (g.name + g.floorsTotal + 'F') : ''; }).filter(Boolean).join('、')
+                        : (groups[0].floorsTotal ? String(groups[0].floorsTotal) : '');
+      var floorLocText = multiBld ? groups.map(function(g) { return g.provided.length ? (g.name + g.rangeText.replace(/\+/g, '、') + '樓') : ''; }).filter(Boolean).join('、')
+                                  : (groups[0].provided.length ? (groups[0].rangeText.replace(/\+/g, '、') + '樓') : '');
+      if (floorLocText) deedSetInput_('所在樓別', floorLocText, res);
     }
-    // 簷高：依每一棟建立（棟別名稱、地上／地下層數），每層高度欄位會自動長出來讓業務填
+    if (upText) deedSetInput_('地上樓層', upText, res);
+    var downText = multiBld
+      ? (groups.map(function(g) { return g.basement ? (g.name + 'B' + g.basement) : ''; }).filter(Boolean).join('、') || '0')
+      : String(groups[0].basement || 0);
+    deedSetInput_('地下樓層', downText, res);
+
+    // 簷高：每一棟建立一個區塊（棟別名稱、地上／地下層數），每層高度欄位會長出來讓業務填
     var eaveGroup = document.querySelector('#typeFields [data-extra-floor-label="簷高(滴水高度)"]');
     if (eaveGroup) {
       var eaveBlocks = Array.prototype.slice.call(eaveGroup.querySelectorAll('.building-block'));
@@ -3373,38 +3549,41 @@ function applyDeed_() {
         eaveBlocks.forEach(function(blk) { var rb = blk.querySelector('.remove-btn'); if (rb) rb.click(); });
         var addBtn = Array.prototype.slice.call(eaveGroup.querySelectorAll('button')).filter(function(btn) { return btn.textContent.indexOf('新增一棟') !== -1; })[0];
         if (addBtn) {
-          blds.forEach(function(b, i) {
+          groups.forEach(function(g) {
             addBtn.click();
             var blocks = eaveGroup.querySelectorAll('.building-block');
             var blk = blocks[blocks.length - 1];
             var nameIn = blk.querySelector('.building-name-input'), upIn = blk.querySelector('.building-above-input'), downIn = blk.querySelector('.building-below-input');
-            nameIn.value = bldName_(i); deedFire_(nameIn, ['input']);
-            upIn.value = b.floors || ''; deedFire_(upIn, ['input']);
-            downIn.value = b.basementCount || ''; deedFire_(downIn, ['input']);
+            var above = (g.whole || !g.provided.length) ? g.floorsTotal : g.provided[g.provided.length - 1];
+            nameIn.value = g.name; deedFire_(nameIn, ['input']);
+            upIn.value = above || ''; deedFire_(upIn, ['input']);
+            downIn.value = g.basement || ''; deedFire_(downIn, ['input']);
           });
           deedMark_(eaveGroup);
           res.filled.push('簷高(滴水高度)的棟別與樓層（每層高度請自行填寫）');
         }
       }
     }
+
+    // 主要建材：全部合併勾選
     var mats = [];
     blds.forEach(function(b) { (b.materials || []).forEach(function(m) { var o = deedMaterialOption_(m); if (mats.indexOf(o) === -1) mats.push(o); }); });
     if (mats.length) deedCheckGroup_('主要建材', mats, [], res);
-    // 多棟廠房、各棟建材不同：勾選欄位只能合併，另外在「其他備註說明」補一行對照，例如「主要建材：A廠房：RC；B倉庫：SC」
-    if (multiFactory) {
-      var perBld = blds.map(function(b, i) {
+    // 多棟、各棟建材不同：在「其他備註說明」補一行對照，例如「主要建材：A廠房：RC；B倉庫：SC」
+    if (multiBld) {
+      var perGroup = groups.map(function(g) {
         var codes = [];
-        (b.materials || []).forEach(function(m) {
+        g.blds.forEach(function(b) { (b.materials || []).forEach(function(m) {
           var o = deedMaterialOption_(m);
           var short = (o.match(/^([A-Z]{2,3})\s/) || [])[1] || o;
           if (codes.indexOf(short) === -1) codes.push(short);
-        });
-        return { name: bldName_(i), codes: codes };
+        }); });
+        return { name: g.name, codes: codes };
       }).filter(function(x) { return x.codes.length; });
       var signatures = {};
-      perBld.forEach(function(x) { signatures[x.codes.slice().sort().join('+')] = true; });
-      if (perBld.length > 1 && Object.keys(signatures).length > 1) {
-        var matLine = '主要建材：' + perBld.map(function(x) { return x.name + '：' + x.codes.join('、'); }).join('；');
+      perGroup.forEach(function(x) { signatures[x.codes.slice().sort().join('+')] = true; });
+      if (perGroup.length > 1 && Object.keys(signatures).length > 1) {
+        var matLine = '主要建材：' + perGroup.map(function(x) { return x.name + '：' + x.codes.join('、'); }).join('；');
         var noteEl = deedField_('其他備註說明');
         if (noteEl && noteEl.value.indexOf(matLine) === -1) {
           var cur = noteEl.value.replace(/\s+$/, '');
@@ -3414,8 +3593,7 @@ function applyDeed_() {
         }
       }
     }
-    if (currentType === '廠房' && document.querySelector('#typeFields [data-checkbox-label="建物類別"]')) {
-      // 各棟的主要用途分別判斷，符合的類別全部勾選（例如一棟廠房、一棟倉庫就兩個都勾）
+    if (isFactory && document.querySelector('#typeFields [data-checkbox-label="建物類別"]')) {
       var cats = [];
       blds.forEach(function(b) {
         var use = b.mainUse || '';
@@ -3425,6 +3603,89 @@ function applyDeed_() {
       if (cats.length) deedCheckGroup_('建物類別', cats, [], res);
     }
   }
+
+  // 3.5 所有權部：取得年月（房屋）、共有／他項權利／查封提醒（只用日期、登記原因、權利範圍、權利種類）
+  (function() {
+    function ownEntries_(r) { return (r.ownership && r.ownership.entries) || []; }
+    if (currentType === '房屋') {
+      var srcRecs = blds.length ? blds : lands;
+      var dates = {}, causes = [];
+      srcRecs.forEach(function(r) {
+        ownEntries_(r).forEach(function(e) {
+          var d = e.occur || e.regDate;
+          if (!d) return;
+          dates[d.rocYear + '-' + d.month + '-' + d.day] = d;
+          if (e.cause && causes.indexOf(e.cause) === -1) causes.push(e.cause);
+        });
+      });
+      var dKeys = Object.keys(dates);
+      if (dKeys.length === 1) {
+        var d0 = dates[dKeys[0]];
+        deedSetInput_('取得年月', (d0.rocYear + 1911) + '-' + ('0' + d0.month).slice(-2), res);
+        var acq = new Date(d0.rocYear + 1911, d0.month - 1, d0.day);
+        var withinYear = (new Date().getTime() - acq.getTime()) / 86400000 <= 365;
+        deedSetInput_('屋主是否一年內取得', withinYear ? '是' : '否', res);
+        res.infos.push('取得年月依謄本所有權部的取得日期（民國' + d0.rocYear + '年' + d0.month + '月' + d0.day + '日' + (causes.length ? '，' + causes.join('、') : '') + '）帶入。');
+      } else if (dKeys.length > 1) {
+        res.notes.push('各筆謄本（或各所有權人）的取得日期不同（' + dKeys.map(function(k) { var x = dates[k]; return x.rocYear + '年' + x.month + '月' + x.day + '日'; }).join('、') + '），取得年月沒有帶入，請自行填寫');
+      }
+    }
+    var shareNotes = [], rightNotes = [], restrictNotes = [];
+    chosen.forEach(function(x) {
+      var r = x.rec;
+      var label = (r.kind === 'land' ? '地號 ' : '建號 ') + r.number;
+      var own = r.ownership; if (!own) return;
+      // 房屋（大樓）的土地持分本來就是分數，不算共有提醒
+      if (!(currentType === '房屋' && r.kind === 'land')) {
+        var partial = own.entries.filter(function(e) { return !e.whole; }).map(function(e) { return e.shareText; });
+        if (partial.length) shareNotes.push(label + '（權利範圍 ' + partial.join('、') + '）');
+        else if (own.entries.length > 1) shareNotes.push(label + '（' + own.entries.length + ' 筆所有權登記）');
+      }
+      if (own.rightTypes.length) rightNotes.push(label + '：' + own.rightTypes.join('、'));
+      if (own.restrictions.length) restrictNotes.push(label + '：' + own.restrictions.join('、'));
+    });
+    // 他項權利摘要寫進「其他備註說明」（這個欄位不會寫進銷售DM資料表）
+    var rightMap = {}, rightOrder = [];
+    function rocDateText2_(d) { return '民國' + d.rocYear + '年' + d.month + '月' + d.day + '日'; }
+    chosen.forEach(function(x) {
+      var r = x.rec;
+      var lbl = (r.kind === 'land' ? '地號 ' : '建號 ') + r.number;
+      ((r.ownership && r.ownership.rights) || []).forEach(function(rt) {
+        var key = [rt.type, rt.holder, rt.holderKind, rt.amount].join('|');
+        if (!rightMap[key]) { rightMap[key] = { rt: rt, items: [] }; rightOrder.push(key); }
+        var itemText = lbl + (rt.date ? ' 設定日' + rocDateText2_(rt.date) : '');
+        if (rightMap[key].items.indexOf(itemText) === -1) rightMap[key].items.push(itemText);
+      });
+    });
+    if (rightOrder.length) {
+      var rightLines = rightOrder.map(function(k) {
+        var m = rightMap[k], rt = m.rt;
+        var parts = [rt.type];
+        if (rt.holder) parts.push(rt.holder); else if (rt.holderKind === 'person') parts.push('權利人為自然人');
+        if (rt.amount) parts.push('擔保債權總金額新台幣' + rt.amount + '元');
+        return '他項權利：' + parts.join('，') + '（' + m.items.join('、') + '）';
+      });
+      var rightNoteEl = deedField_('其他備註說明');
+      if (rightNoteEl) {
+        var addedAny = false;
+        rightLines.forEach(function(line) {
+          if (rightNoteEl.value.indexOf(line) === -1) {
+            var cur2 = rightNoteEl.value.replace(/\s+$/, '');
+            rightNoteEl.value = cur2 ? (cur2 + '\n' + line) : line;
+            addedAny = true;
+          }
+        });
+        if (addedAny) {
+          deedFire_(rightNoteEl, ['input', 'change']);
+          deedMark_(rightNoteEl);
+          res.filled.push('其他備註說明（他項權利摘要）');
+        }
+      }
+    }
+    if (restrictNotes.length) res.notes.push('謄本載有限制登記（' + restrictNotes.join('；') + '），請特別留意');
+    if (shareNotes.length) res.notes.push('所有權部顯示可能是共有（' + shareNotes.join('；') + '），出售需全體所有權人同意，請確認');
+    if (rightNotes.length) res.notes.push('他項權利部有登記（' + rightNotes.join('；') + '），請留意');
+  })();
 
   // 4. 把謄本檔案一起加入上傳（保留原檔）
   var addBox = document.getElementById('deedAddToUploads');
