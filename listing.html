@@ -1048,8 +1048,8 @@ var FIELD_CONFIG = {
     { label: '是否有廠登', type: 'select', options: YES_NO, required: true },
     { label: '附屬設備', type: 'checkbox-other', quantityFor: ['天車','吊車','客梯','貨梯'], dimsFor: ['客梯','貨梯'],
       options: ['天車','吊車','客梯','貨梯','卸貨碼頭','汙水處理設備','蓄水池','瓦斯','辦公室','空調系統','電力設備','無塵室','消防設備','會議室','水井'] },
-    { label: '建築能效標示', type: 'select', options: ['是', '否'], required: true, subForm: 'energy', hint: '本標的或社區是否有取得建築能效標示' },
-    { label: '太陽光電發電設備', type: 'select', options: ['是', '否'], required: true, subForm: 'solar', hint: '本標的或社區是否有設置太陽光電發電設備' },
+    { label: '建築能效標示', type: 'select', options: ['是', '否'], required: true, subForm: 'energy', onlyForEntrust: true, hint: '本標的或社區是否有取得建築能效標示。契約類型是「委託」才需要填' },
+    { label: '太陽光電發電設備', type: 'select', options: ['是', '否'], required: true, subForm: 'solar', onlyForEntrust: true, hint: '本標的或社區是否有設置太陽光電發電設備。契約類型是「委託」才需要填' },
     { label: '半徑300公尺是否有嫌惡設施', type: 'textarea', required: true,
       hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
@@ -1086,7 +1086,7 @@ var FIELD_CONFIG = {
       hint: '如果為都市計畫請查詢土地是什麼細部計畫並填寫\n例如：擬定谷關風景特定區計畫細部計畫案、變更臺中市都市計畫(新市政中心專用區南側)細部計畫(配合醫療專用區變更附帶條件修訂土地使用分區管制要點)\n★要注意特定非都有另外的細部計畫規定!!(如：嘉義大埔美)\n※各縣市細部計畫查詢(有些縣市不包含，台中的請點下面的網址)\nhttps://ngis.nlma.gov.tw/TCDPageD2.aspx\n※台中市細部計畫查詢\nhttps://www.ud.taichung.gov.tw/2878076/post' },
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
     { label: '地段地號及建號', type: 'district-block' },
-    { label: '案件坐落', type: 'text', autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
+    { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '產業園區名稱(土地)', type: 'select-other', options: [], extraDetailFor: ['區外', '非園區'], skipOtherOption: true, dynamicParkOptions: true, dynamicParkExtraOption: '非園區',
       hint: '先在上面「地段資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
     { label: '產權範圍', type: 'select', options: ['全部', '持分'], required: true, controlsGroup: 'share', showWhen: '持分', hint: '整筆出售選「全部」；只賣部分持分選「持分」' },
@@ -1120,9 +1120,9 @@ var FIELD_CONFIG = {
     { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
     { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物）換算帶入，可以再修改' },
     { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物）換算帶入，可以再修改' },
-    { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
-    { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
+    { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租','興建中'] },
     { label: '使用狀態補充說明(房屋)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
+    { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
     { label: '使用分區', type: 'checkbox-other-conditional', required: true,
       hint: '1.都市計畫請依據土地實際都市計畫分區填寫\n2.非都市計畫請填寫使用分區+用地類別\n有其他分區可以另外填寫\n★請記得申調使用分區證明!!',
       optionsByPlan: {
@@ -1130,19 +1130,19 @@ var FIELD_CONFIG = {
         '非都市計畫': ['非都-鄉村區甲種建築用地','非都-鄉村區乙種建築用地','非都-鄉村區丙種建築用地'],
       } },
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
-    { label: '社區大樓名稱', type: 'text', required: true },
     { label: '地段地號及建號', type: 'district-block' },
     { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '詳細地址', type: 'address-detail', required: true, hint: '有兩個以上門牌時，用「；」分開，例如：環工九路7號；環工九路9號' },
+    { label: '社區大樓名稱', type: 'text', required: true, hint: '沒有社區或大樓名稱（例如透天、農舍）請填「無」' },
     { label: '產權範圍', type: 'select', options: ['全部', '持分'], required: true, controlsGroup: 'share', showWhen: '持分', hint: '整戶出售選「全部」（大樓、公寓的土地本來就是持分，也選「全部」）；共有人只賣自己那一份選「持分」' },
     { label: '持分比例', type: 'text', required: true, group: 'share', hint: '例：1/2；土地和建物持分不同時分開寫，例：土地1/2、建物1/3' },
     { label: '全筆土地面積(m²)', type: 'number', required: true, group: 'share', showPing: true, hint: '整戶的土地面積（大樓、公寓填這一戶的土地持分面積），從謄本或權狀填寫' },
     { label: '全筆主建物面積(m²)', type: 'number', required: true, group: 'share', showPing: true, hint: '整棟主建物的面積，從謄本或權狀填寫' },
     { label: '土地面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。大樓、公寓請填這一戶的土地持分面積（土地面積 × 權利範圍），上傳土地謄本會自動算\n持分出售請填賣的那部分的面積', showPing: true },
-    { label: '主建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000\n持分出售請填持分面積', showPing: true },
+    { label: '主建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：85.6\n持分出售請填持分面積', showPing: true },
     { label: '附屬建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。如無附屬建物請填0，範例：500', showPing: true },
-    { label: '加蓋面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
-    { label: '共同使用面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。如無共同使用面積請填0，範例：13000', showPing: true },
+    { label: '加蓋面積(m²)', type: 'number', hint: '無需填單位。範例：20', showPing: true },
+    { label: '共同使用面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。如無共同使用面積請填0，範例：35.2', showPing: true },
     { label: '建蔽率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
     { label: '容積率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
     { label: '建物類別', type: 'checkbox-other', required: true, options: ['無電梯公寓','華廈(10樓含以下)','大樓(11樓以上)','透天','別墅','一般套房','商務套房','學生套房','樓中樓','農舍'] },
@@ -1183,14 +1183,14 @@ var FIELD_CONFIG = {
     { label: '管理方式', type: 'checkbox', options: ['無','保全公司','管理員','守衛室','固定巡邏','社區人員','保全設施'], required: true },
     { label: '管理費', type: 'select', options: ['有','無'], required: true },
     { label: '管理費用', type: 'text', hint: '有請寫管理費用金額，無請填0', requiredIf: { label: '管理費', value: '有' } },
-    { label: '繳費方式', type: 'select', options: ['月繳','雙月繳','季繳','半年繳','年繳','一次繳'], required: true },
+    { label: '繳費方式', type: 'select', options: ['月繳','雙月繳','季繳','半年繳','年繳','一次繳'], requiredIf: { label: '管理費', value: '有' }, hint: '管理費選「有」才需要填' },
     { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
     { label: '大門朝向', type: 'select', options: DIRECTIONS, required: true },
     { label: '落地窗朝向', type: 'select', options: DIRECTIONS, required: true },
     { label: '附屬設備', type: 'checkbox-other',
       options: ['冷氣','洗衣機','冰箱','熱水器','瓦斯爐','床組','衣櫃','沙發','餐桌','電視','網路','對講機','保全系統','電梯'] },
-    { label: '建築能效標示', type: 'select', options: ['是', '否'], required: true, subForm: 'energy', hint: '本標的或社區是否有取得建築能效標示' },
-    { label: '太陽光電發電設備', type: 'select', options: ['是', '否'], required: true, subForm: 'solar', hint: '本標的或社區是否有設置太陽光電發電設備' },
+    { label: '建築能效標示', type: 'select', options: ['是', '否'], required: true, subForm: 'energy', onlyForEntrust: true, hint: '本標的或社區是否有取得建築能效標示。契約類型是「委託」才需要填' },
+    { label: '太陽光電發電設備', type: 'select', options: ['是', '否'], required: true, subForm: 'solar', onlyForEntrust: true, hint: '本標的或社區是否有設置太陽光電發電設備。契約類型是「委託」才需要填' },
     { label: '半徑300公尺是否有嫌惡設施', type: 'textarea', required: true,
       hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
@@ -2868,34 +2868,11 @@ function readFileAsBase64(file) {
   });
 }
 
-document.getElementById('listingForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-
-  var submitBtn = document.getElementById('submitBtn');
-  var msgBox = document.getElementById('msgBox');
-  msgBox.style.display = 'none';
-
-  // 蒐集業務名單，依比例高低自動分成主要/次要業務
-  // （比例最高的算主要業務，並列最高的全部算主要；其他人算次要業務）
-  var allBusinessNames = getCheckedPersonNames();
-  var split = splitPrimarySecondaryByRatio();
-
-  if (allBusinessNames.length === 0 && !EDIT_MODE) {
-    msgBox.className = 'msg error';
-    msgBox.textContent = '請至少勾選一位業務名單。';
-    msgBox.style.display = 'block';
-    markMissingFields_(['業務名單（請至少勾選一位）']);
-    showToast('請至少勾選一位業務名單', 'error', true);
-    return;
-  }
-
+// 把表單目前的內容組成要存進試算表的值（{ 欄位標題: 值 }），送出和修改頁共用。
+// 不含業務名單、比例；不做必填檢查。implausibleDateLabels 收集看起來不合理的日期欄位。
+function collectFormValues_(implausibleDateLabels_) {
+  implausibleDateLabels_ = implausibleDateLabels_ || [];
   var fieldValues = {};
-  var implausibleDateLabels_ = [];
-  fieldValues['主要業務名稱'] = split.primaryNames.join('、');
-  fieldValues['主要業務人員比例'] = split.primaryRatios.join('、');
-  fieldValues['次要業務名稱'] = split.secondaryNames.join('、');
-  fieldValues['次要業務人員比例'] = split.secondaryRatios.join('、');
-
   // 一般 text/select/textarea/number 欄位（common 區塊 + 該類型專屬欄位）。
   // 「其他」選單：選到「其他」時，整個改讀旁邊自訂文字框的內容；
   // 選到「區外」這類「本身有意義、但還要補充說明」的選項時，
@@ -3036,6 +3013,70 @@ document.getElementById('listingForm').addEventListener('submit', async function
       (clientAddrCounty.value || '') + (clientAddrTown.value || '') + (clientAddrDetail.value || '').trim();
   }
 
+  // 地段區塊：「地號」「建號」各自獨立蒐集，縣市/鄉鎮只是輔助篩選，
+  // 最終只取段名本身。這裡直接在前端組合好 Form_Responses 要的三個欄位：
+  //   地段 → 地號清單+建號清單裡出現過的段名，去重後用「；」相接
+  //   地段+地號 → 只從「地號」清單組合，用「；」相接
+  //   地段+建號 → 只從「建號」清單組合（土地類型沒有這欄）
+  var districtSet = [];
+  function addDistrictName(d) { if (d && districtSet.indexOf(d) === -1) districtSet.push(d); }
+
+  var lotParts = [];
+  document.querySelectorAll('#lotEntries .district-entry').forEach(function(entry) {
+    var d = entry.querySelector('.districtSelect') ? entry.querySelector('.districtSelect').value : '';
+    if (!d) return;
+    addDistrictName(d);
+    var lotVal = entry.querySelector('.lotValueInput').value.trim();
+    lotParts.push(lotVal ? (d + lotVal) : d);
+  });
+
+  var buildingParts = [];
+  document.querySelectorAll('#buildingEntries .district-entry').forEach(function(entry) {
+    var d = entry.querySelector('.districtSelect') ? entry.querySelector('.districtSelect').value : '';
+    if (!d) return;
+    addDistrictName(d);
+    var buildingVal = entry.querySelector('.buildingValueInput').value.trim();
+    buildingParts.push(buildingVal ? (d + buildingVal) : d);
+  });
+
+  if (districtSet.length > 0) fieldValues['地段'] = districtSet.join('；');
+  if (lotParts.length > 0) fieldValues['地段+地號'] = lotParts.join('；');
+  if (currentType !== '土地' && document.getElementById('noBuildingNumber').checked) buildingParts.push('未保存登記');
+  if (buildingParts.length > 0) fieldValues['地段+建號'] = buildingParts.join('；');
+
+  return fieldValues;
+}
+
+document.getElementById('listingForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  var submitBtn = document.getElementById('submitBtn');
+  var msgBox = document.getElementById('msgBox');
+  msgBox.style.display = 'none';
+
+  // 蒐集業務名單，依比例高低自動分成主要/次要業務
+  // （比例最高的算主要業務，並列最高的全部算主要；其他人算次要業務）
+  var allBusinessNames = getCheckedPersonNames();
+  var split = splitPrimarySecondaryByRatio();
+
+  if (allBusinessNames.length === 0 && !EDIT_MODE) {
+    msgBox.className = 'msg error';
+    msgBox.textContent = '請至少勾選一位業務名單。';
+    msgBox.style.display = 'block';
+    markMissingFields_(['業務名單（請至少勾選一位）']);
+    showToast('請至少勾選一位業務名單', 'error', true);
+    return;
+  }
+
+  var fieldValues = {};
+  var implausibleDateLabels_ = [];
+  fieldValues['主要業務名稱'] = split.primaryNames.join('、');
+  fieldValues['主要業務人員比例'] = split.primaryRatios.join('、');
+  fieldValues['次要業務名稱'] = split.secondaryNames.join('、');
+  fieldValues['次要業務人員比例'] = split.secondaryRatios.join('、');
+
+  Object.assign(fieldValues, collectFormValues_(implausibleDateLabels_));
+
   // 送出前完整檢查必填欄位：固定共用欄位（STATIC_REQUIRED_LABELS）+ 該類型
   // FIELD_CONFIG 裡標記 required:true 的欄位。車位那組欄位就算標記必填，
   // 如果目前「有無車位」沒選「是」而被收起來看不到，也不會強制要求填寫
@@ -3061,8 +3102,9 @@ document.getElementById('listingForm').addEventListener('submit', async function
   if (currentType !== '土地' && document.getElementById('noBuildingNumber').checked && !String(fieldValues['加蓋面積(m²)'] || '').trim()) {
     missingLabels.push('加蓋面積(m²)（有未保存登記的建物，請填加蓋面積）');
   }
-  if (String(fieldValues['建築能效標示'] || '').indexOf('是') === 0 && !subVal_('energyGrade')) missingLabels.push('建築能效標示（請填標示等級）');
-  if (String(fieldValues['太陽光電發電設備'] || '').indexOf('是') === 0) {
+  var entrust_ = selectedContractType_() === '委託';
+  if (entrust_ && String(fieldValues['建築能效標示'] || '').indexOf('是') === 0 && !subVal_('energyGrade')) missingLabels.push('建築能效標示（請填標示等級）');
+  if (entrust_ && String(fieldValues['太陽光電發電設備'] || '').indexOf('是') === 0) {
     if (!solarPositions_().length) missingLabels.push('太陽光電發電設備（請勾選設置位置）');
     else if (!solarMethods_().length) missingLabels.push('太陽光電發電設備（請勾選設置方式）');
   }
@@ -3079,7 +3121,8 @@ document.getElementById('listingForm').addEventListener('submit', async function
   });
   (FIELD_CONFIG[currentType] || []).forEach(function(f) {
     var isRequired = f.required;
-    if (isPresale_() && f.label === '建築完成日') return;
+    if (isPresale_() && (f.label === '建築完成日' || f.label === '是否有留鑰匙')) return; // 預售屋還沒蓋好
+    if (f.onlyForEntrust && selectedContractType_() !== '委託') return; // 口約、訪談紀錄、授權書不用填
     // 有條件必填：例如「管理費用」只有在「管理費」選「有」的時候才必填
     if (f.requiredIf) {
       isRequired = fieldValues[f.requiredIf.label] === f.requiredIf.value;
@@ -3144,37 +3187,6 @@ document.getElementById('listingForm').addEventListener('submit', async function
     return;
   }
   clearMissingMarks_();
-
-  // 地段區塊：「地號」「建號」各自獨立蒐集，縣市/鄉鎮只是輔助篩選，
-  // 最終只取段名本身。這裡直接在前端組合好 Form_Responses 要的三個欄位：
-  //   地段 → 地號清單+建號清單裡出現過的段名，去重後用「；」相接
-  //   地段+地號 → 只從「地號」清單組合，用「；」相接
-  //   地段+建號 → 只從「建號」清單組合（土地類型沒有這欄）
-  var districtSet = [];
-  function addDistrictName(d) { if (d && districtSet.indexOf(d) === -1) districtSet.push(d); }
-
-  var lotParts = [];
-  document.querySelectorAll('#lotEntries .district-entry').forEach(function(entry) {
-    var d = entry.querySelector('.districtSelect') ? entry.querySelector('.districtSelect').value : '';
-    if (!d) return;
-    addDistrictName(d);
-    var lotVal = entry.querySelector('.lotValueInput').value.trim();
-    lotParts.push(lotVal ? (d + lotVal) : d);
-  });
-
-  var buildingParts = [];
-  document.querySelectorAll('#buildingEntries .district-entry').forEach(function(entry) {
-    var d = entry.querySelector('.districtSelect') ? entry.querySelector('.districtSelect').value : '';
-    if (!d) return;
-    addDistrictName(d);
-    var buildingVal = entry.querySelector('.buildingValueInput').value.trim();
-    buildingParts.push(buildingVal ? (d + buildingVal) : d);
-  });
-
-  if (districtSet.length > 0) fieldValues['地段'] = districtSet.join('；');
-  if (lotParts.length > 0) fieldValues['地段+地號'] = lotParts.join('；');
-  if (currentType !== '土地' && document.getElementById('noBuildingNumber').checked) buildingParts.push('未保存登記');
-  if (buildingParts.length > 0) fieldValues['地段+建號'] = buildingParts.join('；');
 
   // 送出前確認摘要
   var fv_ = fieldValues;
@@ -3595,6 +3607,18 @@ function buildTransferCertBox_(wrap) {
   wrap.querySelector('select').addEventListener('change', updateTransferCertUi_);
 }
 
+// 能效、太陽光電：契約類型是「委託」才必填（必填星號跟著切換）
+function updateEntrustOnlyRequired_() {
+  var entrust = selectedContractType_() === '委託';
+  (FIELD_CONFIG[currentType] || []).forEach(function(f) {
+    if (!f.onlyForEntrust) return;
+    var el = document.querySelector('#typeFields [data-label="' + f.label + '"]');
+    var lab = el ? fieldLabelEl_(el.closest('.field')) : null;
+    if (lab) lab.classList.toggle('required', entrust);
+  });
+}
+document.querySelectorAll('input[name="contractType"]').forEach(function(r) { r.addEventListener('change', updateEntrustOnlyRequired_); });
+
 // 勾「另有未保存登記的建物」時，加蓋面積變必填
 function updateExtraAreaRequired_() {
   var el = document.querySelector('#typeFields [data-label="加蓋面積(m²)"]');
@@ -3623,6 +3647,7 @@ var HOUSE_TYPE_OLD_TO_NEW = { '透天厝': '透天', '公寓': '無電梯公寓'
     if (kind) kind.addEventListener('change', updateHouseKind_);
     updateHouseKind_();
     updateExtraAreaRequired_();
+    updateEntrustOnlyRequired_();
   };
   // 草稿／表單狀態多存細項
   var origCollect = collectDraft_;
@@ -3649,6 +3674,7 @@ var HOUSE_TYPE_OLD_TO_NEW = { '透天厝': '透天', '公寓': '無電梯公寓'
     document.querySelectorAll('#typeFields select').forEach(function(sel) { if (sel._updateSub) sel._updateSub(); });
     updateHouseKind_();
     updateExtraAreaRequired_();
+    updateEntrustOnlyRequired_();
   };
 })();
 
@@ -3740,7 +3766,7 @@ function editRenderList_() {
       btn.addEventListener('click', function() { editOpenCase_(c.key, btn); });
       row.appendChild(btn);
       var meta = document.createElement('div'); meta.className = 'case-meta';
-      meta.textContent = [c.status && c.status !== '銷售中' ? c.status : '', c.contractNo, c.expiry ? ('到期 ' + c.expiry) : '', c.createdAt ? ('填寫 ' + c.createdAt) : ''].filter(Boolean).join('｜');
+      meta.textContent = [c.legacy ? '舊案件' : '', c.status && c.status !== '銷售中' ? c.status : '', c.contractNo, c.expiry ? ('到期 ' + c.expiry) : '', c.createdAt ? ('填寫 ' + c.createdAt) : ''].filter(Boolean).join('｜');
       row.appendChild(meta);
     } else {
       row.appendChild(document.createElement('span'));
@@ -3813,12 +3839,19 @@ function editOpenCase_(key, btn) {
     .then(function(all) {
       var data = all[0];
       editResetForm_();
-      var form = data.form || {};
-      form.type = data.typeTab; // 類型以案件為準，不能更改
-      restoreDraft_(form);
+      var notApplied = [];
+      var legacyBaseline = null;
+      if (data.legacy) {
+        // 舊案件：從目前的值盡量還原
+        notApplied = legacyRestore_(data.typeTab, data.values || {});
+        legacyBaseline = collectFormValues_([]);
+      } else {
+        var form = data.form || {};
+        form.type = data.typeTab; // 類型以案件為準，不能更改
+        restoreDraft_(form);
+      }
 
       // 表單送出後在試算表被改過的欄位：能帶入的帶入目前的值，其他的列出來
-      var notApplied = [];
       (data.changedFields || []).forEach(function(f) {
         if (editApplyCurrentValue_(f.label, f.value)) {
           var fieldEl = document.querySelector('#listingForm [data-label="' + f.label.replace(/"/g, '\\"') + '"]');
@@ -3832,7 +3865,9 @@ function editOpenCase_(key, btn) {
       notice.innerHTML = '';
       if (notApplied.length) {
         var p = document.createElement('div');
-        p.textContent = '下面這些欄位在送出後有人在試算表改過，表單裡顯示的還是原本填的內容。目前的值是：';
+        p.textContent = data.legacy
+          ? '這是修改功能上線前建立的案件，系統已經盡量帶入目前的資料。下面這些欄位沒辦法自動帶入，請對照目前的值在表單裡補填：'
+          : '下面這些欄位在送出後有人在試算表改過，表單裡顯示的還是原本填的內容。目前的值是：';
         var ul = document.createElement('ul');
         notApplied.forEach(function(f) {
           var li = document.createElement('li');
@@ -3841,7 +3876,9 @@ function editOpenCase_(key, btn) {
         });
         var p2 = document.createElement('div');
         p2.style.marginTop = '6px';
-        p2.textContent = '要以目前的值為準，這些欄位不要動；要改，就直接在表單裡改成正確的內容。';
+        p2.textContent = data.legacy
+          ? '這些欄位沒補也沒關係，存檔時會保留目前的值；補了就會更新成你填的內容。'
+          : '要以目前的值為準，這些欄位不要動；要改，就直接在表單裡改成正確的內容。';
         notice.appendChild(p); notice.appendChild(ul); notice.appendChild(p2);
         notice.style.display = '';
       } else {
@@ -3859,7 +3896,7 @@ function editOpenCase_(key, btn) {
 
       var tcEl = document.querySelector('#typeFields [data-label="轉讓證明書"]');
       editCase_ = { key: data.key, typeTab: data.typeTab, version: data.version, caseName: data.caseName, bizText: bizText,
-        loadedTransferCert: tcEl ? tcEl.value : '' };
+        loadedTransferCert: tcEl ? tcEl.value : '', legacy: !!data.legacy, baseline: legacyBaseline };
       updateTransferCertUi_();
       document.getElementById('editBarTitle').textContent = '正在修改：' + (data.caseName || '') + '（' + data.typeTab + '）';
       editShow_('form');
@@ -3868,6 +3905,152 @@ function editOpenCase_(key, btn) {
     .catch(function(err) { showToast(err.message, 'error'); })
     .then(function() { if (btn) { btn.disabled = false; btn.textContent = '修改'; } });
 }
+
+// ============================================================
+// 舊案件（修改功能上線前建立、沒有存表單狀態）：從目前的值盡量還原表單
+// 還原後用 collectFormValues_ 再組一次，跟目前的值比對；組不回同樣內容的欄位列給業務看、自己補。
+// 存檔時用「還原完當下」表單產生的值當基準，只寫入業務真的改過的欄位，沒還原好的欄位不會被寫成空白。
+// ============================================================
+function legacyCanon_(v) {
+  var t = String(v == null ? '' : v).replace(/\r\n?/g, '\n').trim();
+  if (/^-?\d+(\.\d+)?$/.test(t)) return String(parseFloat(t));
+  var ym = t.match(/^(\d{1,3})年(\d{1,2})月$/);
+  if (ym) return parseInt(ym[1], 10) + '年' + parseInt(ym[2], 10) + '月1日';
+  var ymd = t.match(/^(\d{1,3})年(\d{1,2})月(\d{1,2})日$/);
+  if (ymd) return parseInt(ymd[1], 10) + '年' + parseInt(ymd[2], 10) + '月' + parseInt(ymd[3], 10) + '日';
+  return t;
+}
+function legacyRocToIso_(v, isMonth) {
+  var m = String(v || '').trim().match(/^(民國前)?(\d{1,4})年(\d{1,2})月(?:(\d{1,2})日)?$/);
+  if (!m) return null;
+  var y = parseInt(m[2], 10);
+  y = m[1] ? 1912 - y : (y < 1000 ? y + 1911 : y);
+  var mm = ('0' + m[3]).slice(-2);
+  if (isMonth) return y + '-' + mm;
+  if (!m[4]) return null;
+  return y + '-' + mm + '-' + ('0' + m[4]).slice(-2);
+}
+// 「台中市南屯區」這種文字 → { county, town, rest }
+function legacySplitPlace_(text) {
+  var t = String(text || '').replace(/\s+/g, '').replace(/^臺/, '台');
+  var counties = Object.keys(districtData || {});
+  for (var i = 0; i < counties.length; i++) {
+    var c = counties[i], cc = c.replace(/^臺/, '台');
+    if (t.indexOf(cc) !== 0) continue;
+    var rest = t.slice(cc.length);
+    var towns = Object.keys(districtData[c]).sort(function(a, b) { return b.length - a.length; });
+    for (var j = 0; j < towns.length; j++) if (rest.indexOf(towns[j]) === 0) return { county: c, town: towns[j], rest: rest.slice(towns[j].length) };
+    return { county: c, town: '', rest: rest };
+  }
+  return null;
+}
+// 「福林段375,376；中山段12」→ [{ county, town, district, value }]；找不到段名回傳 null
+function legacyParseParts_(text, place) {
+  var out = [];
+  var parts = String(text || '').split(/[；;]/).map(function(x) { return x.trim(); }).filter(Boolean);
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i], hit = null;
+    var tries = [];
+    if (place && place.county && place.town) tries.push([place.county, place.town]);
+    Object.keys(districtData || {}).forEach(function(c) { Object.keys(districtData[c]).forEach(function(t) { tries.push([c, t]); }); });
+    for (var k = 0; k < tries.length && !hit; k++) {
+      var segs = (districtData[tries[k][0]][tries[k][1]] || []).slice().sort(function(a, b) { return b.length - a.length; });
+      for (var s = 0; s < segs.length; s++) if (part.indexOf(segs[s]) === 0) { hit = { county: tries[k][0], town: tries[k][1], district: segs[s], value: part.slice(segs[s].length) }; break; }
+    }
+    if (!hit) return null;
+    out.push(hit);
+  }
+  return out;
+}
+function legacyBuildDraft_(typeTab, values, withGroups) {
+  var draft = { type: typeTab, priceUnits: {}, fields: {}, otherInputs: {}, checkboxGroups: {}, multiGroups: {}, extraFloorGroups: {},
+    businessEntries: [], lotEntries: [], buildingEntries: [], clientAddress: null, detailAddressInputValue: '', noBuildingNumber: false, contractType: '', subFields: {} };
+  document.querySelectorAll('#listingForm [data-label]').forEach(function(el) {
+    var label = el.getAttribute('data-label');
+    if (!Object.prototype.hasOwnProperty.call(values, label)) return;
+    var v = String(values[label] || '');
+    if (el.type === 'date' || el.type === 'month') { draft.fields[label] = v ? (legacyRocToIso_(v, el.type === 'month') || v) : ''; return; }
+    var unitSel = document.querySelector('#listingForm [data-price-unit="' + label + '"]');
+    if (unitSel) {
+      var pm = v.match(/^\s*(\d+(?:\.\d+)?)\s*(.*)$/);
+      draft.fields[label] = pm ? pm[1] : v;
+      if (pm) draft.priceUnits[label] = pm[2].trim();
+      return;
+    }
+    if (el.tagName === 'SELECT') {
+      var has = function(x) { return Array.prototype.some.call(el.options, function(o) { return o.value === x; }); };
+      var other = el.parentElement.querySelector('.other-input');
+      var paren = v.match(/^(.+?)\((.*)\)$/);
+      if (!v || has(v)) draft.fields[label] = v;
+      else if (paren && has(paren[1]) && other) { draft.fields[label] = paren[1]; draft.otherInputs[label] = paren[2]; }
+      else if (has('其他') && other) { draft.fields[label] = '其他'; draft.otherInputs[label] = v; }
+      else if (/^是｜/.test(v) && has('是')) draft.fields[label] = '是';
+      else draft.fields[label] = v;
+      return;
+    }
+    draft.fields[label] = v;
+  });
+  // 契約
+  var cn = String(values['契約編號'] || '').trim();
+  if (cn === '口約' || cn === '授權書') draft.contractType = cn;
+  else if (cn.indexOf('訪談紀錄') === 0) { draft.contractType = '訪談紀錄'; draft.fields['契約編號'] = cn.replace(/^訪談紀錄\s*/, ''); }
+  else if (cn) { draft.contractType = '委託'; draft.fields['契約編號'] = cn; }
+  // 委託人聯絡地址
+  var cp = legacySplitPlace_(values['委託人聯絡地址']);
+  if (cp) draft.clientAddress = { county: cp.county, town: cp.town, detail: cp.rest };
+  else if (values['委託人聯絡地址']) draft.clientAddress = { county: '', town: '', detail: String(values['委託人聯絡地址']) };
+  // 地號、建號
+  var place = legacySplitPlace_(values['案件坐落']);
+  var lots = legacyParseParts_(values['地段+地號'], place);
+  if (lots) draft.lotEntries = lots;
+  var bText = String(values['地段+建號'] || '');
+  if (/未保存登記/.test(bText)) { draft.noBuildingNumber = true; bText = bText.split(/[；;]/).filter(function(x) { return x.trim() !== '未保存登記'; }).join('；'); }
+  var blds = legacyParseParts_(bText, place);
+  if (blds) draft.buildingEntries = blds;
+  // 詳細地址：拿掉縣市區前綴（送出時會自動補回）
+  var prefix = String(values['案件坐落'] || '');
+  draft.detailAddressInputValue = String(values['詳細地址'] || '').split('；').map(function(x) { return prefix && x.indexOf(prefix) === 0 ? x.slice(prefix.length) : x; }).join('；');
+  if (!withGroups) return draft;
+  // 複選：要先有使用分區的選項，所以第二輪才組
+  document.querySelectorAll('#listingForm [data-checkbox-label]').forEach(function(group) {
+    var label = group.getAttribute('data-checkbox-label');
+    if (!Object.prototype.hasOwnProperty.call(values, label)) return;
+    var opts = Array.prototype.map.call(group.querySelectorAll('input[type="checkbox"]'), function(cb) { return cb.value; });
+    var g = { checked: [], otherText: '', qty: {}, dims: {} }, others = [];
+    String(values[label] || '').split('、').map(function(x) { return x.trim(); }).filter(Boolean).forEach(function(item) {
+      var q = item.match(/^(.+?)x(\d+)(?:\((.*)公尺\))?$/), d = item.match(/^(.+?)\((.*)公尺\)$/);
+      var base = q ? q[1] : (d ? d[1] : item);
+      if (opts.indexOf(base) !== -1) {
+        g.checked.push(base);
+        if (q) g.qty[base] = q[2];
+        var dimText = q ? q[3] : (d ? d[2] : '');
+        if (dimText) { g.dims[base] = {}; dimText.split('×').forEach(function(p) { var dm = p.match(/^(\D+)([\d.]+)$/); if (dm) g.dims[base][dm[1]] = dm[2]; }); }
+      } else others.push(item);
+    });
+    if (others.length && opts.indexOf('其他') !== -1) { g.checked.push('其他'); g.otherText = others.join('、'); }
+    draft.checkboxGroups[label] = g;
+  });
+  document.querySelectorAll('#listingForm [data-multi-label]').forEach(function(group) {
+    var label = group.getAttribute('data-multi-label');
+    if (Object.prototype.hasOwnProperty.call(values, label)) draft.multiGroups[label] = String(values[label] || '').split('、').filter(Boolean);
+  });
+  return draft;
+}
+// 還原舊案件，回傳沒辦法還原成一樣內容的欄位 [{ label, value }]
+function legacyRestore_(typeTab, values) {
+  restoreDraft_(legacyBuildDraft_(typeTab, values, false));   // 第一輪：一般欄位（使用分區的選項要先出來）
+  restoreDraft_(legacyBuildDraft_(typeTab, values, true));    // 第二輪：加上複選
+  var out = collectFormValues_([]);
+  var skip = EDIT_LOCKED_LABELS_FRONT_;
+  var diff = [];
+  Object.keys(values).forEach(function(label) {
+    if (skip.indexOf(label) !== -1) return;
+    if (!Object.prototype.hasOwnProperty.call(out, label)) { if (String(values[label] || '').trim()) diff.push({ label: label, value: values[label] }); return; }
+    if (legacyCanon_(out[label]) !== legacyCanon_(values[label])) diff.push({ label: label, value: values[label] });
+  });
+  return diff;
+}
+var EDIT_LOCKED_LABELS_FRONT_ = ['時間戳記', '填寫日期', '委託案件種類', '主要業務名稱', '主要業務人員比例', '次要業務名稱', '次要業務人員比例', '上傳照片', '地段'];
 
 // 已上傳的照片：在修改頁裡直接看、直接刪（不用雲端硬碟權限）
 function editRenderPhotoInfo_(count, loading) {
@@ -3965,7 +4148,7 @@ function submitEditCase_(fieldValues, photoUrls) {
   submitBtn.disabled = true;
   submitBtn.textContent = '儲存中…';
   runServer('editSubmitCase', editAuth_.name, editAuth_.code, editCase_.key, currentType, fieldValues,
-    collectDraft_(), photoUrls, editCase_.version)
+    collectDraft_(), photoUrls, editCase_.version, editCase_.legacy ? editCase_.baseline : null)
     .then(function(result) {
       showToast(result.message || '已儲存修改', 'success');
       editDirty_ = false;
@@ -4489,11 +4672,11 @@ function renderDeedPreview_(messages) {
       var wd = document.createElement('div'); wd.className = 'hint'; wd.style.cssText = 'color:var(--danger);margin:0 0 4px 26px;'; wd.textContent = '⚠ ' + w; box.appendChild(wd);
     });
   });
-  // 房屋：土地有好幾位所有權人時，讓業務勾選賣方（用來算這一戶的土地持分面積）
-  if (currentType === '房屋') {
+  // 土地、房屋：所有權人有好幾位時，讓業務勾選賣方（用來判斷是不是持分出售、算持分面積）
+  if (currentType === '房屋' || currentType === '土地') {
     var owners = [], seen = {};
     deedState_.forEach(function(item) {
-      if (item.rec.kind !== 'land') return;
+      if (currentType === '土地' && item.rec.kind !== 'land') return;
       ((item.rec.ownership && item.rec.ownership.entries) || []).forEach(function(e) {
         var k = deedOwnerKey_(e);
         if (!k || seen[k]) return;
@@ -4512,7 +4695,9 @@ function renderDeedPreview_(messages) {
       var pick = document.createElement('div');
       pick.style.cssText = 'margin:8px 0 4px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;font-size:12.5px;';
       var ph = document.createElement('div'); ph.style.fontWeight = '600';
-      ph.textContent = '土地有好幾位所有權人，請勾選這次的賣方（大樓、公寓用來算這一戶的土地持分面積；整筆土地都要賣就全部不勾）：';
+      ph.textContent = currentType === '房屋'
+        ? '有好幾位所有權人，請勾選這次的賣方（用來算這一戶的土地持分面積、判斷是不是整戶出售）：'
+        : '有好幾位所有權人。只賣其中幾位的持分時，請勾選賣方；全部所有權人一起賣就不用勾：';
       pick.appendChild(ph);
       owners.forEach(function(o) {
         var lb = document.createElement('label');
@@ -4596,6 +4781,52 @@ function deedSetInput_(label, value, res) {
   deedMark_(el); res.filled.push(label);
   return true;
 }
+// 帶入一格；這一格如果是空白、或還是上次帶入的值（業務沒改過），就可以覆蓋（勾選賣方後再按一次「帶入表單」會重算）
+function deedSetAuto_(label, value, res) {
+  var el = deedField_(label);
+  if (!el) return false;
+  var cur = String(el.value).trim();
+  if (cur !== '' && el.getAttribute('data-deed-auto') !== cur) { if (cur !== String(value)) res.skipped.push(label); return false; }
+  el.value = value;
+  el.setAttribute('data-deed-auto', String(value));
+  deedFire_(el, ['input', 'change']);
+  deedMark_(el);
+  if (res.filled.indexOf(label) === -1) res.filled.push(label);
+  return true;
+}
+// 分數（精確計算，不用小數）
+function fracGcd_(a, b) { while (b) { var t = a % b; a = b; b = t; } return a; }
+function fracMake_(n, d) { var g = fracGcd_(n, d) || 1; return { n: n / g, d: d / g }; }
+function fracAdd_(a, b) { return fracMake_(a.n * b.d + b.n * a.d, a.d * b.d); }
+function fracIsOne_(f) { return f.n >= f.d; }
+function fracText_(f) { return fracIsOne_(f) ? '全部' : (f.n + '/' + f.d); }
+// 某一筆土地／建物，勾選的所有權人合計的權利範圍；沒勾或都對不上就算謄本列出的全部所有權人。讀不出來回傳 null
+function deedOwnerFrac_(rec, sel) {
+  var entries = (rec.ownership && rec.ownership.entries) || [];
+  if (!entries.length) return null;
+  var keys = Object.keys(sel || {});
+  var picked = keys.length ? entries.filter(function(e) { return keys.indexOf(deedOwnerKey_(e)) !== -1; }) : [];
+  if (!picked.length) picked = entries;
+  var sum = { n: 0, d: 1 }, jointSeen = {}, counted = [];
+  for (var i = 0; i < picked.length; i++) {
+    var e = picked[i];
+    if (e.whole) return { n: 1, d: 1 };
+    if (e.joint) { if (jointSeen[e.shareText]) continue; jointSeen[e.shareText] = true; }
+    var m = String(e.shareText || '').match(/(\d+)分之(\d+)/);
+    if (!m) return null;
+    counted.push({ n: parseInt(m[2], 10), d: parseInt(m[1], 10) });
+    sum = fracAdd_(sum, fracMake_(parseInt(m[2], 10), parseInt(m[1], 10)));
+  }
+  if (counted.length === 1) return counted[0]; // 只有一筆：照謄本寫法（例如 418/100000），不約分
+  return sum.n > 0 ? sum : null;
+}
+// 預覽勾選的賣方 { 姓名｜統一編號: true }
+function deedSelectedSellers_() {
+  var sel = {};
+  Object.keys(deedSellerKeys_ || {}).forEach(function(k) { if (deedSellerKeys_[k]) sel[k] = true; });
+  return sel;
+}
+
 function deedCheckGroup_(label, values, others, res) {
   var group = document.querySelector('#typeFields [data-checkbox-label="' + label + '"]');
   if (!group) return;
@@ -4734,10 +4965,7 @@ function applyDeed_() {
       }
     });
     // 之前帶入的值還沒被改過，就可以重新帶入（例如勾選賣方後再按一次「帶入表單」）
-    var landAreaEl = deedField_('土地面積(m²)');
-    if (landAreaEl && landAreaEl.value && landAreaEl.getAttribute('data-deed-auto') === landAreaEl.value) landAreaEl.value = '';
-    deedSetInput_('土地面積(m²)', String(Math.round(sum * 100) / 100), res);
-    if (landAreaEl) landAreaEl.setAttribute('data-deed-auto', landAreaEl.value);
+    deedSetAuto_('土地面積(m²)', String(Math.round(sum * 100) / 100), res);
     if (currentType === '房屋' && !landShareNotes.length && lands.some(function(l) { return ((l.ownership && l.ownership.entries) || []).length > 1; })) {
       res.notes.push('這筆土地有好幾位所有權人，土地面積先填了整筆面積。大樓、公寓請在謄本預覽勾選賣方，再按一次「帶入表單」，就會算出這一戶的持分面積');
     }
@@ -4834,8 +5062,8 @@ function applyDeed_() {
     // 面積（同一棟不同樓層的各筆建號也是加總）
     var total = 0, attached = 0, shared = 0, hasShared = false;
     blds.forEach(function(b) { total += b.totalAreaM2 || 0; attached += b.attachedAreaM2 || 0; if (b.sharedAreaM2 !== null && b.sharedAreaM2 !== undefined) { shared += b.sharedAreaM2; hasShared = true; } });
-    deedSetInput_('主建物面積(m²)', String(Math.round(total * 100) / 100), res);
-    deedSetInput_('附屬建物面積(m²)', String(Math.round(attached * 100) / 100), res);
+    deedSetAuto_('主建物面積(m²)', String(Math.round(total * 100) / 100), res);
+    deedSetAuto_('附屬建物面積(m²)', String(Math.round(attached * 100) / 100), res);
     if (hasShared) deedSetInput_('共同使用面積(m²)', String(Math.round(shared * 100) / 100), res);
     else if (deedField_('共同使用面積(m²)')) res.notes.push('這份謄本沒有列出共有部分的面積，「共同使用面積」請從權狀填寫');
 
@@ -4953,6 +5181,54 @@ function applyDeed_() {
       });
       if (cats.length) deedCheckGroup_('建物類別', cats, [], res);
     }
+  }
+
+  // 3.2 產權範圍、持分比例、全筆面積（土地、房屋）：依謄本上的權利範圍和預覽勾選的賣方判斷
+  if ((currentType === '土地' || currentType === '房屋') && deedField_('產權範圍') && (lands.length || blds.length)) {
+    var sel = deedSelectedSellers_();
+    var shareDone = false;
+    if (currentType === '土地') {
+      var lfr = lands.map(function(l) { return { l: l, f: deedOwnerFrac_(l, sel) }; });
+      if (lfr.every(function(x) { return x.f; })) {
+        shareDone = true;
+        if (lfr.every(function(x) { return fracIsOne_(x.f); })) {
+          deedSetAuto_('產權範圍', '全部', res);
+        } else {
+          var fullArea = 0, shareArea = 0;
+          lfr.forEach(function(x) { fullArea += x.l.areaM2 || 0; shareArea += (x.l.areaM2 || 0) * x.f.n / x.f.d; });
+          var sameF = lfr.every(function(x) { return fracText_(x.f) === fracText_(lfr[0].f); });
+          deedSetAuto_('產權範圍', '持分', res);
+          deedSetAuto_('持分比例', sameF ? fracText_(lfr[0].f) : lfr.map(function(x) { return '地號' + x.l.number + '：' + fracText_(x.f); }).join('；'), res);
+          deedSetAuto_('全筆土地面積(m²)', String(Math.round(fullArea * 100) / 100), res);
+          deedSetAuto_('土地面積(m²)', String(Math.round(shareArea * 100) / 100), res);
+        }
+      }
+    } else if (blds.length) {
+      // 房屋：這一戶是不是整戶賣看「建物」的權利範圍；土地本來就是持分，不列入判斷
+      var bOwners = {};
+      blds.forEach(function(b) { ((b.ownership && b.ownership.entries) || []).forEach(function(e) { bOwners[deedOwnerKey_(e)] = true; }); });
+      var selB = Object.keys(sel).length ? sel : bOwners;
+      var bfr = blds.map(function(b) { return { b: b, f: deedOwnerFrac_(b, selB) }; });
+      if (bfr.every(function(x) { return x.f; })) {
+        shareDone = true;
+        if (bfr.every(function(x) { return fracIsOne_(x.f); })) {
+          deedSetAuto_('產權範圍', '全部', res);
+        } else {
+          var fullB = 0, shareB = 0, fullL = 0;
+          bfr.forEach(function(x) { fullB += x.b.totalAreaM2 || 0; shareB += (x.b.totalAreaM2 || 0) * x.f.n / x.f.d; });
+          lands.forEach(function(l) { var f = deedOwnerFrac_(l, bOwners); if (l.areaM2 && f) fullL += l.areaM2 * f.n / f.d; });
+          var rb = bfr[0].f;
+          var sameB = bfr.every(function(x) { return fracText_(x.f) === fracText_(rb); });
+          deedSetAuto_('產權範圍', '持分', res);
+          deedSetAuto_('持分比例', sameB ? fracText_(rb) : bfr.map(function(x) { return '建號' + x.b.number + '：' + fracText_(x.f); }).join('；'), res);
+          deedSetAuto_('全筆主建物面積(m²)', String(Math.round(fullB * 100) / 100), res);
+          deedSetAuto_('主建物面積(m²)', String(Math.round(shareB * 100) / 100), res);
+          if (fullL) deedSetAuto_('全筆土地面積(m²)', String(Math.round(fullL * 100) / 100), res);
+          res.notes.push('這一戶是持分出售（建物權利範圍 ' + fracText_(rb) + '），主建物面積、土地面積已算成賣的那部分；附屬建物、共同使用面積請自己確認是否也要乘上持分');
+        }
+      }
+    }
+    if (!shareDone) res.notes.push('權利範圍讀不出來，「產權範圍」「持分比例」請自己填寫');
   }
 
   // 3.5 所有權部：取得年月（房屋）、共有／他項權利／查封提醒（只用日期、登記原因、權利範圍、權利種類）
