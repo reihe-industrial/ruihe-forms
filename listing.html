@@ -327,7 +327,7 @@
       <label id="typeLabel-房屋"><input type="radio" name="typeTab" value="房屋"><span>房屋</span></label>
     </div>
 
-    <form id="listingForm">
+    <form id="listingForm" novalidate>
 
       <!-- 案件狀態：只在修改案件頁顯示；新增案件一律是「銷售中」 -->
       <div class="card" id="statusCard" style="display:none;">
@@ -1952,6 +1952,7 @@ function renderTypeFields(typeTab) {
       el = document.createElement('input');
       el.type = (f.type === 'number') ? 'number' : (f.type === 'roc-date' ? 'date' : (f.type === 'roc-month' ? 'month' : 'text'));
       el.setAttribute('data-label', f.label);
+      if (f.type === 'number') { el.step = 'any'; el.min = '0'; } // 面積等可以有小數（不加的話瀏覽器只接受整數）
       if (f.placeholder) el.placeholder = f.placeholder;
       if (f.maxlength) el.maxLength = f.maxlength;
       if (f.type === 'text-suggest' && f.options) {
