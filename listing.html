@@ -174,6 +174,7 @@
     .district-entry.deed-filled { background: #fffbe6; border-radius: 8px; }
     .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; white-space: pre-line; line-height: 1.55; }
     .hint a { color: var(--brand); }
+    .hint.warn-hint { color: var(--danger); font-weight: 700; }
     .other-input { margin-top: 8px; }
 
     .district-entry {
@@ -216,13 +217,82 @@
     }
     .msg.success { background: var(--brand-soft); color: var(--brand-dark); display: block; }
     .msg.error { background: var(--danger-soft); color: var(--danger); display: block; }
+
+    /* 修改案件頁 */
+    .mode-link { font-size: 13px; margin: -12px 0 18px; }
+    .mode-link a { color: var(--brand); font-weight: 600; }
+    .edit-login-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .edit-btn {
+      padding: 11px 16px; font-size: 15px; font-weight: 700; border: none; border-radius: 8px;
+      background: var(--brand); color: #fff; cursor: pointer; font-family: inherit;
+    }
+    .edit-btn:disabled { background: #b9c3ba; cursor: not-allowed; }
+    .edit-btn.secondary { background: #eee; color: #333; }
+    .edit-list-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .edit-list-head h2 { margin: 0; }
+    .edit-case {
+      display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center;
+      padding: 12px 0; border-bottom: 1px dashed var(--line);
+    }
+    .edit-case:last-child { border-bottom: none; }
+    .edit-case .type-tag {
+      font-size: 12px; font-weight: 700; color: var(--brand-dark); background: var(--brand-soft);
+      border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+    }
+    .edit-case .case-name { font-weight: 700; font-size: 15px; word-break: break-all; }
+    .edit-case .case-meta { grid-column: 2 / 3; font-size: 12.5px; color: var(--muted); }
+    .edit-case .case-locked { grid-column: 2 / 4; font-size: 12.5px; color: var(--muted); }
+    .edit-case .edit-btn { grid-row: 1 / 3; grid-column: 3; padding: 8px 14px; font-size: 14px; }
+    .edit-case.locked .case-name { color: var(--muted); }
+    .edit-bar {
+      position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: var(--brand-dark); color: #fff; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px;
+    }
+    .edit-bar .edit-bar-title { font-weight: 700; font-size: 14.5px; word-break: break-all; }
+    .edit-bar .edit-btn.secondary { padding: 7px 12px; font-size: 13px; white-space: nowrap; }
+    .edit-notice { background: #fffbe6; border: 1px solid #ecd98b; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; font-size: 13.5px; }
+    .edit-notice ul { margin: 6px 0 0; padding-left: 20px; }
+    .edit-notice li { margin: 2px 0; word-break: break-word; white-space: pre-line; }
+    .edit-biz { font-size: 14px; line-height: 1.7; }
   </style>
 </head>
 <body>
   <div id="toastNotice"></div>
   <div class="container">
     <h1>委託物件資料輸入</h1>
-    <div class="subtitle">請依實際委託內容填寫，送出後會自動同步進總彙整表、個人試算表、物件簡表</div>
+    <div class="subtitle" id="pageSubtitle">請依實際委託內容填寫，送出後會自動同步進總彙整表、個人試算表、物件簡表</div>
+    <div class="mode-link" id="modeLink"></div>
+
+    <!-- 修改案件頁：網址加上 ?mode=edit 時顯示 -->
+    <div class="card" id="editLoginView" style="display:none;">
+      <h2>登入</h2>
+      <div class="field">
+        <label class="required">姓名</label>
+        <select id="editName"><option value="">載入中…</option></select>
+      </div>
+      <div class="field">
+        <label class="required">通關碼</label>
+        <div class="hint">請輸入管理者給你的 6 位數字</div>
+        <input type="password" id="editCode" inputmode="numeric" autocomplete="off" maxlength="12">
+      </div>
+      <div class="edit-login-actions"><button type="button" class="edit-btn" id="editLoginBtn" style="flex:1;">登入</button></div>
+      <div class="msg" id="editLoginMsg"></div>
+    </div>
+    <div class="card" id="editListView" style="display:none;">
+      <div class="edit-list-head">
+        <h2 id="editListTitle">我的案件</h2>
+        <button type="button" class="edit-btn secondary" id="editLogoutBtn" style="padding:7px 12px;font-size:13px;">登出</button>
+      </div>
+      <div class="field">
+        <input type="text" id="editSearch" placeholder="輸入案名或契約編號搜尋">
+      </div>
+      <div id="editCaseList"></div>
+    </div>
+    <div class="edit-bar" id="editBar" style="display:none;">
+      <div class="edit-bar-title" id="editBarTitle"></div>
+      <button type="button" class="edit-btn secondary" id="editBackBtn">回到案件清單</button>
+    </div>
+    <div class="edit-notice" id="editNotice" style="display:none;"></div>
 
     <div id="draftBanner" style="display:none; background:#fff8e1; border:1px solid #e0c341; border-radius:10px; padding:14px; margin-bottom:16px; font-size:14px; color:#5a4a00;">
       偵測到瀏覽器裡有尚未送出的草稿，要繼續剛才填到一半的內容嗎？（照片沒辦法存進草稿，需要重新選取）
@@ -240,21 +310,54 @@
 
     <form id="listingForm">
 
+      <!-- 案件狀態：只在修改案件頁顯示；新增案件一律是「銷售中」 -->
+      <div class="card" id="statusCard" style="display:none;">
+        <h2>案件狀態</h2>
+        <div class="field">
+          <label class="required">案件狀態</label>
+          <select data-label="案件狀態">
+            <option value="銷售中">銷售中</option>
+            <option value="已下架">已下架</option>
+            <option value="已成交">已成交</option>
+          </select>
+        </div>
+        <div class="field" id="statusDateField" style="display:none;">
+          <label class="required" id="statusDateLabel">下架日期</label>
+          <div class="hint">年份可以輸入民國年（例如 115）或西元年（例如 2026）</div>
+          <input type="date" data-label="狀態日期">
+        </div>
+        <div class="field" id="dealPriceField" style="display:none;">
+          <label>成交價</label>
+          <div class="hint">例：2300萬、30萬/月</div>
+          <input type="text" data-label="成交價">
+        </div>
+        <div class="field" id="statusNoteField" style="display:none;">
+          <label>狀態說明</label>
+          <div class="hint" id="statusNoteHint">例：屋主決定不賣了</div>
+          <textarea data-label="狀態說明"></textarea>
+        </div>
+      </div>
+
       <!-- 一、基本資料（各類型共用） -->
       <div class="card">
         <h2>一、基本資料</h2>
-        <div class="field">
+        <div class="field" id="editBizField" style="display:none;">
+          <label>業務及比例</label>
+          <div class="hint">要更改業務或比例，請找管理者</div>
+          <div class="edit-biz" id="editBizInfo"></div>
+        </div>
+        <div class="field" id="bizPersonField">
           <label class="required">業務名單（可複選）</label>
           <div class="checkbox-group" id="businessPersonGroup"></div>
         </div>
-        <div class="field">
+        <div class="field" id="bizRatioField">
           <label class="required">每人比例</label>
-          <div class="hint">勾選了幾位業務，下面就會出現幾格比例，填完送出時系統會自動判斷：比例最高的算「主要業務」，其他人算「次要業務」，不用自己再分主要/次要。</div>
+          <div class="hint">每位業務填一格，合計要 100%（中人不算在內）。比例最高的是主要業務，其他人是次要業務。</div>
           <div id="businessRatioRows"></div>
         </div>
         <div class="field">
           <label class="required">中人比例</label>
-          <div class="hint">例：某中人20%；無則填「無」</div>
+          <div class="hint">例：某中人20%；無則填「無」。中人另外從總額扣，不用算進業務比例</div>
           <input type="text" data-label="中人比例" placeholder="例：某中人20%；無則填「無」">
         </div>
       </div>
@@ -262,7 +365,7 @@
       <!-- 二、委託內容（各類型共用） -->
       <div class="card two-col">
         <h2>二、委託內容</h2>
-        <div class="field">
+        <div class="field" style="grid-column: 1 / -1;">
           <label class="required">契約類型</label>
           <div class="hint">委託請填契約編號；口約、訪談紀錄、授權書不用填編號</div>
           <div class="checkbox-group" id="contractTypeGroup">
@@ -272,7 +375,7 @@
             <label><input type="radio" name="contractType" value="授權書"> 授權書</label>
           </div>
         </div>
-        <div class="field" id="contractNoField" style="display:none;">
+        <div class="field" id="contractNoField" style="display:none; grid-column: 1 / -1;">
           <label class="required">契約編號</label>
           <div class="hint">請填寫委託書上的編號</div>
           <input type="text" data-label="契約編號">
@@ -347,8 +450,8 @@
       <!-- 謄本自動帶入（選填） -->
       <div class="card" id="deedCard">
         <h2>謄本自動帶入（選填）</h2>
-        <div class="hint">上傳土地謄本、建物謄本的 PDF（電子謄本或電傳資料都可以，可以一次選好幾份），預覽確認後可帶入下面「三、物件資訊」的欄位。
-只支援文字型 PDF，掃描檔或翻拍的照片讀不出來。帶入後請核對內容。</div>
+        <div class="hint">上傳土地謄本、建物謄本的 PDF（電子謄本或電傳資料都可以，可以一次選好幾份），預覽確認後可帶入下面「三、物件資訊」的欄位。只支援文字型 PDF。</div>
+        <div class="hint warn-hint">❗ 掃描檔或翻拍的照片讀不出來。帶入後請核對內容。</div>
         <input type="file" id="deedInput" accept="application/pdf" multiple>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;margin:8px 0 0;cursor:pointer;"><input type="checkbox" id="deedAddToUploads" checked style="width:auto;"> 同時把這些謄本加入「上傳照片／文件」（保留原檔）</label>
         <div id="deedResult" style="margin-top:6px;"></div>
@@ -365,6 +468,8 @@
         <h2>四、上傳照片</h2>
         <div class="field">
           <label>上傳照片／文件</label>
+          <div class="hint" id="editPhotoInfo" style="display:none;"></div>
+          <div class="hint warn-hint">❗ 照片不可以使用街景截圖或他人的圖片；使用 AI 生成的圖片，請在檔名或特色說明註明。</div>
           <div class="hint">可以一次選好幾張，也可以分好幾次選。一般照片會壓縮後上傳；權狀、謄本、使用執照、合約等需要看清楚小字的文件，請在檔案旁勾選「保留原圖」。PDF 一律保留原檔。</div>
           <input type="file" id="photoInput" accept="image/*,application/pdf" multiple>
           <div id="photoList" style="margin-top:8px;"></div>
@@ -381,6 +486,8 @@
 <script>
 // 後端（Apps Script 網頁應用程式）網址；重新「新增部署作業」網址會變，要同步更新這裡
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
+// 網址加上 ?mode=edit 就是「修改案件」頁（同一個檔案，先登入、選案件，再用同一張表單修改）
+var EDIT_MODE = /[?&]mode=edit(&|$)/.test(location.search);
 // ============================================================
 // 欄位設定：每個類型要顯示哪些欄位、用什麼輸入方式，順序對應
 // Form_Responses 實際欄位順序（詳見 .gs 檔頭的欄位位置對照表）。
@@ -872,9 +979,9 @@ var LAND_ZONE_OPTIONS = [
 
 var FIELD_CONFIG = {
   '廠房': [
-    { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
-    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月' },
-    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬' },
+    { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
+    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
+    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
     { label: '使用狀態補充說明(廠房)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
@@ -925,9 +1032,9 @@ var FIELD_CONFIG = {
       hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
       hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！(如: 工業區生活機能高、出入方便免倒車/貨櫃車迴轉空間大、近交流道/學校/市場/高鐵站、屋況佳、鋼骨結構、大面寬/前後有路、獨棟行政大樓/適合企業總部、可分割、角地、體地無汙染整治公告......等。)' },
-    { label: '取得原因', type: 'textarea', hint: '例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記' },
-    { label: '所有權人及持分', type: 'textarea', hint: '例如：地號 375：王小明（A123*****4）全部；建號 595：李小華（B220*****1）2分之1' },
-    { label: '他項權利', type: 'textarea', hint: '例如：最高限額抵押權，○○銀行，擔保債權總金額新台幣1,000萬元；有查封、假扣押等限制登記也請寫上' },
+    { label: '取得原因', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記' },
+    { label: '所有權人及持分', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：地號 375：王小明（A123*****4）全部；建號 595：李小華（B220*****1）2分之1，持分面積 60.5㎡（18.3坪）' },
+    { label: '他項權利', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：最高限額抵押權，○○銀行，擔保債權總金額新台幣1,000萬元；有查封、假扣押等限制登記也請寫上' },
     { label: '其他備註說明', type: 'textarea', hint: '如產權、帶看注意事項等' },
     { label: '建物及周圍環境其他說明(廠房)', type: 'textarea', required: true,
       hint: '如：廠房為凶宅、隔壁為高汙染行業、附近有公告汙染場址、廠房位於斷層帶等\n※土地汙染查詢\nhttps://sgw.moenv.gov.tw/SgwSiteInfo/SituationMap/\n※土地參考資訊檔查詢\nhttps://moiref.moi.gov.tw/pubref/\n※地質敏感查詢\nhttps://eland.nlma.gov.tw/seportal (正式申調平台)\nhttps://gsa.gsmma.gov.tw/gwh/gsb97-1/sys_2014b_pg/index.cfm (地質敏感區查詢系統)\nhttps://dmap.ncdr.nat.gov.tw/1109/map/ (3D潛勢地圖)' },
@@ -940,9 +1047,9 @@ var FIELD_CONFIG = {
     { label: '車位說明', type: 'text', group: 'parking', required: true },
   ],
   '土地': [
-    { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
-    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月' },
-    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬' },
+    { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
+    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
+    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
     { label: '使用狀態補充說明(土地)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
@@ -959,8 +1066,11 @@ var FIELD_CONFIG = {
     { label: '地段地號及建號', type: 'district-block' },
     { label: '案件坐落', type: 'text', autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '產業園區名稱(土地)', type: 'select-other', options: [], extraDetailFor: ['區外', '非園區'], skipOtherOption: true, dynamicParkOptions: true, dynamicParkExtraOption: '非園區',
-      hint: '先在上面「地段資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」；不是產業用地（例如農地、建地）請選「非園區」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
-    { label: '土地面積(m²)', type: 'number', required: true, showPing: true, hint: '從權狀本填寫，無需填單位。範例：13000' },
+      hint: '先在上面「地段資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
+    { label: '產權範圍', type: 'select', options: ['全部', '持分'], required: true, controlsGroup: 'share', showWhen: '持分', hint: '整筆出售選「全部」；只賣部分持分選「持分」' },
+    { label: '持分比例', type: 'text', required: true, group: 'share', hint: '例：1/2' },
+    { label: '全筆土地面積(m²)', type: 'number', required: true, group: 'share', showPing: true, hint: '整筆土地的面積，從謄本或權狀填寫' },
+    { label: '土地面積(m²)', type: 'number', required: true, showPing: true, hint: '從權狀本填寫，無需填單位。範例：13000\n持分出售請填持分面積' },
     { label: '建蔽率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
     { label: '容積率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
     { label: '基地深度', type: 'text', required: true, hint: '無需填單位。範例：150' },
@@ -971,17 +1081,17 @@ var FIELD_CONFIG = {
       hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
       hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！' },
-    { label: '取得原因', type: 'textarea', hint: '例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記' },
-    { label: '所有權人及持分', type: 'textarea', hint: '例如：地號 375：王小明（A123*****4）全部；建號 595：李小華（B220*****1）2分之1' },
-    { label: '他項權利', type: 'textarea', hint: '例如：最高限額抵押權，○○銀行，擔保債權總金額新台幣1,000萬元；有查封、假扣押等限制登記也請寫上' },
+    { label: '取得原因', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記' },
+    { label: '所有權人及持分', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：地號 375：王小明（A123*****4）全部；建號 595：李小華（B220*****1）2分之1，持分面積 60.5㎡（18.3坪）' },
+    { label: '他項權利', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：最高限額抵押權，○○銀行，擔保債權總金額新台幣1,000萬元；有查封、假扣押等限制登記也請寫上' },
     { label: '其他備註說明', type: 'textarea', hint: '如產權、帶看注意事項等' },
     { label: '周圍環境其他說明(土地)', type: 'textarea', required: true,
       hint: '如：土地為凶宅、鄰地為高汙染行業、附近有公告汙染場址、土地位於斷層帶等\n※土地汙染查詢\nhttps://sgw.moenv.gov.tw/SgwSiteInfo/SituationMap/\n※土地參考資訊檔查詢\nhttps://moiref.moi.gov.tw/pubref/\n※地質敏感查詢\nhttps://eland.nlma.gov.tw/seportal (正式申調平台)\nhttps://gsa.gsmma.gov.tw/gwh/gsb97-1/sys_2014b_pg/index.cfm (地質敏感區查詢系統)\nhttps://dmap.ncdr.nat.gov.tw/1109/map/ (3D潛勢地圖)' },
   ],
   '房屋': [
-    { label: '案名', type: 'text', required: true, maxlength: 20, hint: '最多20字' },
-    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月' },
-    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬' },
+    { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
+    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物）換算帶入，可以再修改' },
+    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物）換算帶入，可以再修改' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
     { label: '使用狀態補充說明(房屋)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
@@ -996,14 +1106,18 @@ var FIELD_CONFIG = {
     { label: '地段地號及建號', type: 'district-block' },
     { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '詳細地址', type: 'address-detail', required: true, hint: '有兩個以上門牌時，用「；」分開，例如：環工九路7號；環工九路9號' },
-    { label: '土地面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
-    { label: '主建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
+    { label: '產權範圍', type: 'select', options: ['全部', '持分'], required: true, controlsGroup: 'share', showWhen: '持分', hint: '整棟（整筆）出售選「全部」；只賣部分持分選「持分」' },
+    { label: '持分比例', type: 'text', required: true, group: 'share', hint: '例：1/2；土地和建物持分不同時分開寫，例：土地1/2、建物1/3' },
+    { label: '全筆土地面積(m²)', type: 'number', required: true, group: 'share', showPing: true, hint: '整筆土地的面積，從謄本或權狀填寫' },
+    { label: '全筆主建物面積(m²)', type: 'number', required: true, group: 'share', showPing: true, hint: '整棟主建物的面積，從謄本或權狀填寫' },
+    { label: '土地面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000\n持分出售請填持分面積', showPing: true },
+    { label: '主建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。範例：13000\n持分出售請填持分面積', showPing: true },
     { label: '附屬建物面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。如無附屬建物請填0，範例：500', showPing: true },
     { label: '加蓋面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。範例：13000', showPing: true },
     { label: '共同使用面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。如無共同使用面積請填0，範例：13000', showPing: true },
     { label: '建蔽率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
     { label: '容積率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
-    { label: '建物類別', type: 'checkbox-other', required: true, options: ['透天厝','公寓','華廈','電梯大樓'] },
+    { label: '建物類別', type: 'checkbox-other', required: true, options: ['透天厝','公寓','華廈','電梯大樓','農舍'] },
     { label: '基地深度', type: 'text', hint: '無需填單位。範例：150' },
     { label: '基地面寬', type: 'text', hint: '無需填單位。範例：60' },
     { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
@@ -1051,9 +1165,9 @@ var FIELD_CONFIG = {
       hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
       hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！' },
-    { label: '取得原因', type: 'textarea', hint: '例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記' },
-    { label: '所有權人及持分', type: 'textarea', hint: '例如：地號 375：王小明（A123*****4）全部；建號 595：李小華（B220*****1）2分之1' },
-    { label: '他項權利', type: 'textarea', hint: '例如：最高限額抵押權，○○銀行，擔保債權總金額新台幣1,000萬元；有查封、假扣押等限制登記也請寫上' },
+    { label: '取得原因', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記' },
+    { label: '所有權人及持分', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：地號 375：王小明（A123*****4）全部；建號 595：李小華（B220*****1）2分之1，持分面積 60.5㎡（18.3坪）' },
+    { label: '他項權利', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：最高限額抵押權，○○銀行，擔保債權總金額新台幣1,000萬元；有查封、假扣押等限制登記也請寫上' },
     { label: '其他備註說明', type: 'textarea', hint: '如產權、帶看注意事項等' },
   ],
 };
@@ -1066,7 +1180,7 @@ var currentType = '廠房';
 // 初始化：向後端要業務清單、地段資料。加上失敗處理，避免後端版本沒更新
 // 或呼叫出錯時，整頁安靜地空白、看不出原因。
 // ------------------------------------------------------------
-runServer('getListingFormOptions')
+var initReady_ = runServer('getListingFormOptions')
   .then(function(options) {
     personList = options.personList || [];
     districtData = options.districtData || {};
@@ -2180,6 +2294,7 @@ function collectDraft_() {
 }
 
 function saveDraftToLocalStorage_() {
+  if (EDIT_MODE) return; // 修改案件不存草稿（委託人資料不留在瀏覽器裡）
   try {
     localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(collectDraft_()));
   } catch (err) {
@@ -2401,7 +2516,7 @@ try {
   var savedDraftRaw_ = localStorage.getItem(DRAFT_STORAGE_KEY);
   if (savedDraftRaw_) pendingDraft_ = JSON.parse(savedDraftRaw_);
 } catch (err) { pendingDraft_ = null; }
-if (pendingDraft_) {
+if (pendingDraft_ && !EDIT_MODE) {
   document.getElementById('draftBanner').style.display = 'block';
 }
 document.getElementById('restoreDraftBtn').addEventListener('click', function() {
@@ -2732,7 +2847,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
   var allBusinessNames = getCheckedPersonNames();
   var split = splitPrimarySecondaryByRatio();
 
-  if (allBusinessNames.length === 0) {
+  if (allBusinessNames.length === 0 && !EDIT_MODE) {
     msgBox.className = 'msg error';
     msgBox.textContent = '請至少勾選一位業務名單。';
     msgBox.style.display = 'block';
@@ -2785,6 +2900,9 @@ document.getElementById('listingForm').addEventListener('submit', async function
     }
     fieldValues[el.getAttribute('data-label')] = value;
   });
+
+  if (currentType === '土地' && landParkHidden_()) fieldValues['產業園區名稱(土地)'] = '';
+  if (!EDIT_MODE) { fieldValues['案件狀態'] = '銷售中'; fieldValues['狀態日期'] = ''; fieldValues['成交價'] = ''; fieldValues['狀態說明'] = ''; }
 
   // 單價、總價：數字 + 單位 合併成一個文字（沒填數字就是空白，讓必填檢查擋下來）
   document.querySelectorAll('#listingForm [data-price-unit]').forEach(function(sel) {
@@ -2881,13 +2999,22 @@ document.getElementById('listingForm').addEventListener('submit', async function
   // 如果目前「有無車位」沒選「是」而被收起來看不到，也不會強制要求填寫
   // （看不到的題目不該擋住送出）。缺的欄位全部列出來，不是只擋第一個。
   var missingLabels = [];
-  if (!allBusinessNames.length) missingLabels.push('業務名單');
+  if (!allBusinessNames.length && !EDIT_MODE) missingLabels.push('業務名單');
   // 每人比例是必填：只要有任何一位業務的比例格是空的，就視為缺漏
   // （不能只看整串接起來的字串是否為空，那樣會漏抓「70、」這種只填了一半的情況）
   var allRatiosFilled = Array.prototype.slice.call(document.querySelectorAll('#businessRatioRows .ratio-row input'))
     .every(function(input) { return input.value.trim(); });
-  if (allBusinessNames.length && !allRatiosFilled) {
+  if (allBusinessNames.length && !allRatiosFilled && !EDIT_MODE) {
     missingLabels.push('每人比例');
+  }
+  if (allBusinessNames.length && allRatiosFilled && !EDIT_MODE) {
+    var ratioSum_ = Array.prototype.slice.call(document.querySelectorAll('#businessRatioRows .ratio-row input'))
+      .reduce(function(sum, input) { return sum + (parseFloat(input.value) || 0); }, 0);
+    if (Math.abs(ratioSum_ - 100) > 0.01) missingLabels.push('每人比例（業務比例合計要 100%，目前是 ' + Number(ratioSum_.toFixed(2)) + '%）');
+  }
+  if (String(fieldValues['案名'] || '').trim().length > 15) missingLabels.push('案名（最多 15 個字，請縮短）');
+  if (EDIT_MODE && fieldValues['案件狀態'] && fieldValues['案件狀態'] !== '銷售中' && !String(fieldValues['狀態日期'] || '').trim()) {
+    missingLabels.push(document.getElementById('statusDateLabel').textContent);
   }
   var contractTypeNow_ = selectedContractType_();
   if (!contractTypeNow_) missingLabels.push('契約類型');
@@ -3001,9 +3128,12 @@ document.getElementById('listingForm').addEventListener('submit', async function
   var bizText_ = '';
   if (fv_['主要業務名稱']) bizText_ += '主要：' + fv_['主要業務名稱'] + (fv_['主要業務人員比例'] ? '（' + fv_['主要業務人員比例'] + '%）' : '');
   if (fv_['次要業務名稱']) bizText_ += '\n次要：' + fv_['次要業務名稱'] + (fv_['次要業務人員比例'] ? '（' + fv_['次要業務人員比例'] + '%）' : '');
-  var confirmed_ = await showConfirmDialog_('送出前確認（' + currentType + '）', [
+  if (EDIT_MODE && editCase_) bizText_ = editCase_.bizText;
+  var confirmed_ = await showConfirmDialog_((EDIT_MODE ? '確認修改（' : '送出前確認（') + currentType + '）', [
+    ['案件狀態', (EDIT_MODE && fv_['案件狀態'] && fv_['案件狀態'] !== '銷售中') ? [fv_['案件狀態'], fv_['狀態日期'], fv_['成交價']].filter(Boolean).join('｜') : ''],
     ['案名', fv_['案名']],
     ['業務', bizText_],
+    ['產權', fv_['產權範圍'] === '持分' ? ('持分 ' + (fv_['持分比例'] || '')) : ''],
     ['契約', [fv_['契約編號'], fv_['委託種類'], (fv_['合約起始'] || fv_['合約到期']) ? ((fv_['合約起始'] || '') + ' ~ ' + (fv_['合約到期'] || '')) : ''].filter(Boolean).join('｜')],
     ['委託人', [fv_['委託人姓名'], fv_['委託人連絡電話']].filter(Boolean).join('｜')],
     ['地段／地號', fv_['地段+地號']],
@@ -3012,7 +3142,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
     ['單價／總價', [fv_['單價'], fv_['總價']].filter(Boolean).join('　／　')],
     ['使用分區', fv_['使用分區']],
     ['國土功能分區', fv_['國土功能分區']],
-    ['照片', (photoCount_ || docCount_) ? ('壓縮照片 ' + photoCount_ + ' 張、保留原檔 ' + docCount_ + ' 個') : '沒有上傳照片'],
+    ['照片', (photoCount_ || docCount_) ? ((EDIT_MODE ? '新增 ' : '') + '壓縮照片 ' + photoCount_ + ' 張、保留原檔 ' + docCount_ + ' 個') : (EDIT_MODE ? '沒有新增照片' : '沒有上傳照片')],
   ]);
   if (!confirmed_) return;
 
@@ -3032,7 +3162,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
     var failedItems = uploadItems.filter(function(it) { return it.status === 'error'; });
     if (failedItems.length > 0) {
       submitBtn.disabled = false;
-      submitBtn.textContent = '送出';
+      submitBtn.textContent = submitBtnLabel_();
       msgBox.className = 'msg error';
       msgBox.textContent = '以下照片上傳失敗：' + failedItems.map(function(it) { return it.file.name; }).join('、') +
         '。請按該檔案旁的「重試」，或移除後再送出。';
@@ -3042,6 +3172,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
     }
   }
   var photoUrls = uploadItems.filter(function(it) { return it.status === 'done'; }).map(function(it) { return it.url; });
+  if (EDIT_MODE) { submitEditCase_(fieldValues, photoUrls); return; }
   if (photoUrls.length > 0) fieldValues['上傳照片'] = photoUrls.join(', ');
 
   submitBtn.textContent = '送出中…';
@@ -3062,7 +3193,8 @@ document.getElementById('listingForm').addEventListener('submit', async function
     window.scrollTo(0, 0);
   }, 45000);
 
-  runServer('submitListingForm', currentType, fieldValues, [])
+  // 第 4 個參數：表單完整狀態，之後「修改案件」頁用它原樣還原
+  runServer('submitListingForm', currentType, fieldValues, [], collectDraft_())
     .then(function(result) {
       clearTimeout(timeoutHandle);
       if (responseTimedOut) return; // 逾時訊息已經顯示過，避免再蓋一次造成混淆
@@ -3103,6 +3235,451 @@ document.getElementById('listingForm').addEventListener('submit', async function
     })
     ;
 });
+
+// ============================================================
+// 單價／總價互相換算、持分面積、產業園區名稱(土地) 顯示條件、案件狀態
+// ============================================================
+var SQM_PER_PING_ = 3.305785;
+// 換算用的面積：廠房、土地用土地面積；房屋用主建物＋附屬建物（持分出售時這些欄位填的就是持分面積）
+var PRICE_AREA_LABELS = { '廠房': ['土地面積(m²)'], '土地': ['土地面積(m²)'], '房屋': ['主建物面積(m²)', '附屬建物面積(m²)'] };
+var TOTAL_UNIT_YUAN_ = { '萬': 1e4, '億': 1e8, '元': 1, '萬/月': 1e4, '元/月': 1 };
+var PER_PING_UNIT_YUAN_ = { '萬/坪': 1e4, '元/坪': 1, '元/坪/月': 1 }; // 單價單位是「萬/月」「元/月」時不換算
+var priceDriver_ = null; // 業務最後自己輸入的是「單價」還是「總價」，另一個跟著算
+
+function priceAreaPing_() {
+  var m2 = 0;
+  (PRICE_AREA_LABELS[currentType] || []).forEach(function(l) {
+    var el = document.querySelector('#typeFields [data-label="' + l + '"]');
+    var v = el ? parseFloat(el.value) : NaN;
+    if (!isNaN(v)) m2 += v;
+  });
+  return m2 > 0 ? m2 / SQM_PER_PING_ : 0;
+}
+function formatPriceNumber_(n, unit) {
+  var digits = { '萬/坪': 2, '元/坪': 0, '元/坪/月': 1, '萬': (Math.abs(n) >= 10 ? 0 : 2), '億': 2, '元': 0, '萬/月': 2, '元/月': 0 }[unit];
+  if (digits === undefined) digits = 2;
+  return String(Number(n.toFixed(digits)));
+}
+function recalcPrice_() {
+  if (!priceDriver_) return;
+  var uEl = document.querySelector('#typeFields [data-label="單價"]');
+  var tEl = document.querySelector('#typeFields [data-label="總價"]');
+  var uSel = document.querySelector('#typeFields [data-price-unit="單價"]');
+  var tSel = document.querySelector('#typeFields [data-price-unit="總價"]');
+  if (!uEl || !tEl || !uSel || !tSel) return;
+  var ping = priceAreaPing_();
+  var perYuan = PER_PING_UNIT_YUAN_[uSel.value];
+  var totYuan = TOTAL_UNIT_YUAN_[tSel.value];
+  if (!ping || !perYuan || !totYuan) return;
+  if (priceDriver_ === '總價') {
+    var t = parseFloat(tEl.value);
+    if (isNaN(t)) return;
+    uEl.value = formatPriceNumber_(t * totYuan / ping / perYuan, uSel.value);
+  } else {
+    var u = parseFloat(uEl.value);
+    if (isNaN(u)) return;
+    tEl.value = formatPriceNumber_(u * perYuan * ping / totYuan, tSel.value);
+  }
+}
+
+// 持分比例：「1/2」「2分之1」；房屋可以寫「土地1/2、建物1/3」，kind 是 'land' 或 'building'
+function parseShareRatio_(text, kind) {
+  var t = String(text || '').replace(/\s+/g, '');
+  if (!t) return null;
+  var tagged = t.match(kind === 'land' ? /土地[:：]?([\d.]+\/[\d.]+|\d+分之\d+)/ : /建物[:：]?([\d.]+\/[\d.]+|\d+分之\d+)/);
+  if (tagged) t = tagged[1];
+  else if (/土地|建物/.test(t)) return null;
+  var m = t.match(/^([\d.]+)\/([\d.]+)$/);
+  if (m) { var a = parseFloat(m[1]), b = parseFloat(m[2]); return b > 0 && a > 0 && a <= b ? a / b : null; }
+  var c = t.match(/^(\d+)分之(\d+)$/);
+  if (c) { var d = parseFloat(c[1]), n = parseFloat(c[2]); return d > 0 && n > 0 && n <= d ? n / d : null; }
+  return null;
+}
+function recalcShareAreas_() {
+  var ratioEl = document.querySelector('#typeFields [data-label="持分比例"]');
+  var scopeEl = document.querySelector('#typeFields [data-label="產權範圍"]');
+  if (!ratioEl || !scopeEl || scopeEl.value !== '持分') return;
+  [['全筆土地面積(m²)', '土地面積(m²)', 'land'], ['全筆主建物面積(m²)', '主建物面積(m²)', 'building']].forEach(function(p) {
+    var fullEl = document.querySelector('#typeFields [data-label="' + p[0] + '"]');
+    var areaEl = document.querySelector('#typeFields [data-label="' + p[1] + '"]');
+    if (!fullEl || !areaEl) return;
+    var full = parseFloat(fullEl.value);
+    var r = parseShareRatio_(ratioEl.value, p[2]);
+    if (isNaN(full) || r === null) return;
+    areaEl.value = String(Number((full * r).toFixed(2)));
+    areaEl.dispatchEvent(new Event('input', { bubbles: true })); // 更新坪數顯示、單價總價換算
+  });
+}
+
+// 產業園區名稱(土地)：使用分區有勾工業區或丁種建築用地才需要填
+function landParkRelevant_() {
+  var group = document.querySelector('#typeFields [data-checkbox-label="使用分區"]');
+  if (!group) return true;
+  var texts = Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]:checked')).map(function(cb) { return cb.value; });
+  var other = group.parentElement.querySelector('.other-input');
+  if (other && texts.indexOf('其他') !== -1) texts.push(other.value);
+  return texts.some(function(t) { return /工業|丁種|產業/.test(t); });
+}
+function updateLandParkVisibility_() {
+  if (currentType !== '土地') return;
+  var el = document.querySelector('#typeFields [data-label="產業園區名稱(土地)"]');
+  var wrap = el ? el.closest('.field') : null;
+  if (wrap) wrap.style.display = landParkRelevant_() ? '' : 'none';
+}
+function landParkHidden_() {
+  var el = document.querySelector('#typeFields [data-label="產業園區名稱(土地)"]');
+  var wrap = el ? el.closest('.field') : null;
+  return !!wrap && wrap.style.display === 'none';
+}
+
+// 案件狀態：下架、成交時才要填日期、說明；成交才有成交價
+function updateStatusUi_() {
+  var sel = document.querySelector('[data-label="案件狀態"]');
+  var v = sel ? sel.value : '銷售中';
+  var active = !v || v === '銷售中';
+  document.getElementById('statusDateField').style.display = active ? 'none' : '';
+  document.getElementById('statusNoteField').style.display = active ? 'none' : '';
+  document.getElementById('dealPriceField').style.display = v === '已成交' ? '' : 'none';
+  document.getElementById('statusDateLabel').textContent = v === '已成交' ? '成交日期' : '下架日期';
+  document.getElementById('statusNoteHint').textContent = v === '已成交' ? '例：買方是○○公司、成交業務是○○' : '例：屋主決定不賣了';
+}
+(function() {
+  var sel = document.querySelector('[data-label="案件狀態"]');
+  if (sel) sel.addEventListener('change', updateStatusUi_);
+  var dateEl = document.querySelector('[data-label="狀態日期"]');
+  if (dateEl) attachRocPreview_(dateEl);
+  if (EDIT_MODE) document.getElementById('statusCard').style.display = '';
+  updateStatusUi_();
+})();
+
+// 表單內的輸入事件：只有業務自己輸入（isTrusted）才決定換算方向；還原草稿、帶入謄本這類程式填入的不算
+['input', 'change'].forEach(function(evtName) {
+  document.getElementById('listingForm').addEventListener(evtName, function(e) {
+    var t = e.target;
+    var label = t.getAttribute ? (t.getAttribute('data-label') || t.getAttribute('data-price-unit')) : null;
+    if (label === '單價' || label === '總價') {
+      if (!e.isTrusted) return;
+      if (t.hasAttribute('data-label')) priceDriver_ = label;
+      recalcPrice_();
+    } else if (label === '持分比例' || label === '全筆土地面積(m²)' || label === '全筆主建物面積(m²)' || label === '產權範圍') {
+      if (e.isTrusted) recalcShareAreas_();
+    } else if (label === '委託種類' || (PRICE_AREA_LABELS[currentType] || []).indexOf(label) !== -1) {
+      recalcPrice_();
+    }
+    updateLandParkVisibility_();
+  });
+});
+
+// 換類型、還原草稿／案件之後：換算方向歸零，重新判斷產業園區名稱要不要顯示
+(function() {
+  var origRender = renderTypeFields;
+  renderTypeFields = function(typeTab) { priceDriver_ = null; origRender(typeTab); updateLandParkVisibility_(); };
+  var origRestore = restoreDraft_;
+  restoreDraft_ = function(draft) { origRestore(draft); priceDriver_ = null; updateLandParkVisibility_(); updateStatusUi_(); };
+})();
+
+// ============================================================
+// 修改案件頁（網址 ?mode=edit）
+// 登入（姓名＋通關碼）→ 自己的案件清單 → 載入案件：用送出時存下的表單狀態原樣還原 →
+// 改完送出。通關碼只放在這個頁面的記憶體裡，重新整理就要重新登入。
+// ============================================================
+var editAuth_ = null;   // { name, code }
+var editCase_ = null;   // 目前正在修改的案件 { key, typeTab, version, caseName, bizText }
+var editCases_ = [];
+var editDirty_ = false;
+
+function submitBtnLabel_() { return EDIT_MODE ? '儲存修改' : '送出'; }
+
+function editShow_(view) {
+  // view：'login' | 'list' | 'form'
+  document.getElementById('editLoginView').style.display = view === 'login' ? '' : 'none';
+  document.getElementById('editListView').style.display = view === 'list' ? '' : 'none';
+  document.getElementById('editBar').style.display = view === 'form' ? '' : 'none';
+  document.getElementById('listingForm').style.display = view === 'form' ? '' : 'none';
+  if (view !== 'form') document.getElementById('editNotice').style.display = 'none';
+  document.getElementById('msgBox').style.display = 'none';
+  window.scrollTo(0, 0);
+}
+
+function editSetLoginMsg_(text) {
+  var box = document.getElementById('editLoginMsg');
+  box.className = text ? 'msg error' : 'msg';
+  box.textContent = text || '';
+}
+
+function editLogin_() {
+  var name = document.getElementById('editName').value;
+  var code = document.getElementById('editCode').value.trim();
+  if (!name || !code) { editSetLoginMsg_('請選擇姓名並輸入通關碼。'); return; }
+  var btn = document.getElementById('editLoginBtn');
+  btn.disabled = true; btn.textContent = '登入中…';
+  editSetLoginMsg_('');
+  runServer('editListCases', name, code)
+    .then(function(res) {
+      editAuth_ = { name: name, code: code };
+      document.getElementById('editCode').value = '';
+      editCases_ = res.cases || [];
+      editRenderList_();
+      editShow_('list');
+    })
+    .catch(function(err) { editSetLoginMsg_(err.message); })
+    .then(function() { btn.disabled = false; btn.textContent = '登入'; });
+}
+
+function editLogout_() {
+  editAuth_ = null; editCase_ = null; editCases_ = [];
+  resetUploads_();
+  editShow_('login');
+}
+
+function editRefreshList_() {
+  if (!editAuth_) { editShow_('login'); return Promise.resolve(); }
+  return runServer('editListCases', editAuth_.name, editAuth_.code)
+    .then(function(res) { editCases_ = res.cases || []; editRenderList_(); })
+    .catch(function(err) { showToast(err.message, 'error'); });
+}
+
+function editRenderList_() {
+  document.getElementById('editListTitle').textContent = editAuth_ ? (editAuth_.name + ' 的案件') : '我的案件';
+  var box = document.getElementById('editCaseList');
+  var q = document.getElementById('editSearch').value.trim();
+  box.innerHTML = '';
+  var shown = editCases_.filter(function(c) {
+    return !q || String(c.caseName).indexOf(q) !== -1 || String(c.contractNo).indexOf(q) !== -1;
+  });
+  if (!shown.length) {
+    var empty = document.createElement('div');
+    empty.className = 'hint';
+    empty.textContent = editCases_.length ? '找不到符合的案件。' : '目前沒有你負責的案件。';
+    box.appendChild(empty);
+    return;
+  }
+  shown.forEach(function(c) {
+    var row = document.createElement('div');
+    row.className = 'edit-case' + (c.editable ? '' : ' locked');
+    var tag = document.createElement('span'); tag.className = 'type-tag'; tag.textContent = c.typeTab;
+    var name = document.createElement('div'); name.className = 'case-name'; name.textContent = c.caseName || '（沒有案名）';
+    row.appendChild(tag); row.appendChild(name);
+    if (c.editable) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'edit-btn'; btn.textContent = '修改';
+      btn.addEventListener('click', function() { editOpenCase_(c.key, btn); });
+      row.appendChild(btn);
+      var meta = document.createElement('div'); meta.className = 'case-meta';
+      meta.textContent = [c.status && c.status !== '銷售中' ? c.status : '', c.contractNo, c.expiry ? ('到期 ' + c.expiry) : '', c.createdAt ? ('填寫 ' + c.createdAt) : ''].filter(Boolean).join('｜');
+      row.appendChild(meta);
+    } else {
+      row.appendChild(document.createElement('span'));
+      var locked = document.createElement('div'); locked.className = 'case-locked';
+      locked.textContent = '這件要修改請找管理者' + (c.contractNo ? '｜' + c.contractNo : '');
+      row.appendChild(locked);
+    }
+    box.appendChild(row);
+  });
+}
+
+// 清空表單（換案件前）
+function editResetForm_() {
+  document.getElementById('listingForm').reset();
+  document.querySelectorAll('.businessPersonCheckbox').forEach(function(cb) { cb.checked = false; });
+  var otherWrap = document.querySelector('.business-other-names-wrap');
+  if (otherWrap) otherWrap.style.display = 'none';
+  updateRatioRows();
+  document.getElementById('deedResult').innerHTML = '';
+  resetUploads_();
+  clearMissingMarks_();
+  document.querySelectorAll('#listingForm .deed-filled').forEach(function(el) { el.classList.remove('deed-filled'); });
+  updateStatusUi_();
+}
+
+// 把「表單送出後在試算表被改過」的目前值帶進表單；帶不進去的（複選、地段等）回傳 false
+var EDIT_NOT_PATCHABLE_LABELS = ['詳細地址', '委託人聯絡地址', '契約編號'];
+function editApplyCurrentValue_(label, value) {
+  if (EDIT_NOT_PATCHABLE_LABELS.indexOf(label) !== -1) return false;
+  var el = document.querySelector('#listingForm [data-label="' + label.replace(/"/g, '\\"') + '"]');
+  if (!el) return false;
+  value = String(value == null ? '' : value);
+  function fire(target) { target.dispatchEvent(new Event('input', { bubbles: true })); target.dispatchEvent(new Event('change', { bubbles: true })); }
+  var unitSel = document.querySelector('#listingForm [data-price-unit="' + label.replace(/"/g, '\\"') + '"]');
+  if (unitSel) {
+    if (!value) { el.value = ''; fire(el); return true; }
+    var pm = value.match(/^\s*(\d+(?:\.\d+)?)\s*(.*)$/);
+    if (!pm) return false;
+    var unit = pm[2].trim();
+    if (!Array.prototype.some.call(unitSel.options, function(o) { return o.value === unit; })) return false;
+    el.value = pm[1]; unitSel.value = unit; fire(el);
+    return true;
+  }
+  if (el._multi && el._multi.active) return false;
+  if (el.type === 'date' || el.type === 'month') {
+    if (!value) { el.value = ''; fire(el); return true; }
+    var dm = value.match(/^(\d{1,3})年(\d{1,2})月(?:(\d{1,2})日)?$/);
+    if (!dm || (el.type === 'date') !== !!dm[3]) return false;
+    el.value = (parseInt(dm[1], 10) + 1911) + '-' + ('0' + dm[2]).slice(-2) + (dm[3] ? '-' + ('0' + dm[3]).slice(-2) : '');
+    fire(el);
+    return true;
+  }
+  if (el.classList.contains('room-layout-select')) return false;
+  if (el.tagName === 'SELECT') {
+    var has = function(v) { return Array.prototype.some.call(el.options, function(o) { return o.value === v; }); };
+    if (has(value)) { el.value = value; fire(el); return true; }
+    var other = el.parentElement.querySelector('.other-input');
+    if (other && has('其他') && value) { el.value = '其他'; fire(el); other.value = value; return true; }
+    return false;
+  }
+  if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') { el.value = value; fire(el); return true; }
+  return false;
+}
+
+function editOpenCase_(key, btn) {
+  if (!editAuth_) return;
+  if (btn) { btn.disabled = true; btn.textContent = '載入中…'; }
+  Promise.all([runServer('editLoadCase', editAuth_.name, editAuth_.code, key), initReady_])
+    .then(function(all) {
+      var data = all[0];
+      editResetForm_();
+      var form = data.form || {};
+      form.type = data.typeTab; // 類型以案件為準，不能更改
+      restoreDraft_(form);
+
+      // 表單送出後在試算表被改過的欄位：能帶入的帶入目前的值，其他的列出來
+      var notApplied = [];
+      (data.changedFields || []).forEach(function(f) {
+        if (editApplyCurrentValue_(f.label, f.value)) {
+          var fieldEl = document.querySelector('#listingForm [data-label="' + f.label.replace(/"/g, '\\"') + '"]');
+          var wrap = fieldEl ? fieldEl.closest('.field') : null;
+          if (wrap) wrap.classList.add('deed-filled');
+        } else {
+          notApplied.push(f);
+        }
+      });
+      var notice = document.getElementById('editNotice');
+      notice.innerHTML = '';
+      if (notApplied.length) {
+        var p = document.createElement('div');
+        p.textContent = '下面這些欄位在送出後有人在試算表改過，表單裡顯示的還是原本填的內容。目前的值是：';
+        var ul = document.createElement('ul');
+        notApplied.forEach(function(f) {
+          var li = document.createElement('li');
+          li.textContent = f.label + '：' + (f.value || '（空白）');
+          ul.appendChild(li);
+        });
+        var p2 = document.createElement('div');
+        p2.style.marginTop = '6px';
+        p2.textContent = '要以目前的值為準，這些欄位不要動；要改，就直接在表單裡改成正確的內容。';
+        notice.appendChild(p); notice.appendChild(ul); notice.appendChild(p2);
+        notice.style.display = '';
+      } else {
+        notice.style.display = 'none';
+      }
+
+      var ps = data.persons || {};
+      var bizText = '';
+      if (ps.primary) bizText += '主要：' + ps.primary + (ps.primaryRatio ? '（' + ps.primaryRatio + '%）' : '');
+      if (ps.secondary) bizText += (bizText ? '\n' : '') + '次要：' + ps.secondary + (ps.secondaryRatio ? '（' + ps.secondaryRatio + '%）' : '');
+      document.getElementById('editBizInfo').style.whiteSpace = 'pre-line';
+      document.getElementById('editBizInfo').textContent = bizText || '（沒有資料）';
+
+      var photoInfo = document.getElementById('editPhotoInfo');
+      photoInfo.innerHTML = '';
+      photoInfo.appendChild(document.createTextNode('目前已上傳 ' + ((data.photo && data.photo.count) || 0) + ' 個檔案。這裡選的檔案會再加進去，原本的不會被刪掉。'));
+      if (data.photo && data.photo.url) {
+        photoInfo.appendChild(document.createTextNode(' '));
+        var a = document.createElement('a');
+        a.href = data.photo.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = '開啟照片資料夾';
+        photoInfo.appendChild(a);
+      }
+      photoInfo.style.display = '';
+
+      editCase_ = { key: data.key, typeTab: data.typeTab, version: data.version, caseName: data.caseName, bizText: bizText };
+      document.getElementById('editBarTitle').textContent = '正在修改：' + (data.caseName || '') + '（' + data.typeTab + '）';
+      editShow_('form');
+      editDirty_ = false;
+    })
+    .catch(function(err) { showToast(err.message, 'error'); })
+    .then(function() { if (btn) { btn.disabled = false; btn.textContent = '修改'; } });
+}
+
+function editBackToList_() {
+  if (editDirty_ || uploadItems.length) {
+    if (!window.confirm('這次的修改還沒儲存，確定要回到案件清單嗎？')) return;
+  }
+  uploadItems.filter(function(it) { return it.status === 'done'; }).forEach(trashUploadedFile_);
+  editCase_ = null;
+  editResetForm_();
+  editShow_('list');
+  editRefreshList_();
+}
+
+function submitEditCase_(fieldValues, photoUrls) {
+  var submitBtn = document.getElementById('submitBtn');
+  var msgBox = document.getElementById('msgBox');
+  if (!editAuth_ || !editCase_) { editShow_('login'); return; }
+  submitBtn.disabled = true;
+  submitBtn.textContent = '儲存中…';
+  runServer('editSubmitCase', editAuth_.name, editAuth_.code, editCase_.key, currentType, fieldValues,
+    collectDraft_(), photoUrls, editCase_.version)
+    .then(function(result) {
+      showToast(result.message || '已儲存修改', 'success');
+      editDirty_ = false;
+      editCase_ = null;
+      editResetForm_();
+      editShow_('list');
+      return editRefreshList_();
+    })
+    .catch(function(err) {
+      msgBox.className = 'msg error';
+      msgBox.textContent = '儲存失敗：' + err.message;
+      msgBox.style.display = 'block';
+      showToast('儲存失敗：' + err.message, 'error');
+    })
+    .then(function() {
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtnLabel_();
+    });
+}
+
+(function setupEditMode_() {
+  var link = document.getElementById('modeLink');
+  var base = location.pathname;
+  if (!EDIT_MODE) {
+    link.innerHTML = '<a href="' + base + '?mode=edit">修改已送出的案件</a>';
+    return;
+  }
+  link.innerHTML = '<a href="' + base + '">新增案件</a>';
+  document.title = '修改案件｜瑞禾不動產';
+  document.querySelector('h1').textContent = '修改案件';
+  document.getElementById('pageSubtitle').textContent = '選擇姓名、輸入通關碼後，可以修改自己負責的案件';
+  document.querySelector('.type-switch').style.display = 'none';
+  document.getElementById('draftBanner').style.display = 'none';
+  document.getElementById('bizPersonField').style.display = 'none';
+  document.getElementById('bizRatioField').style.display = 'none';
+  document.getElementById('editBizField').style.display = '';
+  document.getElementById('submitBtn').textContent = submitBtnLabel_();
+  editShow_('login');
+
+  runServer('getEditLoginOptions')
+    .then(function(res) {
+      var sel = document.getElementById('editName');
+      sel.innerHTML = '<option value="">請選擇姓名</option>';
+      (res.personList || []).forEach(function(n) {
+        var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o);
+      });
+    })
+    .catch(function(err) { editSetLoginMsg_('載入姓名清單失敗：' + err.message); });
+
+  document.getElementById('editLoginBtn').addEventListener('click', editLogin_);
+  document.getElementById('editCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); editLogin_(); } });
+  document.getElementById('editLogoutBtn').addEventListener('click', editLogout_);
+  document.getElementById('editBackBtn').addEventListener('click', editBackToList_);
+  document.getElementById('editSearch').addEventListener('input', editRenderList_);
+  ['input', 'change'].forEach(function(evt) {
+    document.getElementById('listingForm').addEventListener(evt, function() { if (editCase_) editDirty_ = true; });
+  });
+  window.addEventListener('beforeunload', function(e) {
+    if (editCase_ && editDirty_) { e.preventDefault(); e.returnValue = ''; }
+  });
+})();
 
 // ============================================================
 // 謄本解析（純函式，不碰網頁元素；也能在 Node 測試）
@@ -3502,6 +4079,29 @@ function deedRecordText_(r) {
     '｜附屬 ' + r.attachedAreaM2 + ' m²｜' + c + '｜' + (r.floors || '？') + '層｜' + r.source;
 }
 
+// 建物分棟：預設以門牌分棟；同一個門牌有好幾個建號時，業務可以在預覽選「分開成不同棟」
+var deedSplit_ = {}; // 門牌 key → true（分開）／false（合併）
+function deedAddrKey_(b) {
+  return ((b.addresses && b.addresses.length) ? b.addresses.join('|') : String(b.address || '')).replace(/\s+/g, '') || ('建號' + b.number);
+}
+// 預設：兩個以上建號都有 1 樓、或主要用途不同（例如廠房和倉庫）→ 分開；樓層互不重疊（1F、2F…）→ 合併
+function deedDefaultSplit_(blds) {
+  var withFirst = blds.filter(function(b) { return (b.floorNums || []).indexOf(1) !== -1; }).length;
+  var uses = {};
+  blds.forEach(function(b) { var u = String(b.mainUse || '').split('、')[0].trim(); if (u) uses[u] = true; });
+  return withFirst >= 2 || Object.keys(uses).length >= 2;
+}
+function deedSameDoorGroups_() {
+  var groups = {}, order = [];
+  deedState_.forEach(function(item) {
+    if (item.rec.kind === 'land') return;
+    var k = deedAddrKey_(item.rec);
+    if (!groups[k]) { groups[k] = []; order.push(k); }
+    groups[k].push(item.rec);
+  });
+  return order.filter(function(k) { return groups[k].length > 1; }).map(function(k) { return { key: k, blds: groups[k] }; });
+}
+
 function renderDeedPreview_(messages) {
   var box = document.getElementById('deedResult');
   box.innerHTML = '';
@@ -3524,13 +4124,35 @@ function renderDeedPreview_(messages) {
       var wd = document.createElement('div'); wd.className = 'hint'; wd.style.cssText = 'color:var(--danger);margin:0 0 4px 26px;'; wd.textContent = '⚠ ' + w; box.appendChild(wd);
     });
   });
+  if (currentType !== '土地') {
+    deedSameDoorGroups_().forEach(function(g) {
+      if (!(g.key in deedSplit_)) deedSplit_[g.key] = deedDefaultSplit_(g.blds);
+      var box2 = document.createElement('div');
+      box2.style.cssText = 'margin:8px 0 4px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;font-size:12.5px;';
+      var head = document.createElement('div');
+      head.style.fontWeight = '600';
+      head.textContent = '建號 ' + g.blds.map(function(b) { return b.number + (b.mainUse ? '（' + String(b.mainUse).split('、')[0] + '）' : ''); }).join('、') +
+        ' 門牌相同' + (g.blds[0].address ? '（' + g.blds[0].address + '）' : '') + '：';
+      box2.appendChild(head);
+      [[false, '合併成同一棟（同一棟的不同樓層／單位）'], [true, '分開成不同棟（例如同一個門牌裡的廠房和倉庫）']].forEach(function(opt) {
+        var lb = document.createElement('label');
+        lb.style.cssText = 'display:flex;gap:6px;align-items:center;font-weight:400;margin:4px 0 0;cursor:pointer;';
+        var rb = document.createElement('input');
+        rb.type = 'radio'; rb.name = 'deedSplit_' + g.key; rb.style.width = 'auto'; rb.checked = deedSplit_[g.key] === opt[0];
+        rb.addEventListener('change', function() { if (rb.checked) deedSplit_[g.key] = opt[0]; });
+        lb.appendChild(rb); lb.appendChild(document.createTextNode(opt[1]));
+        box2.appendChild(lb);
+      });
+      box.appendChild(box2);
+    });
+  }
   var btnRow = document.createElement('div'); btnRow.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
   var applyBtn = document.createElement('button'); applyBtn.type = 'button'; applyBtn.id = 'deedApplyBtn'; applyBtn.textContent = '帶入表單';
   applyBtn.style.cssText = 'flex:1;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;';
   applyBtn.addEventListener('click', function() { applyDeed_(); });
   var clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.textContent = '清除';
   clearBtn.style.cssText = 'padding:10px 16px;background:#eee;color:#333;border:none;border-radius:8px;cursor:pointer;';
-  clearBtn.addEventListener('click', function() { deedState_ = []; deedFiles_ = []; document.getElementById('deedResult').innerHTML = ''; });
+  clearBtn.addEventListener('click', function() { deedState_ = []; deedFiles_ = []; deedSplit_ = {}; document.getElementById('deedResult').innerHTML = ''; });
   btnRow.appendChild(applyBtn); btnRow.appendChild(clearBtn); box.appendChild(btnRow);
   var out = document.createElement('div'); out.id = 'deedApplyResult'; box.appendChild(out);
 }
@@ -3710,7 +4332,8 @@ function applyDeed_() {
     var b0 = blds[0];
     var groups = [];
     blds.forEach(function(b) {
-      var key = ((b.addresses && b.addresses.length) ? b.addresses.join('|') : String(b.address || '')).replace(/\s+/g, '') || ('建號' + b.number);
+      var key = deedAddrKey_(b);
+      if (deedSplit_[key]) key += '#' + b.number; // 業務選了「分開成不同棟」
       var g = groups.filter(function(x) { return x.key === key; })[0];
       if (!g) { g = { key: key, blds: [] }; groups.push(g); }
       g.blds.push(b);
@@ -3740,7 +4363,7 @@ function applyDeed_() {
     var hasEave = !!document.querySelector('#typeFields [data-extra-floor-label="簷高(滴水高度)"]');
     function groupMap_() { return groups.map(function(g, gi) { return String.fromCharCode(65 + gi) + '＝建號 ' + g.nums.join('、') + (g.address ? '（' + g.address + '）' : ''); }).join('；'); }
     if (multiBld) {
-      res.notes.push('一共帶入 ' + blds.length + ' 筆建號，依門牌分成 ' + groups.length + ' 棟（' + groupMap_() + '）：面積加總；樓層、建築完成日' + (hasEave ? '、簷高' : '') + '已依棟別列出；門牌已用「；」分開列在詳細地址；主要建材合併勾選，請確認');
+      res.notes.push('一共帶入 ' + blds.length + ' 筆建號，分成 ' + groups.length + ' 棟（' + groupMap_() + '）：面積加總；樓層、建築完成日' + (hasEave ? '、簷高' : '') + '已依棟別列出；門牌已用「；」分開列在詳細地址；主要建材合併勾選，請確認');
     } else if (blds.length > 1) {
       var g1 = groups[0];
       res.notes.push('這 ' + blds.length + ' 筆建號門牌相同' + (g1.address ? '（' + g1.address + '）' : '') + '，視為同一棟的不同樓層／單位：面積加總；' +
@@ -3945,6 +4568,12 @@ function applyDeed_() {
         var who = (e.owner && e.owner.name) ? (e.owner.name + (e.owner.id ? '（' + e.owner.id + '）' : '')) : '';
         if (e.owner && e.owner.autoMasked) idAutoMasked = true;
         var share = e.whole ? '全部' : (e.shareText || '');
+        var frac = !e.whole && String(e.shareText || '').match(/(\d+)分之(\d+)/);
+        var baseArea = x.rec.kind === 'land' ? x.rec.areaM2 : x.rec.totalAreaM2;
+        if (frac && baseArea) {
+          var shareM2 = baseArea * parseFloat(frac[2]) / parseFloat(frac[1]);
+          share += '，持分面積 ' + Number(shareM2.toFixed(2)) + '㎡（' + Number((shareM2 / 3.305785).toFixed(2)) + '坪）';
+        }
         return (who ? who + (who.slice(-1) === '）' ? '' : ' ') : '') + share;
       });
       ownerLines.push(recLabel_(x.rec) + '：' + parts.join('、'));
