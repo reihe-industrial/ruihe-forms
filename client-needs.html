@@ -86,6 +86,10 @@
     }
 
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .range-row { display: flex; align-items: center; gap: 6px; }
+    .range-row input { flex: 1 1 0; min-width: 0; }
+    .range-row span { color: var(--muted); font-size: 13.5px; flex: 0 0 auto; }
+    .range-row .range-unit { min-width: 1.5em; }
 
     .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px 6px; }
     .checkbox-group label {
@@ -194,6 +198,7 @@
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="listing.html" data-key="listing">新增物件</a>
     <a href="listing.html?mode=edit" data-key="edit">修改案件</a>
+    <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-needs.html" data-key="needs">客需資料</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
   </nav>
@@ -201,6 +206,7 @@
   (function() {
     var page = location.pathname.split('/').pop();
     var key = page === 'client-needs.html' ? 'needs' : page === 'land-registry.html' ? 'registry'
+      : page === 'summary.html' ? 'summary'
       : (/[?&]mode=edit(&|$)/.test(location.search) ? 'edit' : 'listing');
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
@@ -313,14 +319,14 @@
     <!-- 廠房區塊 -->
     <div class="type-block" id="factoryBlock">
       <div class="type-block-title">廠房需求</div>
-      <div class="field buy-field"><label>廠房需求坪數</label><input type="text" id="factoryAreaBuy"></div>
-      <div class="field buy-field"><label>廠房總價上限(萬元)</label><input type="text" id="factoryPriceBuy"></div>
-      <div class="field rent-field"><label>廠房需求坪數（承租）</label><input type="text" id="factoryAreaRent"></div>
-      <div class="field rent-field"><label>廠房租金上限(元/坪/月)</label><input type="text" id="factoryRent"></div>
+      <div class="field buy-field"><label>廠房需求坪數</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="factoryAreaBuyMin" placeholder="最少" aria-label="最少"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="factoryAreaBuyMax" placeholder="最多" aria-label="最多"><span class="range-unit">坪</span></div></div>
+      <div class="field buy-field"><label>廠房總價(萬元)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="factoryPriceBuyMin" placeholder="最低" aria-label="最低"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="factoryPriceBuyMax" placeholder="最高" aria-label="最高"><span class="range-unit">萬</span></div></div>
+      <div class="field rent-field"><label>廠房需求坪數(承租)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="factoryAreaRentMin" placeholder="最少" aria-label="最少"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="factoryAreaRentMax" placeholder="最多" aria-label="最多"><span class="range-unit">坪</span></div></div>
+      <div class="field rent-field"><label>廠房租金(元/坪/月)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="factoryRentMin" placeholder="最低" aria-label="最低"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="factoryRentMax" placeholder="最高" aria-label="最高"><span class="range-unit">元/坪/月</span></div></div>
       <div class="field rent-field"><label>廠房預計租期</label><input type="text" id="factoryRentTerm" placeholder="例：3年"></div>
       <div class="field">
         <label>土地坪數需求</label>
-        <input type="text" id="factoryLandArea">
+        <div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="factoryLandAreaMin" placeholder="最少" aria-label="最少"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="factoryLandAreaMax" placeholder="最多" aria-label="最多"><span class="range-unit">坪</span></div>
       </div>
       <div class="field">
         <label>需求土地分區</label>
@@ -372,10 +378,10 @@
     <!-- 土地區塊 -->
     <div class="type-block" id="landBlock">
       <div class="type-block-title">土地需求</div>
-      <div class="field buy-field"><label>土地需求面積(坪)</label><input type="text" id="landAreaBuy"></div>
-      <div class="field buy-field"><label>土地總價上限(萬元)</label><input type="text" id="landPriceBuy"></div>
-      <div class="field rent-field"><label>土地需求面積（承租）(坪)</label><input type="text" id="landAreaRent"></div>
-      <div class="field rent-field"><label>土地租金上限(元/坪/月)</label><input type="text" id="landRent"></div>
+      <div class="field buy-field"><label>土地需求面積(坪)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="landAreaBuyMin" placeholder="最少" aria-label="最少"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="landAreaBuyMax" placeholder="最多" aria-label="最多"><span class="range-unit">坪</span></div></div>
+      <div class="field buy-field"><label>土地總價(萬元)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="landPriceBuyMin" placeholder="最低" aria-label="最低"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="landPriceBuyMax" placeholder="最高" aria-label="最高"><span class="range-unit">萬</span></div></div>
+      <div class="field rent-field"><label>土地需求面積(承租)(坪)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="landAreaRentMin" placeholder="最少" aria-label="最少"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="landAreaRentMax" placeholder="最多" aria-label="最多"><span class="range-unit">坪</span></div></div>
+      <div class="field rent-field"><label>土地租金(元/坪/月)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="landRentMin" placeholder="最低" aria-label="最低"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="landRentMax" placeholder="最高" aria-label="最高"><span class="range-unit">元/坪/月</span></div></div>
       <div class="field rent-field"><label>土地預計租期</label><input type="text" id="landRentTerm" placeholder="例：3年"></div>
       <div class="field">
         <label>地形需求</label>
@@ -400,10 +406,10 @@
     <!-- 房屋區塊 -->
     <div class="type-block" id="houseBlock">
       <div class="type-block-title">房屋需求</div>
-      <div class="field buy-field"><label>房屋需求坪數</label><input type="text" id="houseAreaBuy"></div>
-      <div class="field buy-field"><label>房屋總價上限(萬元)</label><input type="text" id="housePriceBuy"></div>
-      <div class="field rent-field"><label>房屋需求坪數（承租）</label><input type="text" id="houseAreaRent"></div>
-      <div class="field rent-field"><label>房屋租金上限(元/月)</label><input type="text" id="houseRent"></div>
+      <div class="field buy-field"><label>房屋需求坪數</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="houseAreaBuyMin" placeholder="最少" aria-label="最少"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="houseAreaBuyMax" placeholder="最多" aria-label="最多"><span class="range-unit">坪</span></div></div>
+      <div class="field buy-field"><label>房屋總價(萬元)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="housePriceBuyMin" placeholder="最低" aria-label="最低"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="housePriceBuyMax" placeholder="最高" aria-label="最高"><span class="range-unit">萬</span></div></div>
+      <div class="field rent-field"><label>房屋需求坪數(承租)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="houseAreaRentMin" placeholder="最少" aria-label="最少"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="houseAreaRentMax" placeholder="最多" aria-label="最多"><span class="range-unit">坪</span></div></div>
+      <div class="field rent-field"><label>房屋租金(元/月)</label><div class="range-row"><input type="number" inputmode="decimal" step="any" min="0" id="houseRentMin" placeholder="最低" aria-label="最低"><span>～</span><input type="number" inputmode="decimal" step="any" min="0" id="houseRentMax" placeholder="最高" aria-label="最高"><span class="range-unit">元/月</span></div></div>
       <div class="field rent-field"><label>房屋預計租期</label><input type="text" id="houseRentTerm" placeholder="例：1年"></div>
       <div class="field">
         <label>需求房型</label>
@@ -622,6 +628,123 @@ function getBusinessList() {
   }).filter(function(v) { return v; });
 }
 
+// ---------------- 坪數／預算範圍（客需） ----------------
+// 存進試算表的格式：「100～300」「100以上」「300以下」「200」（最少和最多一樣）
+// kind：area（坪）、price（萬）、rentPing（元/坪/月）、rentMonth（元/月）
+var RANGE_UNITS_ = {
+  area: { '': 1, '坪': 1, '甲': 2934.3, '公頃': 3025, '分地': 293.43, '分': 293.43,
+    '平方公尺': 1 / 3.305785, '平米': 1 / 3.305785, '㎡': 1 / 3.305785, 'm2': 1 / 3.305785, 'M2': 1 / 3.305785 },
+  price: { '': 1, '萬': 1, '萬元': 1, '億': 10000, '億元': 10000, '元': 0.0001 },
+  rent: { '': 1, '元': 1, '萬': 10000, '萬元': 10000 }
+};
+function rangeUnitGroup_(kind) { return kind === 'area' ? 'area' : kind === 'price' ? 'price' : 'rent'; }
+function rangeRound_(n) { return Math.round(n * 100) / 100; }
+function rangeNumText_(n) { return String(rangeRound_(n)); }
+function formatRange_(min, max) {
+  var hasMin = min !== null && min !== undefined && !isNaN(min);
+  var hasMax = max !== null && max !== undefined && !isNaN(max);
+  if (hasMin && hasMax) {
+    if (min > max) { var t = min; min = max; max = t; }
+    return rangeRound_(min) === rangeRound_(max) ? rangeNumText_(min) : rangeNumText_(min) + '～' + rangeNumText_(max);
+  }
+  if (hasMin) return rangeNumText_(min) + '以上';
+  if (hasMax) return rangeNumText_(max) + '以下';
+  return '';
+}
+// 把文字解析成 { empty } 或 { ok, min, max }；看不懂回傳 { ok: false }。
+// singleIsMax：只有一個數字時當成上限（舊的「總價上限」「租金上限」欄位用）
+function parseRangeText_(raw, kind, singleIsMax) {
+  var t = String(raw === null || raw === undefined ? '' : raw)
+    .replace(/[０-９]/g, function(c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+    .replace(/．/g, '.').replace(/[\s,，、]/g, '');
+  if (!t) return { empty: true };
+  var group = rangeUnitGroup_(kind);
+  var units = RANGE_UNITS_[group];
+  t = t.replace(/^(大約|大概|約)/, '').replace(/(左右|上下)$/, '');
+  if (group === 'rent') t = t.replace(/(\/坪\/月|\/坪|\/月|每坪每月|每坪|每月|月租)/g, '');
+  if (group === 'area') t = t.replace(/(需求|需要|約)/g, '');
+  var unitAlt = Object.keys(units).filter(function(u) { return u; })
+    .sort(function(a, b) { return b.length - a.length; })
+    .map(function(u) { return u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|');
+  var NUM = '(\\d+(?:\\.\\d+)?)(' + unitAlt + ')?';
+  var m;
+  function val(n, u) { var f = units[u || '']; return f === undefined ? NaN : parseFloat(n) * f; }
+  function done(min, max) {
+    if ((min !== null && isNaN(min)) || (max !== null && isNaN(max))) return { ok: false };
+    if (min !== null && max !== null && min > max) { var x = min; min = max; max = x; }
+    return { ok: true, min: min === null ? null : rangeRound_(min), max: max === null ? null : rangeRound_(max) };
+  }
+  m = t.match(new RegExp('^' + NUM + '(?:~|～|〜|-|－|—|–|至|到)' + NUM + '$'));
+  if (m) return done(val(m[1], m[2] || m[4]), val(m[3], m[4] || m[2]));
+  m = t.match(new RegExp('^(?:最少|至少|最低|最小)?' + NUM + '(?:以上|起)$')) || t.match(new RegExp('^(?:最少|至少|最低|最小)' + NUM + '$'));
+  if (m) return done(val(m[1], m[2]), null);
+  m = t.match(new RegExp('^(?:最多|上限|最高|最大|預算)?' + NUM + '(?:以下|以內|內)$')) || t.match(new RegExp('^(?:最多|上限|最高|最大|預算)' + NUM + '$'));
+  if (m) return done(null, val(m[1], m[2]));
+  m = t.match(new RegExp('^' + NUM + '$'));
+  if (m) { var v = val(m[1], m[2]); return singleIsMax ? done(null, v) : done(v, v); }
+  return { ok: false };
+}
+// 解析後組回標準格式；看不懂就原樣保留
+function normalizeRangeText_(raw, kind, singleIsMax) {
+  var r = parseRangeText_(raw, kind, singleIsMax);
+  if (r.empty) return '';
+  if (!r.ok) return String(raw).trim();
+  return formatRange_(r.min, r.max);
+}
+
+// 坪數、總價、租金的範圍欄位（id 對應送出資料的 key）；舊版是一格文字，只給還原舊草稿用
+var RANGE_INPUTS_ = [
+  { id: 'factoryAreaBuy', kind: 'area' }, { id: 'factoryPriceBuy', kind: 'price', oldIsMax: true },
+  { id: 'factoryAreaRent', kind: 'area' }, { id: 'factoryRent', kind: 'rentPing', oldIsMax: true },
+  { id: 'factoryLandArea', kind: 'area' },
+  { id: 'landAreaBuy', kind: 'area' }, { id: 'landPriceBuy', kind: 'price', oldIsMax: true },
+  { id: 'landAreaRent', kind: 'area' }, { id: 'landRent', kind: 'rentPing', oldIsMax: true },
+  { id: 'houseAreaBuy', kind: 'area' }, { id: 'housePriceBuy', kind: 'price', oldIsMax: true },
+  { id: 'houseAreaRent', kind: 'area' }, { id: 'houseRent', kind: 'rentMonth', oldIsMax: true }
+];
+function rangeInputNum_(el) {
+  var v = String(el.value || '').trim();
+  if (v === '') return null;
+  var n = parseFloat(v);
+  return isNaN(n) ? NaN : n;
+}
+function getRangeValue_(id) {
+  var lo = rangeInputNum_(document.getElementById(id + 'Min'));
+  var hi = rangeInputNum_(document.getElementById(id + 'Max'));
+  return formatRange_(isNaN(lo) ? null : lo, isNaN(hi) ? null : hi);
+}
+// 回傳有問題的欄位（格式同必填檢查：「標題（說明）」）；隱藏的欄位不檢查
+function checkRangeInputs_() {
+  var errors = [];
+  RANGE_INPUTS_.forEach(function(d) {
+    var minEl = document.getElementById(d.id + 'Min');
+    var field = minEl.closest('.field');
+    if (!field || field.offsetParent === null) return;
+    var label = fieldLabelEl_(field).textContent.trim();
+    var lo = rangeInputNum_(minEl), hi = rangeInputNum_(document.getElementById(d.id + 'Max'));
+    if ((lo !== null && (isNaN(lo) || lo < 0)) || (hi !== null && (isNaN(hi) || hi < 0))) errors.push(label + '（請填 0 以上的數字）');
+    else if (lo !== null && hi !== null && lo > hi) errors.push(label + '（最少不能大於最多）');
+  });
+  return errors;
+}
+// 確認摘要用：「3000以下」→「3000萬以下」、「300～500」→「300～500坪」
+function rangeWithUnit_(text, unit) {
+  var m = String(text || '').match(/^(.*?)(以上|以下)$/);
+  return m ? m[1] + unit + m[2] : text + unit;
+}
+// 舊草稿（一格文字）→ 拆成最少、最多兩格
+function restoreOldRangeDraft_(fields) {
+  RANGE_INPUTS_.forEach(function(d) {
+    if (!fields || typeof fields[d.id] !== 'string' || !fields[d.id].trim()) return;
+    var minEl = document.getElementById(d.id + 'Min'), maxEl = document.getElementById(d.id + 'Max');
+    if (minEl.value || maxEl.value) return;
+    var r = parseRangeText_(fields[d.id], d.kind, !!d.oldIsMax);
+    if (!r.ok) return;
+    if (r.min !== null) minEl.value = r.min;
+    if (r.max !== null) maxEl.value = r.max;
+  });
+}
+
 function getBusinessValue(selectId, otherInputId) {
   var sel = document.getElementById(selectId);
   if (sel.value === '其他') return document.getElementById(otherInputId).value.trim();
@@ -818,6 +941,14 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     showToast('還有 ' + missing.length + ' 個必填欄位沒填，請看紅框標示處', 'error', true);
     return;
   }
+  var rangeErrors = checkRangeInputs_();
+  if (rangeErrors.length > 0) {
+    msgBox.className = 'msg error';
+    msgBox.textContent = '以下欄位的範圍要再確認：\n' + rangeErrors.map(function(e) { return e.replace('（', '：').replace('）', ''); }).join('\n');
+    markMissingFields_(rangeErrors);
+    showToast('有 ' + rangeErrors.length + ' 個範圍要再確認，請看紅框標示處', 'error', true);
+    return;
+  }
   clearMissingMarks_();
 
   var industryList = Array.prototype.slice.call(document.querySelectorAll('.industryCheckbox:checked')).map(function(cb) {
@@ -868,12 +999,12 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     propertyTypes: propertyTypes.join('、'),
     demandType: demandType,
 
-    factoryAreaBuy: document.getElementById('factoryAreaBuy').value.trim(),
-    factoryPriceBuy: document.getElementById('factoryPriceBuy').value.trim(),
-    factoryAreaRent: document.getElementById('factoryAreaRent').value.trim(),
-    factoryRent: document.getElementById('factoryRent').value.trim(),
+    factoryAreaBuy: getRangeValue_('factoryAreaBuy'),
+    factoryPriceBuy: getRangeValue_('factoryPriceBuy'),
+    factoryAreaRent: getRangeValue_('factoryAreaRent'),
+    factoryRent: getRangeValue_('factoryRent'),
     factoryRentTerm: document.getElementById('factoryRentTerm').value.trim(),
-    factoryLandArea: document.getElementById('factoryLandArea').value.trim(),
+    factoryLandArea: getRangeValue_('factoryLandArea'),
     factoryLandZoning: document.getElementById('factoryLandZoning').value.trim(),
     factoryHeight: document.getElementById('factoryHeight').value.trim(),
     factoryPower: document.getElementById('factoryPower').value.trim(),
@@ -884,10 +1015,10 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     factorySewage: document.getElementById('factorySewage').value,
     factoryOther: document.getElementById('factoryOther').value.trim(),
 
-    landAreaBuy: document.getElementById('landAreaBuy').value.trim(),
-    landPriceBuy: document.getElementById('landPriceBuy').value.trim(),
-    landAreaRent: document.getElementById('landAreaRent').value.trim(),
-    landRent: document.getElementById('landRent').value.trim(),
+    landAreaBuy: getRangeValue_('landAreaBuy'),
+    landPriceBuy: getRangeValue_('landPriceBuy'),
+    landAreaRent: getRangeValue_('landAreaRent'),
+    landRent: getRangeValue_('landRent'),
     landRentTerm: document.getElementById('landRentTerm').value.trim(),
     landShape: document.getElementById('landShape').value,
     landRoadWidth: document.getElementById('landRoadWidth').value.trim(),
@@ -895,10 +1026,10 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     landZoning: document.getElementById('landZoning').value.trim(),
     landOther: document.getElementById('landOther').value.trim(),
 
-    houseAreaBuy: document.getElementById('houseAreaBuy').value.trim(),
-    housePriceBuy: document.getElementById('housePriceBuy').value.trim(),
-    houseAreaRent: document.getElementById('houseAreaRent').value.trim(),
-    houseRent: document.getElementById('houseRent').value.trim(),
+    houseAreaBuy: getRangeValue_('houseAreaBuy'),
+    housePriceBuy: getRangeValue_('housePriceBuy'),
+    houseAreaRent: getRangeValue_('houseAreaRent'),
+    houseRent: getRangeValue_('houseRent'),
     houseRentTerm: document.getElementById('houseRentTerm').value.trim(),
     houseLayout: houseLayout,
     houseFloor: document.getElementById('houseFloor').value.trim(),
@@ -916,9 +1047,9 @@ document.getElementById('submitBtn').addEventListener('click', function() {
   };
 
   var demandParts_ = [];
-  if (data.propertyTypes.indexOf('廠房') !== -1) demandParts_.push('廠房：' + [data.factoryAreaBuy && ('買' + data.factoryAreaBuy + '坪'), data.factoryPriceBuy && ('總價上限' + data.factoryPriceBuy + '萬'), data.factoryAreaRent && ('租' + data.factoryAreaRent + '坪'), data.factoryRent && ('租金上限' + data.factoryRent), data.factoryHeight && ('淨高' + data.factoryHeight), data.factoryPower && ('電力' + data.factoryPower)].filter(Boolean).join('、'));
-  if (data.propertyTypes.indexOf('土地') !== -1) demandParts_.push('土地：' + [data.landAreaBuy && ('買' + data.landAreaBuy + '坪'), data.landPriceBuy && ('總價上限' + data.landPriceBuy + '萬'), data.landAreaRent && ('租' + data.landAreaRent + '坪'), data.landRent && ('租金上限' + data.landRent), data.landUse && ('種類' + data.landUse)].filter(Boolean).join('、'));
-  if (data.propertyTypes.indexOf('房屋') !== -1) demandParts_.push('房屋：' + [data.houseAreaBuy && ('買' + data.houseAreaBuy + '坪'), data.housePriceBuy && ('總價上限' + data.housePriceBuy + '萬'), data.houseAreaRent && ('租' + data.houseAreaRent + '坪'), data.houseRent && ('租金上限' + data.houseRent), data.houseLayout && ('房型' + data.houseLayout)].filter(Boolean).join('、'));
+  if (data.propertyTypes.indexOf('廠房') !== -1) demandParts_.push('廠房：' + [data.factoryAreaBuy && ('買' + rangeWithUnit_(data.factoryAreaBuy, '坪')), data.factoryPriceBuy && ('總價' + rangeWithUnit_(data.factoryPriceBuy, '萬')), data.factoryAreaRent && ('租' + rangeWithUnit_(data.factoryAreaRent, '坪')), data.factoryRent && ('租金' + rangeWithUnit_(data.factoryRent, '元/坪/月')), data.factoryHeight && ('淨高' + data.factoryHeight), data.factoryPower && ('電力' + data.factoryPower)].filter(Boolean).join('、'));
+  if (data.propertyTypes.indexOf('土地') !== -1) demandParts_.push('土地：' + [data.landAreaBuy && ('買' + rangeWithUnit_(data.landAreaBuy, '坪')), data.landPriceBuy && ('總價' + rangeWithUnit_(data.landPriceBuy, '萬')), data.landAreaRent && ('租' + rangeWithUnit_(data.landAreaRent, '坪')), data.landRent && ('租金' + rangeWithUnit_(data.landRent, '元/坪/月')), data.landUse && ('種類' + data.landUse)].filter(Boolean).join('、'));
+  if (data.propertyTypes.indexOf('房屋') !== -1) demandParts_.push('房屋：' + [data.houseAreaBuy && ('買' + rangeWithUnit_(data.houseAreaBuy, '坪')), data.housePriceBuy && ('總價' + rangeWithUnit_(data.housePriceBuy, '萬')), data.houseAreaRent && ('租' + rangeWithUnit_(data.houseAreaRent, '坪')), data.houseRent && ('租金' + rangeWithUnit_(data.houseRent, '元/月')), data.houseLayout && ('房型' + data.houseLayout)].filter(Boolean).join('、'));
   showConfirmDialog_('送出前確認（客需）', [
     ['負責業務', data.business],
     ['客戶', [data.clientName, data.contactPerson, data.contactPhone].filter(Boolean).join('｜')],
@@ -1038,6 +1169,7 @@ function restoreDraft_(draft) {
     el.value = draft.fields[id];
     if (el.tagName === 'SELECT') fireChange_(el);
   });
+  restoreOldRangeDraft_(draft.fields);
   updatePropertyTypeBlocks();
   updateDemandTypeFields();
 

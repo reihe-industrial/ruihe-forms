@@ -95,6 +95,7 @@
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="listing.html" data-key="listing">新增物件</a>
     <a href="listing.html?mode=edit" data-key="edit">修改案件</a>
+    <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-needs.html" data-key="needs">客需資料</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
   </nav>
@@ -102,6 +103,7 @@
   (function() {
     var page = location.pathname.split('/').pop();
     var key = page === 'client-needs.html' ? 'needs' : page === 'land-registry.html' ? 'registry'
+      : page === 'summary.html' ? 'summary'
       : (/[?&]mode=edit(&|$)/.test(location.search) ? 'edit' : 'listing');
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
