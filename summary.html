@@ -168,24 +168,43 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <div class="container">
     <nav class="site-nav" id="siteNav" aria-label="表單選單">
-      <a href="listing.html" data-key="listing">新增物件</a>
-      <a href="listing.html?mode=edit" data-key="edit">修改案件</a>
-      <a href="summary.html" data-key="summary">物件簡表</a>
-      <a href="client-needs.html" data-key="needs">客需資料</a>
-      <a href="land-registry.html" data-key="registry">調謄本</a>
-    </nav>
-    <script>
-    (function() {
-      var page = location.pathname.split('/').pop();
-      var key = page === 'client-needs.html' ? 'needs' : page === 'land-registry.html' ? 'registry'
-        : page === 'summary.html' ? 'summary'
-        : (/[?&]mode=edit(&|$)/.test(location.search) ? 'edit' : 'listing');
-      var links = document.querySelectorAll('#siteNav a');
-      for (var i = 0; i < links.length; i++) {
-        if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
-      }
-    })();
-    </script>
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
+    <a href="summary.html" data-key="summary">物件簡表</a>
+    <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'client-summary.html' ? 'csummary'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+    // 修改頁：「修改物件」「修改客需」切換
+    if (key === 'edit') {
+      var isNeeds = page === 'client-needs.html';
+      var sw = document.createElement('div');
+      sw.style.cssText = 'display:inline-flex;gap:4px;background:#fff;border:1px solid #dfe2d7;border-radius:999px;padding:3px;margin:0 0 14px;';
+      [['listing.html?mode=edit', '修改物件', !isNeeds], ['client-needs.html?mode=edit', '修改客需', isNeeds]].forEach(function(t) {
+        var a = document.createElement('a');
+        a.href = t[0]; a.textContent = t[1];
+        a.style.cssText = 'padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;text-decoration:none;' +
+          (t[2] ? 'background:#e9f1ec;color:#1e4a32;' : 'color:#66776c;');
+        if (t[2]) a.setAttribute('aria-current', 'page');
+        sw.appendChild(a);
+      });
+      var nav = document.getElementById('siteNav');
+      nav.parentNode.insertBefore(sw, nav.nextSibling);
+    }
+  })();
+  </script>
 
     <h1>物件簡表</h1>
     <div class="subtitle">全公司銷售中的物件</div>
@@ -715,7 +734,11 @@ function login() {
       applyAndRender();
     } else {
       applyAndRender();
-      $('results').innerHTML = '<div class="loading">讀取中…</div>';
+      $('results').innerHTML = '<div class="loading" id="firstLoading">讀取中…</div>';
+      setTimeout(function() {
+        var el = $('firstLoading');
+        if (el) el.innerHTML = '讀取中…<br>第一次在這台裝置打開比較久，請稍候；之後打開會先顯示上次的資料。';
+      }, 4000);
     }
     updateStatus();
     checkForUpdates(false);

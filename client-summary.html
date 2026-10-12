@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>客需簡表｜瑞禾不動產</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --ink: #1c2b22;
+      --muted: #66776c;
+      --paper: #f3f1e9;
+      --card: #ffffff;
+      --line: #dfe2d7;
+      --brand: #2f6f4e;
+      --brand-dark: #1e4a32;
+      --brand-soft: #e9f1ec;
+      --danger: #a3352c;
+      --danger-soft: #fbebe9;
+      --radius: 10px;
+      --t-factory: #3d5a80;  --t-factory-soft: #e6ecf4;
+      --t-land: #8a6a1f;     --t-land-soft: #f5eedb;
+      --t-house: #8c3f5a;    --t-house-soft: #f6e7ec;
+    }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: var(--paper); margin: 0; padding: 20px 16px 60px;
+      color: var(--ink); line-height: 1.5;
+    }
+    .container { max-width: 1180px; margin: 0 auto; }
+    .narrow { max-width: 640px; }
+
+    .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line);
+      color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
+    .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+    h1 {
+      font-family: "Noto Serif TC", "Noto Sans TC", serif;
+      font-size: 23px; font-weight: 700; letter-spacing: 0.02em;
+      margin: 4px 0 6px; color: var(--brand-dark);
+    }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
+    .card h2 { font-size: 15px; font-weight: 700; margin: 0 0 16px; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
+    .card h2::before { content: ""; display: inline-block; width: 4px; height: 15px; background: var(--brand); border-radius: 2px; flex-shrink: 0; }
+
+    .field { margin-bottom: 16px; }
+    label, .flabel { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
+    label.required::after { content: " *"; color: var(--danger); font-weight: 700; }
+    .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; line-height: 1.55; }
+    input, select {
+      width: 100%; padding: 10px 12px; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font-family: inherit;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+    select { appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366776c' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 10px center; background-size: 18px; padding-right: 34px; }
+    button { font-family: inherit; }
+    button:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid var(--brand-soft); outline-offset: 2px; }
+
+    .btn { border: none; border-radius: 8px; background: var(--brand); color: #fff; font-size: 15px; font-weight: 700; padding: 11px 18px; cursor: pointer; }
+    .btn:disabled { background: #b9c3ba; cursor: not-allowed; }
+    .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 600; font-size: 13.5px; padding: 7px 13px; }
+    .btn.ghost:hover { border-color: var(--brand); color: var(--brand); }
+    .btn.ghost:disabled { background: #fff; color: #a9b0a2; }
+
+    .msg { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+    .msg.error { display: block; background: var(--danger-soft); color: var(--danger); }
+    .login-note { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+
+    /* 登入後的頂列 */
+    .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 14px; }
+    .topbar .who { font-weight: 700; font-size: 14px; }
+    .topbar .status { font-size: 13px; color: var(--muted); flex: 1 1 auto; }
+    .topbar .status.warn { color: var(--danger); }
+    .topbar .actions { display: flex; gap: 6px; }
+
+    /* 篩選 */
+    .filters { padding: 16px 18px; }
+    .filter-toggle { display: none; }
+    .filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 18px; align-items: end; }
+    .filter-grid .span2 { grid-column: span 2; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chips button {
+      border: 1px solid var(--line); background: #fbfaf6; color: var(--ink); border-radius: 999px;
+      padding: 6px 13px; font-size: 13.5px; cursor: pointer;
+    }
+    .chips button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+    .range { display: flex; align-items: center; gap: 6px; }
+    .range input { padding: 9px 10px; }
+    .range span { color: var(--muted); flex: 0 0 auto; }
+    .row-sel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .filter-foot { grid-column: 2 / -1; display: flex; justify-content: flex-end; }
+    @media (max-width: 899px) { .filter-foot { grid-column: auto; } }
+
+    /* 結果列 */
+    .resultbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 2px 10px; }
+    .count { font-size: 15px; font-weight: 700; color: var(--brand-dark); }
+    .count small { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 6px; }
+    .sort-mobile { display: none; max-width: 180px; padding: 7px 30px 7px 10px; font-size: 13.5px; }
+
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 5px; padding: 1px 7px; white-space: nowrap; background: #eef0ea; color: var(--muted); }
+    .tag.t-factory { background: var(--t-factory-soft); color: var(--t-factory); }
+    .tag.t-land { background: var(--t-land-soft); color: var(--t-land); }
+    .tag.t-house { background: var(--t-house-soft); color: var(--t-house); }
+    .tag.rs { background: #fff; border: 1px solid var(--line); color: var(--ink); }
+
+    /* 電腦：表格 */
+    .table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 120px); }
+    table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: #f8f7f2; z-index: 1; white-space: nowrap; padding: 0; }
+    th button { all: unset; display: block; padding: 10px; font-weight: 700; font-size: 13px; color: var(--brand-dark); cursor: pointer; white-space: nowrap; }
+    th button:focus-visible { outline: 3px solid var(--brand-soft); }
+    th .arrow { color: var(--brand); margin-left: 3px; font-size: 11px; }
+    td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    td { white-space: nowrap; }
+    td.wrap { white-space: normal; min-width: 9em; max-width: 18em; }
+    tbody tr.main { cursor: pointer; }
+    tbody tr.main.open { background: #f4f8f5; }
+    tr.detail td { background: #fbfbf8; white-space: normal; }
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 22px; font-size: 13.5px; }
+    .detail-grid div { display: grid; grid-template-columns: 9.5em 1fr; gap: 8px; }
+    .detail-grid span:first-child { color: var(--muted); }
+    .mine { display: inline-block; font-size: 11.5px; font-weight: 700; color: var(--brand); border: 1px solid var(--brand); border-radius: 5px; padding: 0 5px; margin-left: 4px; }
+    .edit-link { color: var(--brand); font-weight: 600; font-size: 13.5px; text-decoration: none; }
+    .demand-lines { font-size: 13.5px; }
+    .demand-lines div + div { margin-top: 2px; }
+    tbody tr:hover { background: #fafaf5; }
+
+    /* 手機：卡片 */
+    .cards { display: grid; gap: 10px; }
+    .item { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+    .item > summary { list-style: none; cursor: pointer; padding: 14px 14px 12px; }
+    .item > summary::-webkit-details-marker { display: none; }
+    .item-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .item-name { font-size: 16px; font-weight: 700; margin-right: auto; }
+    .item-price { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+    .item-price b { font-size: 19px; color: var(--brand-dark); }
+    .item-price span { font-size: 13.5px; color: var(--muted); }
+    .item-meta { font-size: 13.5px; color: var(--ink); margin-top: 3px; }
+    .item-meta.muted { color: var(--muted); }
+    .item-more-hint { font-size: 12.5px; color: var(--brand); margin-top: 6px; }
+    .item[open] .item-more-hint .open-t { display: none; }
+    .item:not([open]) .item-more-hint .close-t { display: none; }
+    .item-more { margin: 0; padding: 4px 14px 14px; border-top: 1px dashed var(--line); display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13.5px; }
+    .item-more dt { color: var(--muted); padding-top: 6px; }
+    .item-more dd { margin: 0; padding-top: 6px; }
+
+    .empty { text-align: center; padding: 40px 16px; color: var(--muted); background: var(--card); border: 1px dashed var(--line); border-radius: var(--radius); }
+    .loading { text-align: center; padding: 40px 16px; color: var(--muted); }
+
+    #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 50; background: var(--brand-dark); color: #fff;
+      padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,.18); display: none; max-width: 90%; text-align: center; }
+    #toast.error { background: var(--danger); }
+
+    @media (max-width: 899px) {
+      .filter-toggle { display: flex; width: 100%; justify-content: space-between; align-items: center; background: none; border: none; padding: 0; font-size: 15px; font-weight: 700; color: var(--brand-dark); cursor: pointer; }
+      .filters:not(.open) .filter-body { display: none; }
+      .filters.open .filter-toggle { margin-bottom: 14px; }
+      .filter-grid { grid-template-columns: 1fr; gap: 14px; }
+      .filter-grid .span2 { grid-column: auto; }
+      .sort-mobile { display: block; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .item[open] .item-more { animation: open .15s ease-out; }
+      @keyframes open { from { opacity: 0; } to { opacity: 1; } }
+    }
+  </style>
+</head>
+<body>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div class="container">
+    <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
+    <a href="summary.html" data-key="summary">物件簡表</a>
+    <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'client-summary.html' ? 'csummary'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+    // 修改頁：「修改物件」「修改客需」切換
+    if (key === 'edit') {
+      var isNeeds = page === 'client-needs.html';
+      var sw = document.createElement('div');
+      sw.style.cssText = 'display:inline-flex;gap:4px;background:#fff;border:1px solid #dfe2d7;border-radius:999px;padding:3px;margin:0 0 14px;';
+      [['listing.html?mode=edit', '修改物件', !isNeeds], ['client-needs.html?mode=edit', '修改客需', isNeeds]].forEach(function(t) {
+        var a = document.createElement('a');
+        a.href = t[0]; a.textContent = t[1];
+        a.style.cssText = 'padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;text-decoration:none;' +
+          (t[2] ? 'background:#e9f1ec;color:#1e4a32;' : 'color:#66776c;');
+        if (t[2]) a.setAttribute('aria-current', 'page');
+        sw.appendChild(a);
+      });
+      var nav = document.getElementById('siteNav');
+      nav.parentNode.insertBefore(sw, nav.nextSibling);
+    }
+  })();
+  </script>
+
+    <h1>客需簡表</h1>
+    <div class="subtitle">全公司的客戶需求（不含客戶聯絡資料）</div>
+
+    <div class="card narrow" id="loginView">
+      <h2>登入</h2>
+      <div class="field">
+        <label class="required" for="loginName">姓名</label>
+        <select id="loginName"><option value="">載入中…</option></select>
+      </div>
+      <div class="field">
+        <label class="required" for="loginCode">通關碼</label>
+        <div class="hint">輸入修改案件用的同一組通關碼（英文和數字，不分大小寫）</div>
+        <input type="password" id="loginCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20">
+      </div>
+      <button type="button" class="btn" id="loginBtn" style="width:100%;">登入</button>
+      <div class="msg" id="loginMsg"></div>
+      <div class="login-note">在共用電腦上看完，請按「登出」。</div>
+    </div>
+
+    <div id="mainView" hidden>
+      <div class="topbar">
+        <span class="who" id="whoName"></span>
+        <span class="status" id="statusText"></span>
+        <span class="actions">
+          <button type="button" class="btn ghost" id="refreshBtn">重新整理</button>
+          <button type="button" class="btn ghost" id="logoutBtn">登出</button>
+        </span>
+      </div>
+
+      <div class="card filters" id="filterCard">
+        <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterBody">
+          <span id="filterToggleText">篩選</span><span aria-hidden="true">▾</span>
+        </button>
+        <div class="filter-body" id="filterBody">
+          <div class="filter-grid">
+            <div class="span2">
+              <span class="flabel">物件類型</span>
+              <div class="chips" id="typeChips" role="group" aria-label="物件類型"></div>
+            </div>
+            <div>
+              <span class="flabel">買／租</span>
+              <div class="chips" id="rsChips" role="group" aria-label="買／租"></div>
+            </div>
+            <div>
+              <span class="flabel">負責業務</span>
+              <div class="chips" id="mineChips" role="group" aria-label="負責業務"></div>
+            </div>
+            <div class="span2">
+              <span class="flabel">區域</span>
+              <div class="row-sel">
+                <select id="fCounty" aria-label="縣市"><option value="">全部縣市</option></select>
+                <select id="fTown" aria-label="鄉鎮市區"><option value="">先選縣市</option></select>
+              </div>
+            </div>
+            <div class="span2">
+              <label for="fKeyword">關鍵字</label>
+              <input type="search" id="fKeyword" placeholder="產業、業務、區域、需求內容" autocomplete="off">
+            </div>
+            <div>
+              <label for="fArea">物件坪數</label>
+              <input type="number" inputmode="decimal" step="any" min="0" id="fArea" placeholder="例：300">
+            </div>
+            <div>
+              <label for="fPrice">物件總價（萬）</label>
+              <input type="number" inputmode="decimal" step="any" min="0" id="fPrice" placeholder="例：3000">
+            </div>
+            <div>
+              <label for="fRent">物件租金（元）</label>
+              <input type="number" inputmode="decimal" step="any" min="0" id="fRent" placeholder="廠房、土地每坪每月；房屋每月">
+            </div>
+            <div class="filter-foot"><button type="button" class="btn ghost" id="clearBtn">清除篩選</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resultbar">
+        <div class="count" id="countText" aria-live="polite"></div>
+        <select class="sort-mobile" id="sortMobile" aria-label="排序">
+          <option value="">最新在前</option>
+          <option value="lastTrack|-1">最近追蹤在前</option>
+          <option value="lastTrack|1">最久沒追蹤在前</option>
+          <option value="urgency|1">最急的在前</option>
+        </select>
+      </div>
+
+      <div id="results"><div class="loading">讀取中…</div></div>
+    </div>
+  </div>
+
+<script>
+var API_URL = 'https://script.google.com/macros/s/AKfycbz6EXnxZb40rln8q9xTaD_TiABT5leWT-R20P5DAQmgLwhiyLvVsI8mqC4Df4wT01zP/exec';   // 客需後端
+var LISTING_API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec'; // 物件後端（姓名清單）
+
+var CACHE_KEY = 'ruihe_client_summary_cache_v1';
+var LAST_NAME_KEY = 'ruihe_summary_last_name';
+var FILTER_KEY = 'ruihe_client_summary_filters_v1';
+var POLL_MS = 5 * 60 * 1000;
+var DESKTOP_QUERY = window.matchMedia('(min-width: 900px)');
+var TYPE_ORDER = ['廠房', '土地', '房屋'];
+var URGENCY_ORDER = ['非常急', '普通', '不急'];
+
+// 坪數、總價、租金欄位（依物件類型、買／租）
+var NEED_COLS = {
+  '廠房': { buyArea: '廠房需求坪數', rentArea: '廠房需求坪數(承租)', landArea: '土地坪數需求(廠房)', price: '廠房總價(萬元)', rent: '廠房租金(元/坪/月)', rentUnit: '元/坪/月' },
+  '土地': { buyArea: '土地需求面積(坪)', rentArea: '土地需求面積(承租)(坪)', price: '土地總價(萬元)', rent: '土地租金(元/坪/月)', rentUnit: '元/坪/月' },
+  '房屋': { buyArea: '房屋需求坪數', rentArea: '房屋需求坪數(承租)', price: '房屋總價(萬元)', rent: '房屋租金(元/月)', rentUnit: '元/月' }
+};
+// 表格和卡片上直接顯示的欄位；其他欄位點開看
+var SHOWN = ['負責業務', '填表日期', '物件類型', '需求類型', '目標區域', '產業類別', '進駐時間', '客戶急迫程度', '最後追蹤日', '追蹤次數'];
+(function() {
+  Object.keys(NEED_COLS).forEach(function(t) {
+    var c = NEED_COLS[t];
+    [c.buyArea, c.rentArea, c.landArea, c.price, c.rent].forEach(function(x) { if (x) SHOWN.push(x); });
+  });
+})();
+
+var auth = null, data = null, items = [], colIndex = {};
+var sortState = { key: '', dir: 1 };
+var filters = emptyFilters();
+var pollTimer = null, busy = false, lastCheckFailed = false;
+var openKeys = {};
+
+function $(id) { return document.getElementById(id); }
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function post(url, fnName, args) {
+  return fetch(url, { method: 'POST', body: JSON.stringify({ fn: fnName, args: args }) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.ok) { var e = new Error(res.message || '系統發生錯誤'); e.fromServer = true; throw e; }
+      return res.result;
+    });
+}
+function isAuthError(err) { return err && err.fromServer && /通關碼|請選擇姓名/.test(err.message); }
+var toastTimer = null;
+function toast(text, isError) {
+  var el = $('toast');
+  el.textContent = text; el.className = isError ? 'error' : ''; el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.style.display = 'none'; }, 2600);
+}
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function timeText(ms) {
+  var d = new Date(ms), now = new Date();
+  var hm = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  return d.toDateString() === now.toDateString() ? hm : (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hm;
+}
+// ---------------- 坪數／預算範圍（客需） ----------------
+// 存進試算表的格式：「100～300」「100以上」「300以下」「200」（最少和最多一樣）
+// kind：area（坪）、price（萬）、rentPing（元/坪/月）、rentMonth（元/月）
+var RANGE_UNITS_ = {
+  area: { '': 1, '坪': 1, '甲': 2934.3, '公頃': 3025, '分地': 293.43, '分': 293.43,
+    '平方公尺': 1 / 3.305785, '平米': 1 / 3.305785, '㎡': 1 / 3.305785, 'm2': 1 / 3.305785, 'M2': 1 / 3.305785 },
+  price: { '': 1, '萬': 1, '萬元': 1, '億': 10000, '億元': 10000, '元': 0.0001 },
+  rent: { '': 1, '元': 1, '萬': 10000, '萬元': 10000 }
+};
+function rangeUnitGroup_(kind) { return kind === 'area' ? 'area' : kind === 'price' ? 'price' : 'rent'; }
+function rangeRound_(n) { return Math.round(n * 100) / 100; }
+function rangeNumText_(n) { return String(rangeRound_(n)); }
+function formatRange_(min, max) {
+  var hasMin = min !== null && min !== undefined && !isNaN(min);
+  var hasMax = max !== null && max !== undefined && !isNaN(max);
+  if (hasMin && hasMax) {
+    if (min > max) { var t = min; min = max; max = t; }
+    return rangeRound_(min) === rangeRound_(max) ? rangeNumText_(min) : rangeNumText_(min) + '～' + rangeNumText_(max);
+  }
+  if (hasMin) return rangeNumText_(min) + '以上';
+  if (hasMax) return rangeNumText_(max) + '以下';
+  return '';
+}
+// 把文字解析成 { empty } 或 { ok, min, max }；看不懂回傳 { ok: false }。
+// singleIsMax：只有一個數字時當成上限（舊的「總價上限」「租金上限」欄位用）
+function parseRangeText_(raw, kind, singleIsMax) {
+  var t = String(raw === null || raw === undefined ? '' : raw)
+    .replace(/[０-９]/g, function(c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+    .replace(/．/g, '.').replace(/[\s,，、]/g, '');
+  if (!t) return { empty: true };
+  var group = rangeUnitGroup_(kind);
+  var units = RANGE_UNITS_[group];
+  t = t.replace(/^(大約|大概|約)/, '').replace(/(左右|上下)$/, '');
+  if (group === 'rent') t = t.replace(/(\/坪\/月|\/坪|\/月|每坪每月|每坪|每月|月租)/g, '');
+  if (group === 'area') t = t.replace(/(需求|需要|約)/g, '');
+  var unitAlt = Object.keys(units).filter(function(u) { return u; })
+    .sort(function(a, b) { return b.length - a.length; })
+    .map(function(u) { return u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|');
+  var NUM = '(\\d+(?:\\.\\d+)?)(' + unitAlt + ')?';
+  var m;
+  function val(n, u) { var f = units[u || '']; return f === undefined ? NaN : parseFloat(n) * f; }
+  function done(min, max) {
+    if ((min !== null && isNaN(min)) || (max !== null && isNaN(max))) return { ok: false };
+    if (min !== null && max !== null && min > max) { var x = min; min = max; max = x; }
+    return { ok: true, min: min === null ? null : rangeRound_(min), max: max === null ? null : rangeRound_(max) };
+  }
+  m = t.match(new RegExp('^' + NUM + '(?:~|～|〜|-|－|—|–|至|到)' + NUM + '$'));
+  if (m) return done(val(m[1], m[2] || m[4]), val(m[3], m[4] || m[2]));
+  m = t.match(new RegExp('^(?:最少|至少|最低|最小)?' + NUM + '(?:以上|起)$')) || t.match(new RegExp('^(?:最少|至少|最低|最小)' + NUM + '$'));
+  if (m) return done(val(m[1], m[2]), null);
+  m = t.match(new RegExp('^(?:最多|上限|最高|最大|預算)?' + NUM + '(?:以下|以內|內)$')) || t.match(new RegExp('^(?:最多|上限|最高|最大|預算)' + NUM + '$'));
+  if (m) return done(null, val(m[1], m[2]));
+  m = t.match(new RegExp('^' + NUM + '$'));
+  if (m) { var v = val(m[1], m[2]); return singleIsMax ? done(null, v) : done(v, v); }
+  return { ok: false };
+}
+// 解析後組回標準格式；看不懂就原樣保留
+function normalizeRangeText_(raw, kind, singleIsMax) {
+  var r = parseRangeText_(raw, kind, singleIsMax);
+  if (r.empty) return '';
+  if (!r.ok) return String(raw).trim();
+  return formatRange_(r.min, r.max);
+}
+
+function rangeWithUnit_(text, unit) {
+  var m = String(text || '').match(/^(.*?)(以上|以下)$/);
+  return m ? m[1] + unit + m[2] : text + unit;
+}
+// 數字是否落在範圍裡：單一數字（剛好）給上下 20% 彈性；看不懂或空白回傳 null
+function inNeedRange(text, kind, v) {
+  var p = parseRangeText_(text, kind, false);
+  if (!p.ok) return null;
+  if (p.min !== null && p.max !== null && p.min === p.max) return Math.abs(v - p.min) <= p.min * 0.2;
+  return (p.min === null || v >= p.min) && (p.max === null || v <= p.max);
+}
+function rocNum(text) {
+  var m = String(text || '').match(/^(\d{2,3})年(\d{1,2})月(\d{1,2})日?$/);
+  return m ? (parseInt(m[1], 10) + 1911) * 10000 + parseInt(m[2], 10) * 100 + parseInt(m[3], 10) : 0;
+}
+
+function cell(row, label) { var i = colIndex[label]; return i === undefined ? '' : (row[i] || ''); }
+function splitList(t) { return String(t || '').split(/[、,，]/).map(function(s) { return s.trim(); }).filter(Boolean); }
+
+// 目標區域「台中市大雅區、彰化縣」→ [{county, town}]，town 空白代表整個縣市
+function splitRegions(text) {
+  return splitList(text).map(function(p) {
+    var t = p.replace(/臺/g, '台');
+    var m = t.match(/^(.{2}[縣市])(.*)$/);
+    return m ? { county: m[1], town: m[2] } : { county: t, town: '' };
+  });
+}
+function wantsBuy(it) { return it.demand === '購買' || it.demand === '皆可' || !it.demand; }
+function wantsRent(it) { return it.demand === '承租' || it.demand === '皆可' || !it.demand; }
+
+function buildItems() {
+  colIndex = {};
+  data.columns.forEach(function(c, i) { colIndex[c] = i; });
+  items = data.rows.map(function(row, i) {
+    var it = {
+      row: row, order: i, key: cell(row, '_key'),
+      types: splitList(cell(row, '物件類型')),
+      demand: String(cell(row, '需求類型')).trim(),
+      agents: splitList(cell(row, '負責業務')),
+      regions: splitRegions(cell(row, '目標區域')),
+      lastTrackNum: rocNum(cell(row, '最後追蹤日')),
+      urgency: URGENCY_ORDER.indexOf(String(cell(row, '客戶急迫程度')).trim()),
+      search: data.columns.filter(function(c) { return c !== '_key'; }).map(function(c) { return cell(row, c); }).join(' ').toLowerCase(),
+    };
+    return it;
+  });
+  buildFilterOptions();
+}
+function demandLines(it) {
+  var lines = [];
+  TYPE_ORDER.concat(it.types.filter(function(t) { return TYPE_ORDER.indexOf(t) === -1; })).forEach(function(t) {
+    if (it.types.indexOf(t) === -1) return;
+    var c = NEED_COLS[t];
+    if (!c) { lines.push(t); return; }
+    var parts = [];
+    var r = it.row;
+    if (wantsBuy(it)) {
+      var a = cell(r, c.buyArea), p = cell(r, c.price);
+      if (a || p) parts.push([a && ('買 ' + rangeWithUnit_(a, '坪')), p && ('總價 ' + rangeWithUnit_(p, '萬'))].filter(Boolean).join('、'));
+    }
+    if (wantsRent(it)) {
+      var ra = cell(r, c.rentArea), rp = cell(r, c.rent);
+      if (ra || rp) parts.push([ra && ('租 ' + rangeWithUnit_(ra, '坪')), rp && ('租金 ' + rangeWithUnit_(rp, c.rentUnit))].filter(Boolean).join('、'));
+    }
+    if (c.landArea && cell(r, c.landArea)) parts.push('土地 ' + rangeWithUnit_(cell(r, c.landArea), '坪'));
+    lines.push(t + '：' + (parts.length ? parts.join('；') : '坪數、預算未填'));
+  });
+  return lines;
+}
+
+// ---------------- 篩選 ----------------
+function emptyFilters() { return { type: '', rs: '', mine: '', county: '', town: '', keyword: '', area: '', price: '', rent: '' }; }
+function renderChips(boxId, values, current, key) {
+  var html = values.map(function(v) {
+    return '<button type="button" data-v="' + esc(v[0]) + '" aria-pressed="' + (current === v[0]) + '">' + esc(v[1]) + '</button>';
+  }).join('');
+  var box = $(boxId);
+  box.innerHTML = html;
+  box.onclick = function(e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    filters[key] = b.getAttribute('data-v');
+    renderChips(boxId, values, filters[key], key);
+    applyAndRender();
+  };
+}
+function buildFilterOptions() {
+  renderChips('typeChips', [['', '全部']].concat(TYPE_ORDER.map(function(t) { return [t, t]; })), filters.type, 'type');
+  renderChips('rsChips', [['', '全部'], ['買', '買'], ['租', '租']], filters.rs, 'rs');
+  renderChips('mineChips', [['', '全公司'], ['mine', '只看我的']], filters.mine, 'mine');
+  var counts = {};
+  items.forEach(function(it) { it.regions.forEach(function(r) { counts[r.county] = (counts[r.county] || 0) + 1; }); });
+  var counties = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a] || a.localeCompare(b, 'zh-Hant'); });
+  if (filters.county && counties.indexOf(filters.county) === -1) { filters.county = ''; filters.town = ''; }
+  $('fCounty').innerHTML = '<option value="">全部縣市</option>' + counties.map(function(c) {
+    return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+  }).join('');
+  $('fCounty').value = filters.county;
+  buildTownOptions();
+}
+function buildTownOptions() {
+  var counts = {};
+  items.forEach(function(it) { it.regions.forEach(function(r) { if (r.county === filters.county && r.town) counts[r.town] = (counts[r.town] || 0) + 1; }); });
+  var towns = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a] || a.localeCompare(b, 'zh-Hant'); });
+  if (filters.town && towns.indexOf(filters.town) === -1) filters.town = '';
+  $('fTown').innerHTML = '<option value="">' + (filters.county ? '全部鄉鎮市區' : '先選縣市') + '</option>' + towns.map(function(t) {
+    return '<option value="' + esc(t) + '">' + esc(t) + '</option>';
+  }).join('');
+  $('fTown').disabled = !filters.county;
+  $('fTown').value = filters.town;
+}
+function num(v) { if (v === '' || v == null) return null; var n = parseFloat(v); return isNaN(n) || n < 0 ? null : n; }
+// 物件坪數／總價／租金：客戶的範圍有任何一項包含這個數字就符合；沒填的客戶不列出
+function matchNeed(it, field, v) {
+  var types = filters.type ? [filters.type] : it.types;
+  var hit = false;
+  types.forEach(function(t) {
+    var c = NEED_COLS[t];
+    if (!c || it.types.indexOf(t) === -1) return;
+    var buy = filters.rs !== '租' && wantsBuy(it), rent = filters.rs !== '買' && wantsRent(it);
+    var cols = [];
+    if (field === 'area') {
+      if (buy) cols.push(c.buyArea);
+      if (rent) cols.push(c.rentArea);
+      if (c.landArea && (buy || rent)) cols.push(c.landArea);
+    } else if (field === 'price' && buy) cols.push(c.price);
+    else if (field === 'rent' && rent) cols.push(c.rent);
+    cols.forEach(function(col) {
+      var kind = field === 'area' ? 'area' : field === 'price' ? 'price' : (t === '房屋' ? 'rentMonth' : 'rentPing');
+      if (inNeedRange(cell(it.row, col), kind, v) === true) hit = true;
+    });
+  });
+  return hit;
+}
+function filtered() {
+  var words = filters.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  var area = num(filters.area), price = num(filters.price), rent = num(filters.rent);
+  return items.filter(function(it) {
+    if (filters.type && it.types.indexOf(filters.type) === -1) return false;
+    if (filters.rs === '買' && !wantsBuy(it)) return false;
+    if (filters.rs === '租' && !wantsRent(it)) return false;
+    if (filters.mine && auth && it.agents.indexOf(auth.name) === -1) return false;
+    if (filters.county && !it.regions.some(function(r) {
+      return r.county === filters.county && (!filters.town || !r.town || r.town === filters.town);
+    })) return false;
+    for (var i = 0; i < words.length; i++) if (it.search.indexOf(words[i]) === -1) return false;
+    if (area !== null && !matchNeed(it, 'area', area)) return false;
+    if (price !== null && !matchNeed(it, 'price', price)) return false;
+    if (rent !== null && !matchNeed(it, 'rent', rent)) return false;
+    return true;
+  });
+}
+function activeFilterCount() {
+  var n = 0;
+  ['type', 'rs', 'mine', 'county', 'area', 'price', 'rent'].forEach(function(k) { if (filters[k]) n++; });
+  if (filters.keyword.trim()) n++;
+  return n;
+}
+var SORT_KEYS = {
+  agent: function(it) { return cell(it.row, '負責業務') || null; },
+  fillDate: function(it) { return cell(it.row, '填表日期') || null; },
+  types: function(it) { return cell(it.row, '物件類型') || null; },
+  demand: function(it) { return it.demand || null; },
+  region: function(it) { return cell(it.row, '目標區域') || null; },
+  industry: function(it) { return cell(it.row, '產業類別') || null; },
+  moveIn: function(it) { return cell(it.row, '進駐時間') || null; },
+  urgency: function(it) { return it.urgency === -1 ? null : it.urgency; },
+  lastTrack: function(it) { return it.lastTrackNum || null; },
+};
+function sortList(list) {
+  if (!sortState.key) return list.slice().sort(function(a, b) { return a.order - b.order; });
+  var f = SORT_KEYS[sortState.key], dir = sortState.dir;
+  return list.slice().sort(function(a, b) {
+    var va = f(a), vb = f(b);
+    if (va === null && vb === null) return a.order - b.order;
+    if (va === null) return 1;
+    if (vb === null) return -1;
+    var c = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'zh-Hant');
+    return c ? c * dir : a.order - b.order;
+  });
+}
+function saveFilters() { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ f: filters, s: sortState })); } catch (e) {} }
+function loadFilters() {
+  try {
+    var o = JSON.parse(sessionStorage.getItem(FILTER_KEY) || 'null');
+    if (o && o.f) { var b = emptyFilters(); for (var k in b) if (o.f[k] != null) b[k] = o.f[k]; filters = b; }
+    if (o && o.s && (o.s.key === '' || SORT_KEYS[o.s.key])) sortState = { key: o.s.key, dir: o.s.dir === -1 ? -1 : 1 };
+  } catch (e) {}
+}
+function syncFilterInputs() {
+  $('fKeyword').value = filters.keyword; $('fArea').value = filters.area; $('fPrice').value = filters.price; $('fRent').value = filters.rent;
+}
+
+// ---------------- 畫面 ----------------
+function applyAndRender() {
+  saveFilters();
+  var n = activeFilterCount();
+  $('filterToggleText').textContent = n ? '篩選（已套用 ' + n + ' 項）' : '篩選';
+  if (!data) return;
+  var list = sortList(filtered());
+  $('countText').innerHTML = '共 ' + list.length + ' 筆' + (list.length !== items.length ? '<small>全部 ' + items.length + ' 筆</small>' : '');
+  var sv = sortState.key ? sortState.key + '|' + sortState.dir : '';
+  $('sortMobile').value = sv;
+  if ($('sortMobile').value !== sv) $('sortMobile').value = '';
+  var box = $('results');
+  if (!items.length) { box.innerHTML = '<div class="empty">目前沒有客需資料。</div>'; return; }
+  if (!list.length) { box.innerHTML = '<div class="empty">沒有符合條件的客需。<br><button type="button" class="btn ghost" style="margin-top:12px;" onclick="clearFilters()">清除篩選</button></div>'; return; }
+  box.innerHTML = DESKTOP_QUERY.matches ? tableHtml(list) : cardsHtml(list);
+}
+function typeTags(it) {
+  return it.types.map(function(t) {
+    var cls = t === '廠房' ? 't-factory' : t === '土地' ? 't-land' : t === '房屋' ? 't-house' : '';
+    return '<span class="tag ' + cls + '">' + esc(t) + '</span>';
+  }).join(' ');
+}
+function isMine(it) { return auth && it.agents.indexOf(auth.name) !== -1; }
+function agentHtml(it) {
+  return esc(cell(it.row, '負責業務')) + (isMine(it) ? '<span class="mine">我的</span>' : '');
+}
+function editLinkHtml(it) {
+  return isMine(it) ? '<a class="edit-link" href="client-needs.html?mode=edit&key=' + encodeURIComponent(it.key) + '">修改／追蹤</a>' : '';
+}
+function trackText(it) {
+  var d = cell(it.row, '最後追蹤日');
+  return d ? d + '（' + (cell(it.row, '追蹤次數') || 0) + ' 筆）' : '還沒有追蹤';
+}
+function detailHtml(it) {
+  var rest = data.columns.filter(function(c) { return c !== '_key' && SHOWN.indexOf(c) === -1 && String(cell(it.row, c)).trim() !== ''; });
+  if (!rest.length) return '<div class="hint">沒有其他資料</div>';
+  return '<div class="detail-grid">' + rest.map(function(c) {
+    return '<div><span>' + esc(c) + '</span><span>' + esc(cell(it.row, c)) + '</span></div>';
+  }).join('') + '</div>';
+}
+var TABLE_COLS = [
+  ['agent', '負責業務'], ['fillDate', '填表日期'], ['types', '物件類型'], ['demand', '需求類型'], [null, '坪數／預算'],
+  ['region', '目標區域'], ['industry', '產業類別'], ['moveIn', '進駐時間'], ['urgency', '急迫程度'], ['lastTrack', '最後追蹤'], [null, '']
+];
+function tableHtml(list) {
+  var head = TABLE_COLS.map(function(c) {
+    if (!c[0]) return '<th><button type="button" tabindex="-1" style="cursor:default;">' + esc(c[1]) + '</button></th>';
+    var on = sortState.key === c[0];
+    var arrow = on ? '<span class="arrow">' + (sortState.dir === 1 ? '▲' : '▼') + '</span>' : '';
+    return '<th aria-sort="' + (on ? (sortState.dir === 1 ? 'ascending' : 'descending') : 'none') + '"><button type="button" data-sort="' + c[0] + '">' + esc(c[1]) + arrow + '</button></th>';
+  }).join('');
+  var body = list.map(function(it) {
+    var open = !!openKeys[it.key];
+    var r = it.row;
+    var main = '<tr class="main' + (open ? ' open' : '') + '" data-key="' + esc(it.key) + '" aria-expanded="' + open + '">' +
+      '<td>' + agentHtml(it) + '</td><td>' + esc(cell(r, '填表日期')) + '</td><td>' + typeTags(it) + '</td><td>' + esc(it.demand) + '</td>' +
+      '<td class="wrap"><div class="demand-lines">' + demandLines(it).map(function(l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div></td>' +
+      '<td class="wrap">' + esc(cell(r, '目標區域')) + '</td><td class="wrap">' + esc(cell(r, '產業類別')) + '</td>' +
+      '<td>' + esc(cell(r, '進駐時間')) + '</td><td>' + esc(cell(r, '客戶急迫程度')) + '</td><td>' + esc(trackText(it)) + '</td>' +
+      '<td>' + editLinkHtml(it) + '</td></tr>';
+    return main + (open ? '<tr class="detail"><td colspan="' + TABLE_COLS.length + '">' + detailHtml(it) + '</td></tr>' : '');
+  }).join('');
+  return '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+function cardsHtml(list) {
+  return '<div class="cards">' + list.map(function(it) {
+    var r = it.row;
+    return '<details class="item" data-key="' + esc(it.key) + '"' + (openKeys[it.key] ? ' open' : '') + '><summary>' +
+      '<div class="item-top"><span class="item-name">' + agentHtml(it) + '</span>' + typeTags(it) +
+        (it.demand ? '<span class="tag rs">' + esc(it.demand) + '</span>' : '') + '</div>' +
+      '<div class="item-meta demand-lines" style="margin-top:6px;">' + demandLines(it).map(function(l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>' +
+      (cell(r, '目標區域') ? '<div class="item-meta">區域：' + esc(cell(r, '目標區域')) + '</div>' : '') +
+      (cell(r, '產業類別') ? '<div class="item-meta">產業：' + esc(cell(r, '產業類別')) + '</div>' : '') +
+      '<div class="item-meta muted">' + esc([cell(r, '進駐時間'), cell(r, '客戶急迫程度')].filter(Boolean).join('｜') || '') +
+        (cell(r, '進駐時間') || cell(r, '客戶急迫程度') ? '｜' : '') + '追蹤：' + esc(trackText(it)) + '</div>' +
+      '<div class="item-more-hint"><span class="open-t">看其他欄位</span><span class="close-t">收起</span></div>' +
+      '</summary><div class="item-more" style="display:block;">' + detailHtml(it) +
+      (isMine(it) ? '<div style="margin-top:10px;">' + editLinkHtml(it) + '</div>' : '') + '</div></details>';
+  }).join('') + '</div>';
+}
+function updateStatus() {
+  var el = $('statusText');
+  if (busy) { el.textContent = '檢查新資料中…'; el.className = 'status'; return; }
+  if (!data) { el.textContent = ''; return; }
+  if (lastCheckFailed) { el.textContent = '連不上系統，顯示的是 ' + timeText(data.checkedAt) + ' 的資料'; el.className = 'status warn'; }
+  else { el.textContent = '最後檢查 ' + timeText(data.checkedAt) + '（每 5 分鐘自動檢查）'; el.className = 'status'; }
+}
+function clearFilters() { filters = emptyFilters(); syncFilterInputs(); buildFilterOptions(); applyAndRender(); }
+
+// ---------------- 快取／檢查新版本 ----------------
+function loadCache() { try { var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && c.version && c.rows) return c; } catch (e) {} return null; }
+function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {} }
+function clearCache() { try { localStorage.removeItem(CACHE_KEY); } catch (e) {} }
+
+// 第一次（登入）：伺服器回應前不顯示任何資料；之後在背景檢查
+function checkForUpdates(manual, isLogin) {
+  if (!auth || busy) return Promise.resolve();
+  busy = true; $('refreshBtn').disabled = true; updateStatus();
+  var cached = isLogin ? loadCache() : data;
+  return post(API_URL, 'clientSummaryGet', [auth.name, auth.code, cached ? cached.version : ''])
+    .then(function(res) {
+      lastCheckFailed = false;
+      if (res.unchanged && cached) {
+        var first = !data;
+        data = cached; data.checkedAt = Date.now(); saveCache();
+        if (first) { buildItems(); applyAndRender(); }
+        if (manual) toast('已經是最新資料');
+      } else {
+        var had = !!data;
+        data = { version: res.version, columns: res.columns || [], rows: res.rows || [], checkedAt: Date.now() };
+        saveCache(); buildItems(); applyAndRender();
+        if (had) toast('已更新到最新資料');
+      }
+    })
+    .catch(function(err) {
+      if (isAuthError(err)) { logout(err.message); throw err; }
+      lastCheckFailed = true;
+      if (isLogin) throw err;
+      if (manual) toast('連不上系統，請稍後再試', true);
+    })
+    .then(function() { busy = false; $('refreshBtn').disabled = false; updateStatus(); },
+          function(err) { busy = false; $('refreshBtn').disabled = false; updateStatus(); throw err; });
+}
+function startPolling() { stopPolling(); pollTimer = setInterval(function() { if (!document.hidden) checkForUpdates(false).catch(function() {}); }, POLL_MS); }
+function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && auth && data && Date.now() - data.checkedAt >= POLL_MS) checkForUpdates(false).catch(function() {});
+});
+
+// ---------------- 登入／登出 ----------------
+function loadLoginOptions() {
+  post(LISTING_API_URL, 'getEditLoginOptions', []).then(function(res) {
+    var last = '';
+    try { last = localStorage.getItem(LAST_NAME_KEY) || ''; } catch (e) {}
+    var names = res.personList || [];
+    $('loginName').innerHTML = '<option value="">請選擇</option>' + names.map(function(n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+    if (last && names.indexOf(last) !== -1) $('loginName').value = last;
+  }).catch(function(err) {
+    $('loginName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>';
+    showLoginError(err.message || '連不上系統');
+  });
+}
+function showLoginError(text) { var m = $('loginMsg'); m.textContent = text; m.className = 'msg error'; }
+function login() {
+  var name = $('loginName').value, code = $('loginCode').value.replace(/\s+/g, '');
+  if (!name || !code) { showLoginError('請選擇姓名並輸入通關碼。'); return; }
+  var btn = $('loginBtn');
+  btn.disabled = true; btn.textContent = '登入中…'; $('loginMsg').className = 'msg';
+  var slowTimer = setTimeout(function() { if (btn.disabled) btn.textContent = '讀取中，第一次比較久…'; }, 4000);
+  auth = { name: name, code: code };
+  loadFilters(); syncFilterInputs();
+  checkForUpdates(false, true).then(function() {
+    try { localStorage.setItem(LAST_NAME_KEY, name); } catch (e) {}
+    $('loginCode').value = '';
+    $('whoName').textContent = name;
+    $('loginView').hidden = true; $('mainView').hidden = false;
+    applyAndRender(); updateStatus(); startPolling();
+  }).catch(function(err) {
+    auth = null; data = null;
+    showLoginError(err.message || '連不上系統');
+  }).then(function() { clearTimeout(slowTimer); btn.disabled = false; btn.textContent = '登入'; });
+}
+function logout(reason) {
+  auth = null; data = null; items = []; openKeys = {};
+  stopPolling(); clearCache();
+  $('mainView').hidden = true; $('loginView').hidden = false;
+  $('results').innerHTML = '<div class="loading">讀取中…</div>';
+  if (reason) showLoginError(reason); else $('loginMsg').className = 'msg';
+}
+
+// ---------------- 事件 ----------------
+$('loginBtn').addEventListener('click', login);
+$('loginCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
+$('refreshBtn').addEventListener('click', function() { checkForUpdates(true).catch(function() {}); });
+$('logoutBtn').addEventListener('click', function() { logout(); });
+$('clearBtn').addEventListener('click', clearFilters);
+$('filterToggle').addEventListener('click', function() {
+  var card = $('filterCard'), open = !card.classList.contains('open');
+  card.classList.toggle('open', open); this.setAttribute('aria-expanded', String(open));
+});
+$('fCounty').addEventListener('change', function() { filters.county = this.value; filters.town = ''; buildTownOptions(); applyAndRender(); });
+$('fTown').addEventListener('change', function() { filters.town = this.value; applyAndRender(); });
+var kwTimer = null;
+$('fKeyword').addEventListener('input', function() { var v = this.value; clearTimeout(kwTimer); kwTimer = setTimeout(function() { filters.keyword = v; applyAndRender(); }, 200); });
+[['fArea', 'area'], ['fPrice', 'price'], ['fRent', 'rent']].forEach(function(p) {
+  $(p[0]).addEventListener('input', function() { filters[p[1]] = this.value; applyAndRender(); });
+});
+$('sortMobile').addEventListener('change', function() {
+  var v = this.value;
+  sortState = v ? { key: v.split('|')[0], dir: parseInt(v.split('|')[1], 10) } : { key: '', dir: 1 };
+  applyAndRender();
+});
+$('results').addEventListener('click', function(e) {
+  var b = e.target.closest('th button[data-sort]');
+  if (b) {
+    var k = b.getAttribute('data-sort');
+    if (sortState.key !== k) sortState = { key: k, dir: 1 };
+    else if (sortState.dir === 1) sortState = { key: k, dir: -1 };
+    else sortState = { key: '', dir: 1 };
+    applyAndRender();
+    return;
+  }
+  if (e.target.closest('a')) return;
+  var tr = e.target.closest('tr.main');
+  if (tr) { var key = tr.getAttribute('data-key'); openKeys[key] = !openKeys[key]; applyAndRender(); }
+});
+$('results').addEventListener('toggle', function(e) {
+  var d = e.target;
+  if (d.classList && d.classList.contains('item')) openKeys[d.getAttribute('data-key')] = d.open;
+}, true);
+var lastDesktop = DESKTOP_QUERY.matches;
+window.addEventListener('resize', function() { if (DESKTOP_QUERY.matches !== lastDesktop) { lastDesktop = DESKTOP_QUERY.matches; if (data) applyAndRender(); } });
+
+loadLoginOptions();
+</script>
+</body>
+</html>

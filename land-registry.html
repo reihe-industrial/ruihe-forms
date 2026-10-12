@@ -2,6 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>調謄本申請表｜瑞禾不動產</title>
 <style>
   * { box-sizing: border-box; }
@@ -94,20 +95,39 @@
 <div class="container">
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="listing.html" data-key="listing">新增物件</a>
-    <a href="listing.html?mode=edit" data-key="edit">修改案件</a>
+    <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
-    <a href="client-needs.html" data-key="needs">客需資料</a>
+    <a href="client-summary.html" data-key="csummary">客需簡表</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
-    var key = page === 'client-needs.html' ? 'needs' : page === 'land-registry.html' ? 'registry'
-      : page === 'summary.html' ? 'summary'
-      : (/[?&]mode=edit(&|$)/.test(location.search) ? 'edit' : 'listing');
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'client-summary.html' ? 'csummary'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
       if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+    // 修改頁：「修改物件」「修改客需」切換
+    if (key === 'edit') {
+      var isNeeds = page === 'client-needs.html';
+      var sw = document.createElement('div');
+      sw.style.cssText = 'display:inline-flex;gap:4px;background:#fff;border:1px solid #dfe2d7;border-radius:999px;padding:3px;margin:0 0 14px;';
+      [['listing.html?mode=edit', '修改物件', !isNeeds], ['client-needs.html?mode=edit', '修改客需', isNeeds]].forEach(function(t) {
+        var a = document.createElement('a');
+        a.href = t[0]; a.textContent = t[1];
+        a.style.cssText = 'padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;text-decoration:none;' +
+          (t[2] ? 'background:#e9f1ec;color:#1e4a32;' : 'color:#66776c;');
+        if (t[2]) a.setAttribute('aria-current', 'page');
+        sw.appendChild(a);
+      });
+      var nav = document.getElementById('siteNav');
+      nav.parentNode.insertBefore(sw, nav.nextSibling);
     }
   })();
   </script>

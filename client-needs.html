@@ -184,7 +184,35 @@
       .card, .type-block { grid-template-columns: 1fr; }
     }
   
-    /* 三個網頁共用的導覽列 */
+    /* 修改客需（?mode=edit） */
+    .card.edit-card { display: block; }
+    .edit-btn { border: none; border-radius: 8px; background: var(--brand); color: #fff; font-size: 15px; font-weight: 700; padding: 11px 18px; cursor: pointer; font-family: inherit; }
+    .edit-btn:disabled { background: #b9c3ba; cursor: not-allowed; }
+    .edit-btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 600; font-size: 13.5px; padding: 7px 13px; }
+    .edit-top { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .edit-top .who { font-weight: 700; }
+    .edit-top .grow { flex: 1 1 auto; }
+    .client-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 12px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+    .client-row:hover { background: #fafaf5; }
+    .client-row .nm { font-weight: 700; }
+    .client-row .meta { font-size: 13px; color: var(--muted); grid-column: 1; }
+    .client-row .go { grid-row: 1 / 3; grid-column: 2; align-self: center; color: var(--brand); font-weight: 600; font-size: 14px; }
+    .edit-notice { background: #fff8e1; border: 1px solid #e0c341; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 13.5px; color: #5a4a00; white-space: pre-line; }
+    .track-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin-bottom: 8px; }
+    .track-form .wide { grid-column: 1 / -1; }
+    @media (max-width: 480px) { .track-form { grid-template-columns: 1fr; } }
+    .track-item { border-top: 1px solid var(--line); padding: 10px 2px; }
+    .track-item .th { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 13.5px; }
+    .track-item .th b { font-size: 14.5px; }
+    .track-item .tag { font-size: 12px; font-weight: 700; border-radius: 5px; padding: 1px 7px; background: var(--brand-soft); color: var(--brand-dark); }
+    .track-item .by { color: var(--muted); margin-left: auto; font-size: 12.5px; }
+    .track-item .tc { margin-top: 4px; white-space: pre-wrap; font-size: 14px; }
+    .track-item .tn { margin-top: 4px; font-size: 13px; color: var(--muted); }
+    .track-item .del { border: none; background: none; color: var(--danger); font-size: 12.5px; cursor: pointer; padding: 0; margin-left: 6px; font-family: inherit; }
+    .track-empty { color: var(--muted); font-size: 13.5px; padding: 8px 2px; }
+    .locked-note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+    /* 網頁共用的導覽列 */
     .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
     .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line);
       color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
@@ -197,20 +225,39 @@
 <div class="container">
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="listing.html" data-key="listing">新增物件</a>
-    <a href="listing.html?mode=edit" data-key="edit">修改案件</a>
+    <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
-    <a href="client-needs.html" data-key="needs">客需資料</a>
+    <a href="client-summary.html" data-key="csummary">客需簡表</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
-    var key = page === 'client-needs.html' ? 'needs' : page === 'land-registry.html' ? 'registry'
-      : page === 'summary.html' ? 'summary'
-      : (/[?&]mode=edit(&|$)/.test(location.search) ? 'edit' : 'listing');
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'client-summary.html' ? 'csummary'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
       if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+    // 修改頁：「修改物件」「修改客需」切換
+    if (key === 'edit') {
+      var isNeeds = page === 'client-needs.html';
+      var sw = document.createElement('div');
+      sw.style.cssText = 'display:inline-flex;gap:4px;background:#fff;border:1px solid #dfe2d7;border-radius:999px;padding:3px;margin:0 0 14px;';
+      [['listing.html?mode=edit', '修改物件', !isNeeds], ['client-needs.html?mode=edit', '修改客需', isNeeds]].forEach(function(t) {
+        var a = document.createElement('a');
+        a.href = t[0]; a.textContent = t[1];
+        a.style.cssText = 'padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;text-decoration:none;' +
+          (t[2] ? 'background:#e9f1ec;color:#1e4a32;' : 'color:#66776c;');
+        if (t[2]) a.setAttribute('aria-current', 'page');
+        sw.appendChild(a);
+      });
+      var nav = document.getElementById('siteNav');
+      nav.parentNode.insertBefore(sw, nav.nextSibling);
     }
   })();
   </script>
@@ -223,6 +270,49 @@
     <div style="margin-top:10px; display:flex; gap:8px;">
       <button type="button" id="restoreDraftBtn" style="flex:1; padding:9px; background:#2f6f4e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">繼續使用草稿</button>
       <button type="button" id="discardDraftBtn" style="flex:1; padding:9px; background:#eee; color:#333; border:none; border-radius:8px; cursor:pointer;">捨棄，重新開始</button>
+    </div>
+  </div>
+  <!-- 修改客需（網址加上 ?mode=edit 時顯示） -->
+  <div id="editArea" style="display:none;">
+    <div class="card edit-card" id="editLoginView">
+      <h2>登入</h2>
+      <div class="field">
+        <label class="required" for="editName">姓名</label>
+        <select id="editName"><option value="">載入中…</option></select>
+      </div>
+      <div class="field">
+        <label class="required" for="editCode">通關碼</label>
+        <div class="hint">輸入修改案件用的同一組通關碼（英文和數字，不分大小寫）</div>
+        <input type="password" id="editCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20">
+      </div>
+      <button type="button" class="edit-btn" id="editLoginBtn" style="width:100%;">登入</button>
+      <div class="msg" id="editLoginMsg"></div>
+    </div>
+
+    <div class="card edit-card" id="editListView" style="display:none;">
+      <div class="edit-top"><span class="who" id="editWho"></span><span class="grow"></span><button type="button" class="edit-btn secondary" id="editLogoutBtn">登出</button></div>
+      <h2>我的客需</h2>
+      <input type="search" id="editSearch" placeholder="搜尋客戶名稱、聯絡人、區域" autocomplete="off" style="margin-bottom:8px;">
+      <div id="editClientList"><div class="track-empty">讀取中…</div></div>
+    </div>
+
+    <div id="editCaseView" style="display:none;">
+      <div class="edit-top"><button type="button" class="edit-btn secondary" id="editBackBtn">← 回清單</button><span class="who" id="editCaseTitle"></span></div>
+      <div class="edit-notice" id="editNotice" style="display:none;"></div>
+      <div class="card edit-card" id="trackCard">
+        <h2>追蹤紀錄</h2>
+        <div class="track-form">
+          <div class="field"><label class="required" for="trackDate">日期</label><input type="date" id="trackDate"></div>
+          <div class="field"><label class="required" for="trackMethod">方式</label>
+            <select id="trackMethod"><option value="">請選擇</option><option>電話</option><option>LINE</option><option>見面</option><option>帶看</option><option>其他</option></select></div>
+          <div class="field wide" id="trackListingField" style="display:none;"><label for="trackListing">帶看物件</label><input type="text" id="trackListing" placeholder="案名，多個用頓號「、」分開"></div>
+          <div class="field wide"><label class="required" for="trackContent">內容</label><textarea id="trackContent" placeholder="例：客戶看過後覺得路太小，想找臨 12 米路的"></textarea></div>
+          <div class="field"><label for="trackNext">下次聯絡日</label><input type="date" id="trackNext"></div>
+          <div class="field" style="display:flex;align-items:flex-end;"><button type="button" class="edit-btn" id="trackAddBtn" style="width:100%;">新增紀錄</button></div>
+        </div>
+        <div class="msg" id="trackMsg"></div>
+        <div id="trackList"></div>
+      </div>
     </div>
   </div>
 
@@ -913,44 +1003,12 @@ fetch(API_URL + '?action=options').then(function(r) { return r.json(); }).then(f
   showToast('載入資料失敗，請重新整理頁面', 'error');
 });
 
-document.getElementById('submitBtn').addEventListener('click', function() {
-  var msgBox = document.getElementById('msgBox');
-  msgBox.style.display = 'none';
-
+// 把表單內容組成送出用的資料（新增客需、修改客需共用）
+function collectFormData_() {
   var business = getBusinessList().join('、');
   var clientName = document.getElementById('clientNameInput').value.trim();
   var propertyTypes = Array.prototype.slice.call(document.querySelectorAll('.propertyTypeCheckbox:checked')).map(function(cb) { return cb.value; });
   var demandType = document.getElementById('demandTypeSelect').value;
-
-  var missing = [];
-  if (!business) missing.push('負責業務（至少勾選一位）');
-  if (!document.getElementById('fillDate').value) missing.push('填表日期');
-  if (propertyTypes.length === 0) missing.push('物件類型（至少勾選一項）');
-  if (!demandType) missing.push('需求類型');
-  if (propertyTypes.indexOf('廠房') !== -1) {
-    if (!document.getElementById('factoryHeight').value.trim()) missing.push('廠房淨高需求');
-    if (!document.getElementById('factoryPower').value.trim()) missing.push('電力需求');
-    if (!document.getElementById('factoryWater').value.trim()) missing.push('用水需求');
-    if (!document.getElementById('factoryOther').value.trim()) missing.push('廠房其他需求');
-  }
-
-  if (missing.length > 0) {
-    msgBox.className = 'msg error';
-    msgBox.textContent = '請填寫以下必填欄位：\n' + missing.join('\n');
-    markMissingFields_(missing);
-    showToast('還有 ' + missing.length + ' 個必填欄位沒填，請看紅框標示處', 'error', true);
-    return;
-  }
-  var rangeErrors = checkRangeInputs_();
-  if (rangeErrors.length > 0) {
-    msgBox.className = 'msg error';
-    msgBox.textContent = '以下欄位的範圍要再確認：\n' + rangeErrors.map(function(e) { return e.replace('（', '：').replace('）', ''); }).join('\n');
-    markMissingFields_(rangeErrors);
-    showToast('有 ' + rangeErrors.length + ' 個範圍要再確認，請看紅框標示處', 'error', true);
-    return;
-  }
-  clearMissingMarks_();
-
   var industryList = Array.prototype.slice.call(document.querySelectorAll('.industryCheckbox:checked')).map(function(cb) {
     if (cb.value === '其他') return document.getElementById('industryOtherInput').value.trim();
     return cb.value;
@@ -1045,6 +1103,49 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     competitor: document.getElementById('competitorSelect').value,
     finalNote: document.getElementById('finalNoteInput').value.trim(),
   };
+  return data;
+}
+
+document.getElementById('submitBtn').addEventListener('click', function() {
+  var msgBox = document.getElementById('msgBox');
+  msgBox.style.display = 'none';
+
+  var business = getBusinessList().join('、');
+  var clientName = document.getElementById('clientNameInput').value.trim();
+  var propertyTypes = Array.prototype.slice.call(document.querySelectorAll('.propertyTypeCheckbox:checked')).map(function(cb) { return cb.value; });
+  var demandType = document.getElementById('demandTypeSelect').value;
+
+  var missing = [];
+  if (!business) missing.push('負責業務（至少勾選一位）');
+  if (!document.getElementById('fillDate').value) missing.push('填表日期');
+  if (propertyTypes.length === 0) missing.push('物件類型（至少勾選一項）');
+  if (!demandType) missing.push('需求類型');
+  if (propertyTypes.indexOf('廠房') !== -1) {
+    if (!document.getElementById('factoryHeight').value.trim()) missing.push('廠房淨高需求');
+    if (!document.getElementById('factoryPower').value.trim()) missing.push('電力需求');
+    if (!document.getElementById('factoryWater').value.trim()) missing.push('用水需求');
+    if (!document.getElementById('factoryOther').value.trim()) missing.push('廠房其他需求');
+  }
+
+  if (missing.length > 0) {
+    msgBox.className = 'msg error';
+    msgBox.textContent = '請填寫以下必填欄位：\n' + missing.join('\n');
+    markMissingFields_(missing);
+    showToast('還有 ' + missing.length + ' 個必填欄位沒填，請看紅框標示處', 'error', true);
+    return;
+  }
+  var rangeErrors = checkRangeInputs_();
+  if (rangeErrors.length > 0) {
+    msgBox.className = 'msg error';
+    msgBox.textContent = '以下欄位的範圍要再確認：\n' + rangeErrors.map(function(e) { return e.replace('（', '：').replace('）', ''); }).join('\n');
+    markMissingFields_(rangeErrors);
+    showToast('有 ' + rangeErrors.length + ' 個範圍要再確認，請看紅框標示處', 'error', true);
+    return;
+  }
+  clearMissingMarks_();
+
+  var data = collectFormData_();
+  if (EDIT_MODE) { saveEdit_(data); return; }
 
   var demandParts_ = [];
   if (data.propertyTypes.indexOf('廠房') !== -1) demandParts_.push('廠房：' + [data.factoryAreaBuy && ('買' + rangeWithUnit_(data.factoryAreaBuy, '坪')), data.factoryPriceBuy && ('總價' + rangeWithUnit_(data.factoryPriceBuy, '萬')), data.factoryAreaRent && ('租' + rangeWithUnit_(data.factoryAreaRent, '坪')), data.factoryRent && ('租金' + rangeWithUnit_(data.factoryRent, '元/坪/月')), data.factoryHeight && ('淨高' + data.factoryHeight), data.factoryPower && ('電力' + data.factoryPower)].filter(Boolean).join('、'));
@@ -1138,6 +1239,7 @@ function draftIsEmpty_(draft) {
 }
 
 function saveDraftToLocalStorage_() {
+  if (EDIT_MODE) return; // 修改客需不存草稿
   try {
     var draft = collectDraft_();
     if (draftIsEmpty_(draft)) localStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -1195,6 +1297,7 @@ function restoreDraft_(draft) {
 // 載入完成後檢查有沒有草稿，有的話顯示提示橫幅（不自動套用，等使用者按按鈕）
 var pendingDraft_ = null;
 function initDraftBanner_() {
+  if (EDIT_MODE) return;
   try {
     var raw = localStorage.getItem(DRAFT_STORAGE_KEY);
     if (raw) pendingDraft_ = JSON.parse(raw);
@@ -1232,6 +1335,414 @@ setInterval(function() {
   if (document.getElementById('draftBanner').style.display === 'block') return;
   saveDraftToLocalStorage_();
 }, 15000);
+
+// ============================================================
+// 修改客需＋追蹤紀錄（網址加上 ?mode=edit）
+// 登入用修改案件的姓名＋通關碼；通關碼只留在這個頁面的記憶體，重新整理要重登。
+// 只送出真的改過的欄位（後端比對開啟時的表單內容）；負責業務不能改。
+// ============================================================
+var EDIT_MODE = /[?&]mode=edit(&|$)/.test(location.search);
+var LISTING_API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
+var FIELD_LABELS_ = ['時間戳記', '負責業務', '填表日期', '資訊來源', '客戶身份', '公司／客戶名稱', '產業類別',
+  '聯絡人與職稱', '聯絡電話', 'Line ID', 'Email', '物件類型', '需求類型',
+  '廠房需求坪數', '廠房總價(萬元)', '廠房需求坪數(承租)', '廠房租金(元/坪/月)', '廠房預計租期',
+  '土地坪數需求(廠房)', '需求土地分區(廠房)', '廠房淨高需求(公尺)', '電力需求', '用水需求', '是否需要天車', '天車需求噸數',
+  '是否需要裝卸月台/碼頭', '是否需要汙水處理設施', '廠房其他需求',
+  '土地需求面積(坪)', '土地總價(萬元)', '土地需求面積(承租)(坪)', '土地租金(元/坪/月)', '土地預計租期',
+  '地形需求', '鄰路寬度需求', '需求土地種類', '需求土地分區(土地)', '土地其他需求',
+  '房屋需求坪數', '房屋總價(萬元)', '房屋需求坪數(承租)', '房屋租金(元/月)', '房屋預計租期',
+  '需求房型', '樓層需求', '屋齡需求', '車位需求', '房屋其他需求',
+  '目標區域', '進駐時間', '客戶急迫程度', '是否已看過其他物件', '是否有競爭仲介接觸', '其他需求／備註'];
+var DATA_KEYS_ = ['_ts', 'business', 'fillDate', 'source', 'identity', 'clientName', 'industry',
+  'contactPerson', 'contactPhone', 'lineId', 'email', 'propertyTypes', 'demandType',
+  'factoryAreaBuy', 'factoryPriceBuy', 'factoryAreaRent', 'factoryRent', 'factoryRentTerm',
+  'factoryLandArea', 'factoryLandZoning', 'factoryHeight', 'factoryPower', 'factoryWater', 'factoryCrane', 'factoryCraneTon',
+  'factoryDock', 'factorySewage', 'factoryOther',
+  'landAreaBuy', 'landPriceBuy', 'landAreaRent', 'landRent', 'landRentTerm',
+  'landShape', 'landRoadWidth', 'landUse', 'landZoning', 'landOther',
+  'houseAreaBuy', 'housePriceBuy', 'houseAreaRent', 'houseRent', 'houseRentTerm',
+  'houseLayout', 'houseFloor', 'houseAge', 'houseParking', 'houseOther',
+  'region', 'moveInTime', 'urgency', 'seenOthers', 'competitor', 'finalNote'];
+function keyLabel_(k) { var i = DATA_KEYS_.indexOf(k); return i === -1 ? k : FIELD_LABELS_[i]; }
+
+var editAuth_ = null;      // { name, code }
+var editCase_ = null;      // { key, version, baseline, title }
+var editClients_ = [];
+
+function runClientApi_(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.ok) { var e = new Error(res.message || '系統發生錯誤'); e.fromServer = true; throw e; }
+      return res.result;
+    });
+}
+function isEditAuthError_(err) { return err && err.fromServer && /通關碼|請選擇姓名/.test(err.message); }
+function escHtml_(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function todayIso_() {
+  var d = new Date();
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+function formParts_() { return document.querySelectorAll('.needs-form-part'); }
+function showFormParts_(show) {
+  Array.prototype.forEach.call(formParts_(), function(el) { el.style.display = show ? '' : 'none'; });
+}
+
+function setupEditMode_() {
+  document.title = '修改客需｜瑞禾不動產';
+  document.querySelector('h1').textContent = '修改客需';
+  document.querySelector('.subtitle').textContent = '修改自己負責的客需資料，新增追蹤紀錄';
+  document.getElementById('draftBanner').style.display = 'none';
+  // 表單本體：開啟客需之前先藏起來
+  Array.prototype.forEach.call(document.querySelectorAll('.container > .card:not(.edit-card), #submitBtn, #msgBox'), function(el) {
+    el.classList.add('needs-form-part');
+  });
+  showFormParts_(false);
+  document.getElementById('editArea').style.display = 'block';
+  document.getElementById('submitBtn').textContent = '儲存修改';
+  // 負責業務不能改
+  var bizField = document.getElementById('businessCheckGroup').closest('.field');
+  var note = document.createElement('div');
+  note.className = 'locked-note';
+  note.textContent = '負責業務不能在這裡修改，要換人請通知管理者。';
+  bizField.appendChild(note);
+
+  fetch(LISTING_API_URL, { method: 'POST', body: JSON.stringify({ fn: 'getEditLoginOptions', args: [] }) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.ok) throw new Error(res.message);
+      var sel = document.getElementById('editName');
+      var last = '';
+      try { last = localStorage.getItem('ruihe_summary_last_name') || ''; } catch (e) {}
+      var names = res.result.personList || [];
+      sel.innerHTML = '<option value="">請選擇</option>' + names.map(function(n) {
+        return '<option value="' + escHtml_(n) + '">' + escHtml_(n) + '</option>';
+      }).join('');
+      if (last && names.indexOf(last) !== -1) sel.value = last;
+    })
+    .catch(function(err) {
+      document.getElementById('editName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>';
+      showEditMsg_('editLoginMsg', err.message || '連不上系統');
+    });
+}
+function showEditMsg_(id, text, ok) {
+  var m = document.getElementById(id);
+  m.textContent = text || '';
+  m.className = text ? ('msg ' + (ok ? 'success' : 'error')) : 'msg';
+}
+function editLogin_() {
+  var name = document.getElementById('editName').value;
+  var code = document.getElementById('editCode').value.replace(/\s+/g, '');
+  if (!name || !code) { showEditMsg_('editLoginMsg', '請選擇姓名並輸入通關碼。'); return; }
+  var btn = document.getElementById('editLoginBtn');
+  btn.disabled = true; btn.textContent = '登入中…';
+  showEditMsg_('editLoginMsg', '');
+  runClientApi_('clientEditList', name, code).then(function(res) {
+    editAuth_ = { name: res.name, code: code };
+    try { localStorage.setItem('ruihe_summary_last_name', res.name); } catch (e) {}
+    document.getElementById('editCode').value = '';
+    document.getElementById('editWho').textContent = res.name;
+    document.getElementById('editLoginView').style.display = 'none';
+    renderClientList_(res.clients);
+    showEditView_('list');
+    var want = (location.search.match(/[?&]key=([^&]+)/) || [])[1];
+    if (want) openClient_(decodeURIComponent(want));
+  }).catch(function(err) {
+    showEditMsg_('editLoginMsg', err.message || '連不上系統');
+  }).then(function() { btn.disabled = false; btn.textContent = '登入'; });
+}
+function editLogout_(reason) {
+  editAuth_ = null; editCase_ = null; editClients_ = [];
+  showFormParts_(false);
+  document.getElementById('editListView').style.display = 'none';
+  document.getElementById('editCaseView').style.display = 'none';
+  document.getElementById('editLoginView').style.display = 'block';
+  showEditMsg_('editLoginMsg', reason || '');
+}
+function handleEditError_(err, msgId) {
+  if (isEditAuthError_(err)) { editLogout_(err.message); return; }
+  if (msgId) showEditMsg_(msgId, err.message || '連不上系統');
+  showToast(err.message || '連不上系統', 'error', true);
+}
+function showEditView_(which) {
+  document.getElementById('editListView').style.display = which === 'list' ? 'block' : 'none';
+  document.getElementById('editCaseView').style.display = which === 'case' ? 'block' : 'none';
+  showFormParts_(which === 'case');
+}
+function renderClientList_(clients) {
+  editClients_ = clients || editClients_;
+  var q = document.getElementById('editSearch').value.trim().toLowerCase();
+  var list = editClients_.filter(function(c) {
+    return !q || [c.clientName, c.contact, c.region, c.propertyTypes].join(' ').toLowerCase().indexOf(q) !== -1;
+  });
+  var box = document.getElementById('editClientList');
+  if (!editClients_.length) { box.innerHTML = '<div class="track-empty">目前沒有你負責的客需。</div>'; return; }
+  if (!list.length) { box.innerHTML = '<div class="track-empty">沒有符合的客需。</div>'; return; }
+  box.innerHTML = list.map(function(c) {
+    var meta = [c.propertyTypes, c.demandType, c.region].filter(Boolean).join('｜');
+    var t = c.lastTrack ? '最後追蹤 ' + c.lastTrack + '（' + c.trackCount + ' 筆）' : '還沒有追蹤紀錄';
+    return '<div class="client-row" data-key="' + escHtml_(c.key) + '" role="button" tabindex="0">' +
+      '<span class="nm">' + escHtml_(c.clientName || c.contact || '（未填客戶名稱）') + '</span>' +
+      '<span class="go">修改／追蹤</span>' +
+      '<span class="meta">' + escHtml_(meta || '—') + '</span>' +
+      '<span class="meta">填表 ' + escHtml_(c.fillDate || '—') + '｜' + escHtml_(t) + '</span></div>';
+  }).join('');
+}
+function refreshClientList_() {
+  if (!editAuth_) return;
+  runClientApi_('clientEditList', editAuth_.name, editAuth_.code)
+    .then(function(res) { renderClientList_(res.clients); })
+    .catch(function(err) { handleEditError_(err); });
+}
+
+// ---------- 把試算表的值放回表單 ----------
+function resetNeedsForm_() {
+  document.querySelectorAll('.needs-form-part input[type=text], .needs-form-part input[type=number], .needs-form-part input[type=date], .needs-form-part textarea').forEach(function(el) { el.value = ''; });
+  document.querySelectorAll('.needs-form-part select').forEach(function(el) { el.selectedIndex = 0; fireChange_(el); });
+  document.querySelectorAll('.needs-form-part input[type=checkbox]').forEach(function(el) { if (el.checked) { el.checked = false; fireChange_(el); } });
+  document.getElementById('regionEntries').innerHTML = '';
+  clearMissingMarks_();
+}
+function setSelectOrOther_(selectId, otherId, value) {
+  var sel = document.getElementById(selectId);
+  var has = Array.prototype.some.call(sel.options, function(o) { return o.value === value; });
+  if (!value) sel.value = '';
+  else if (has) sel.value = value;
+  else if (otherId) { sel.value = '其他'; document.getElementById(otherId).value = value; }
+  fireChange_(sel);
+}
+function checkListOrOther_(cbClass, otherInputId, value) {
+  var parts = String(value || '').split('、').map(function(s) { return s.trim(); }).filter(Boolean);
+  var unknown = [];
+  parts.forEach(function(p) {
+    var cb = Array.prototype.filter.call(document.querySelectorAll('.' + cbClass), function(x) { return x.value === p && p !== '其他'; })[0];
+    if (cb) { if (!cb.checked) { cb.checked = true; fireChange_(cb); } }
+    else unknown.push(p);
+  });
+  if (unknown.length && otherInputId) {
+    var other = Array.prototype.filter.call(document.querySelectorAll('.' + cbClass), function(x) { return x.value === '其他'; })[0];
+    if (other) { other.checked = true; fireChange_(other); document.getElementById(otherInputId).value = unknown.join('、'); }
+  }
+}
+function fillRegions_(value) {
+  var counties = Object.keys(DISTRICT_DATA).sort(function(a, b) { return b.length - a.length; });
+  var groups = [];
+  String(value || '').split('、').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(p) {
+    var norm = p.replace(/臺/g, '台');
+    var county = counties.filter(function(c) { return norm.indexOf(c.replace(/臺/g, '台')) === 0; })[0];
+    if (!county) return;
+    var town = p.substring(county.length);
+    var g = groups.filter(function(x) { return x.county === county; })[0];
+    if (!g) { g = { county: county, towns: [] }; groups.push(g); }
+    if (town) g.towns.push(town);
+  });
+  document.getElementById('regionEntries').innerHTML = '';
+  if (!groups.length) { createRegionEntry(); return; }
+  groups.forEach(function(g) {
+    createRegionEntry();
+    var entries = document.querySelectorAll('.region-entry');
+    var entry = entries[entries.length - 1];
+    var sel = entry.querySelector('.countySelect');
+    sel.value = g.county; fireChange_(sel);
+    g.towns.forEach(function(t) {
+      Array.prototype.forEach.call(entry.querySelectorAll('.townCheckbox'), function(cb) { if (cb.value === t) cb.checked = true; });
+    });
+  });
+}
+function fillNeedsForm_(d) {
+  resetNeedsForm_();
+  checkListOrOther_('businessCheckbox', 'businessOtherInput', d.business);
+  var fd = String(d.fillDate || '').substring(0, 10);
+  document.getElementById('fillDate').value = /^\d{4}-\d{2}-\d{2}$/.test(fd) ? fd : '';
+  setSelectOrOther_('sourceSelect', 'sourceOtherInput', d.source);
+  setSelectOrOther_('identitySelect', null, d.identity);
+  [['clientNameInput', 'clientName'], ['contactPersonInput', 'contactPerson'], ['contactPhoneInput', 'contactPhone'],
+   ['lineIdInput', 'lineId'], ['emailInput', 'email'], ['factoryRentTerm', 'factoryRentTerm'], ['factoryLandZoning', 'factoryLandZoning'],
+   ['factoryHeight', 'factoryHeight'], ['factoryPower', 'factoryPower'], ['factoryWater', 'factoryWater'], ['factoryCraneTon', 'factoryCraneTon'],
+   ['factoryOther', 'factoryOther'], ['landRentTerm', 'landRentTerm'], ['landRoadWidth', 'landRoadWidth'], ['landZoning', 'landZoning'],
+   ['landOther', 'landOther'], ['houseRentTerm', 'houseRentTerm'], ['houseFloor', 'houseFloor'], ['houseAge', 'houseAge'],
+   ['houseOther', 'houseOther'], ['finalNoteInput', 'finalNote']].forEach(function(p) {
+    document.getElementById(p[0]).value = d[p[1]] || '';
+  });
+  checkListOrOther_('propertyTypeCheckbox', null, d.propertyTypes);
+  setSelectOrOther_('demandTypeSelect', null, d.demandType);
+  checkListOrOther_('landKindCheckbox', 'landUseOtherInput', d.landUse);
+  checkListOrOther_('industryCheckbox', 'industryOtherInput', d.industry);
+  [['factoryCrane', 'factoryCrane'], ['factoryDock', 'factoryDock'], ['factorySewage', 'factorySewage'], ['landShape', 'landShape'],
+   ['houseParking', 'houseParking'], ['moveInTimeSelect', 'moveInTime'], ['urgencySelect', 'urgency'],
+   ['seenOthersSelect', 'seenOthers'], ['competitorSelect', 'competitor']].forEach(function(p) { setSelectOrOther_(p[0], null, d[p[1]]); });
+  RANGE_INPUTS_.forEach(function(r) {
+    var p = parseRangeText_(d[r.id], r.kind, false);
+    if (!p.ok) return;
+    if (p.min !== null) document.getElementById(r.id + 'Min').value = p.min;
+    if (p.max !== null) document.getElementById(r.id + 'Max').value = p.max;
+  });
+  var lay = String(d.houseLayout || '');
+  var m = lay.match(/^(?:(\d+)房)?(?:(\d+)廳)?(?:(\d+)衛)?$/);
+  if (lay === '不限' || lay === '開放式格局') setSelectOrOther_('houseLayoutSelect', null, lay);
+  else if (lay && m) {
+    setSelectOrOther_('houseLayoutSelect', null, '有格局');
+    document.getElementById('houseRoomCount').value = m[1] || '';
+    document.getElementById('houseHallCount').value = m[2] || '';
+    document.getElementById('houseBathCount').value = m[3] || '';
+  }
+  fillRegions_(d.region);
+  updatePropertyTypeBlocks();
+  updateDemandTypeFields();
+  // 負責業務鎖住
+  document.querySelectorAll('.businessCheckbox, #businessOtherInput').forEach(function(el) { el.disabled = true; });
+}
+
+function openClient_(key) {
+  if (!editAuth_) return;
+  showEditMsg_('trackMsg', '');
+  document.getElementById('editCaseTitle').textContent = '讀取中…';
+  document.getElementById('trackList').innerHTML = '';
+  document.getElementById('editNotice').style.display = 'none';
+  showEditView_('case');
+  window.scrollTo(0, 0);
+  runClientApi_('clientEditLoad', editAuth_.name, editAuth_.code, key).then(function(res) {
+    fillNeedsForm_(res.data);
+    var baseline = collectFormData_();
+    // 表單組不回原本內容的欄位：列出來，不改的話會保留原值
+    var lossy = DATA_KEYS_.filter(function(k) {
+      if (k === '_ts' || k === 'business') return false;
+      return String(baseline[k] || '').trim() !== String(res.data[k] || '').trim();
+    });
+    var notice = document.getElementById('editNotice');
+    if (lossy.length) {
+      notice.textContent = '下面這些欄位沒辦法完整帶進表單，不改的話會保留原本的值：\n' +
+        lossy.map(function(k) { return keyLabel_(k) + '：' + (res.data[k] || '（空白）'); }).join('\n');
+      notice.style.display = 'block';
+    }
+    editCase_ = { key: res.key, version: res.version, baseline: baseline, title: res.data.clientName || res.data.contactPerson || '（未填客戶名稱）' };
+    document.getElementById('editCaseTitle').textContent = editCase_.title;
+    document.getElementById('trackDate').value = todayIso_();
+    renderTracks_(res.records);
+  }).catch(function(err) {
+    showEditView_('list');
+    handleEditError_(err);
+  });
+}
+
+function saveEdit_(data) {
+  var msgBox = document.getElementById('msgBox');
+  if (!editCase_ || !editAuth_) return;
+  var changed = DATA_KEYS_.filter(function(k) {
+    if (k === '_ts' || k === 'business') return false;
+    return String(data[k] || '').trim() !== String(editCase_.baseline[k] || '').trim();
+  });
+  if (!changed.length) { showToast('沒有修改任何欄位', 'error', true); return; }
+  showConfirmDialog_('儲存前確認（' + editCase_.title + '）', changed.map(function(k) {
+    return [keyLabel_(k), (editCase_.baseline[k] || '（空白）') + ' → ' + (data[k] || '（空白）')];
+  })).then(function(ok) {
+    if (!ok) return;
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = '儲存中…';
+    runClientApi_('clientEditSave', editAuth_.name, editAuth_.code, editCase_.key, editCase_.version, editCase_.baseline, data)
+      .then(function(res) {
+        editCase_.version = res.version;
+        editCase_.baseline = data;
+        msgBox.className = 'msg success';
+        msgBox.textContent = '已儲存 ' + res.saved + ' 個欄位。';
+        showToast('已儲存', 'success', true);
+        refreshClientList_();
+      })
+      .catch(function(err) {
+        if (isEditAuthError_(err)) { editLogout_(err.message); return; }
+        msgBox.className = 'msg error';
+        msgBox.textContent = err.message || '儲存失敗';
+        showToast(err.message || '儲存失敗', 'error', true);
+      })
+      .then(function() { btn.disabled = false; btn.textContent = '儲存修改'; });
+  });
+}
+
+// ---------- 追蹤紀錄 ----------
+function renderTracks_(records) {
+  var box = document.getElementById('trackList');
+  if (!records || !records.length) { box.innerHTML = '<div class="track-empty">還沒有追蹤紀錄。</div>'; return; }
+  box.innerHTML = records.map(function(t) {
+    return '<div class="track-item"><div class="th"><b>' + escHtml_(t.date) + '</b><span class="tag">' + escHtml_(t.method) + '</span>' +
+      '<span class="by">' + escHtml_(t.author) + (t.canDelete ? '<button type="button" class="del" data-id="' + escHtml_(t.id) + '">刪除</button>' : '') + '</span></div>' +
+      (t.listing ? '<div class="tn">帶看：' + escHtml_(t.listing) + '</div>' : '') +
+      '<div class="tc">' + escHtml_(t.content) + '</div>' +
+      (t.next ? '<div class="tn">下次聯絡：' + escHtml_(t.next) + '</div>' : '') + '</div>';
+  }).join('');
+}
+function addTrack_() {
+  if (!editCase_ || !editAuth_) return;
+  var rec = {
+    date: document.getElementById('trackDate').value,
+    method: document.getElementById('trackMethod').value,
+    content: document.getElementById('trackContent').value.trim(),
+    next: document.getElementById('trackNext').value,
+    listing: document.getElementById('trackListing').value.trim(),
+  };
+  var miss = [];
+  if (!rec.date) miss.push('日期');
+  if (!rec.method) miss.push('方式');
+  if (!rec.content) miss.push('內容');
+  if (miss.length) { showEditMsg_('trackMsg', '請填：' + miss.join('、')); return; }
+  var btn = document.getElementById('trackAddBtn');
+  btn.disabled = true; btn.textContent = '新增中…';
+  showEditMsg_('trackMsg', '');
+  runClientApi_('clientTrackAdd', editAuth_.name, editAuth_.code, editCase_.key, rec).then(function(res) {
+    renderTracks_(res.records);
+    document.getElementById('trackContent').value = '';
+    document.getElementById('trackNext').value = '';
+    document.getElementById('trackListing').value = '';
+    document.getElementById('trackMethod').value = '';
+    document.getElementById('trackListingField').style.display = 'none';
+    document.getElementById('trackDate').value = todayIso_();
+    showToast('已新增追蹤紀錄', 'success', true);
+    refreshClientList_();
+  }).catch(function(err) { handleEditError_(err, 'trackMsg'); })
+    .then(function() { btn.disabled = false; btn.textContent = '新增紀錄'; });
+}
+function deleteTrack_(id) {
+  if (!confirm('確定要刪除這筆追蹤紀錄嗎？')) return;
+  runClientApi_('clientTrackDelete', editAuth_.name, editAuth_.code, editCase_.key, id).then(function(res) {
+    renderTracks_(res.records);
+    showToast('已刪除', 'success', true);
+    refreshClientList_();
+  }).catch(function(err) { handleEditError_(err, 'trackMsg'); });
+}
+
+if (EDIT_MODE) {
+  setupEditMode_();
+  document.getElementById('editLoginBtn').addEventListener('click', editLogin_);
+  document.getElementById('editCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') editLogin_(); });
+  document.getElementById('editLogoutBtn').addEventListener('click', function() { editLogout_(); });
+  document.getElementById('editSearch').addEventListener('input', function() { renderClientList_(); });
+  document.getElementById('editClientList').addEventListener('click', function(e) {
+    var row = e.target.closest('.client-row');
+    if (row) openClient_(row.getAttribute('data-key'));
+  });
+  document.getElementById('editClientList').addEventListener('keydown', function(e) {
+    var row = e.target.closest('.client-row');
+    if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openClient_(row.getAttribute('data-key')); }
+  });
+  document.getElementById('editBackBtn').addEventListener('click', function() {
+    editCase_ = null;
+    document.getElementById('msgBox').className = 'msg';
+    showEditView_('list');
+    refreshClientList_();
+  });
+  document.getElementById('trackMethod').addEventListener('change', function() {
+    document.getElementById('trackListingField').style.display = this.value === '帶看' ? 'block' : 'none';
+  });
+  document.getElementById('trackAddBtn').addEventListener('click', addTrack_);
+  document.getElementById('trackList').addEventListener('click', function(e) {
+    var b = e.target.closest('.del');
+    if (b) deleteTrack_(b.getAttribute('data-id'));
+  });
+}
 </script>
 </body>
 </html>
