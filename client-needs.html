@@ -243,22 +243,6 @@
     for (var i = 0; i < links.length; i++) {
       if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
     }
-    // 修改頁：「修改物件」「修改客需」切換
-    if (key === 'edit') {
-      var isNeeds = page === 'client-needs.html';
-      var sw = document.createElement('div');
-      sw.style.cssText = 'display:inline-flex;gap:4px;background:#fff;border:1px solid #dfe2d7;border-radius:999px;padding:3px;margin:0 0 14px;';
-      [['listing.html?mode=edit', '修改物件', !isNeeds], ['client-needs.html?mode=edit', '修改客需', isNeeds]].forEach(function(t) {
-        var a = document.createElement('a');
-        a.href = t[0]; a.textContent = t[1];
-        a.style.cssText = 'padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;text-decoration:none;' +
-          (t[2] ? 'background:#e9f1ec;color:#1e4a32;' : 'color:#66776c;');
-        if (t[2]) a.setAttribute('aria-current', 'page');
-        sw.appendChild(a);
-      });
-      var nav = document.getElementById('siteNav');
-      nav.parentNode.insertBefore(sw, nav.nextSibling);
-    }
   })();
   </script>
 
@@ -297,7 +281,7 @@
     </div>
 
     <div id="editCaseView" style="display:none;">
-      <div class="edit-top"><button type="button" class="edit-btn secondary" id="editBackBtn">← 回清單</button><span class="who" id="editCaseTitle"></span></div>
+      <div class="edit-top"><button type="button" class="edit-btn secondary" id="editBackBtn">← 回清單（物件／客需）</button><span class="who" id="editCaseTitle"></span></div>
       <div class="edit-notice" id="editNotice" style="display:none;"></div>
       <div class="card edit-card" id="trackCard">
         <h2>追蹤紀錄</h2>
@@ -984,7 +968,7 @@ document.getElementById('addRegionBtn').addEventListener('click', function() {
   createRegionEntry();
 });
 
-fetch(API_URL + '?action=options').then(function(r) { return r.json(); }).then(function(options) {
+var optionsReady_ = fetch(API_URL + '?action=options').then(function(r) { return r.json(); }).then(function(options) {
   PERSON_LIST = options.personList || [];
   DISTRICT_DATA = options.districtData || {};
 
@@ -1341,7 +1325,24 @@ setInterval(function() {
 // 登入用修改案件的姓名＋通關碼；通關碼只留在這個頁面的記憶體，重新整理要重登。
 // 只送出真的改過的欄位（後端比對開啟時的表單內容）；負責業務不能改。
 // ============================================================
+// ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
+// 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
+var SHARED_LOGIN_KEY = 'ruihe_login_v1';
+function sharedLoginGet_() {
+  try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
+  catch (e) { return null; }
+}
+function sharedLoginSet_(name, code) {
+  try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code })); } catch (e) {}
+  try { localStorage.setItem('ruihe_summary_last_name', name); } catch (e) {}
+}
+function sharedLoginClear_() {
+  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); } catch (e) {}
+  try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); } catch (e) {}
+}
 var EDIT_MODE = /[?&]mode=edit(&|$)/.test(location.search);
+var EDIT_WANT_KEY_ = (function() { var m = location.search.match(/[?&]key=([^&]+)/); return m ? decodeURIComponent(m[1]) : ''; })();
+var EDIT_LIST_URL_ = 'listing.html?mode=edit&tab=needs'; // 物件和客需共用的清單（在修改物件頁）
 var LISTING_API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 var FIELD_LABELS_ = ['時間戳記', '負責業務', '填表日期', '資訊來源', '客戶身份', '公司／客戶名稱', '產業類別',
   '聯絡人與職稱', '聯絡電話', 'Line ID', 'Email', '物件類型', '需求類型',
@@ -1435,28 +1436,29 @@ function showEditMsg_(id, text, ok) {
   m.textContent = text || '';
   m.className = text ? ('msg ' + (ok ? 'success' : 'error')) : 'msg';
 }
-function editLogin_() {
-  var name = document.getElementById('editName').value;
-  var code = document.getElementById('editCode').value.replace(/\s+/g, '');
+function editLogin_(auto) {
+  var name = auto ? auto.name : document.getElementById('editName').value;
+  var code = auto ? auto.code : document.getElementById('editCode').value.replace(/\s+/g, '');
   if (!name || !code) { showEditMsg_('editLoginMsg', '請選擇姓名並輸入通關碼。'); return; }
   var btn = document.getElementById('editLoginBtn');
   btn.disabled = true; btn.textContent = '登入中…';
   showEditMsg_('editLoginMsg', '');
   runClientApi_('clientEditList', name, code).then(function(res) {
     editAuth_ = { name: res.name, code: code };
-    try { localStorage.setItem('ruihe_summary_last_name', res.name); } catch (e) {}
+    sharedLoginSet_(res.name, code);
     document.getElementById('editCode').value = '';
     document.getElementById('editWho').textContent = res.name;
     document.getElementById('editLoginView').style.display = 'none';
     renderClientList_(res.clients);
-    showEditView_('list');
-    var want = (location.search.match(/[?&]key=([^&]+)/) || [])[1];
-    if (want) openClient_(decodeURIComponent(want));
+    if (EDIT_WANT_KEY_) openClient_(EDIT_WANT_KEY_);
+    else showEditView_('list');
   }).catch(function(err) {
+    if (auto && isEditAuthError_(err)) sharedLoginClear_();
     showEditMsg_('editLoginMsg', err.message || '連不上系統');
   }).then(function() { btn.disabled = false; btn.textContent = '登入'; });
 }
 function editLogout_(reason) {
+  sharedLoginClear_();
   editAuth_ = null; editCase_ = null; editClients_ = [];
   showFormParts_(false);
   document.getElementById('editListView').style.display = 'none';
@@ -1606,7 +1608,8 @@ function openClient_(key) {
   document.getElementById('editNotice').style.display = 'none';
   showEditView_('case');
   window.scrollTo(0, 0);
-  runClientApi_('clientEditLoad', editAuth_.name, editAuth_.code, key).then(function(res) {
+  Promise.all([runClientApi_('clientEditLoad', editAuth_.name, editAuth_.code, key), optionsReady_]).then(function(all) {
+    var res = all[0];
     fillNeedsForm_(res.data);
     var baseline = collectFormData_();
     // 表單組不回原本內容的欄位：列出來，不改的話會保留原值
@@ -1625,6 +1628,7 @@ function openClient_(key) {
     document.getElementById('trackDate').value = todayIso_();
     renderTracks_(res.records);
   }).catch(function(err) {
+    if (isEditAuthError_(err)) { handleEditError_(err); return; }
     showEditView_('list');
     handleEditError_(err);
   });
@@ -1716,7 +1720,7 @@ function deleteTrack_(id) {
 
 if (EDIT_MODE) {
   setupEditMode_();
-  document.getElementById('editLoginBtn').addEventListener('click', editLogin_);
+  document.getElementById('editLoginBtn').addEventListener('click', function() { editLogin_(); });
   document.getElementById('editCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') editLogin_(); });
   document.getElementById('editLogoutBtn').addEventListener('click', function() { editLogout_(); });
   document.getElementById('editSearch').addEventListener('input', function() { renderClientList_(); });
@@ -1729,11 +1733,19 @@ if (EDIT_MODE) {
     if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openClient_(row.getAttribute('data-key')); }
   });
   document.getElementById('editBackBtn').addEventListener('click', function() {
+    if (editCase_) {
+      var now = collectFormData_();
+      var dirty = DATA_KEYS_.some(function(k) {
+        return k !== '_ts' && k !== 'business' && String(now[k] || '').trim() !== String(editCase_.baseline[k] || '').trim();
+      });
+      if (dirty && !window.confirm('這次的修改還沒儲存，確定要回到清單嗎？')) return;
+    }
     editCase_ = null;
-    document.getElementById('msgBox').className = 'msg';
-    showEditView_('list');
-    refreshClientList_();
+    location.href = EDIT_LIST_URL_;
   });
+  // 沒有指定哪一筆客需：回到物件和客需共用的清單
+  if (!EDIT_WANT_KEY_) location.replace(EDIT_LIST_URL_);
+  else if (sharedLoginGet_()) editLogin_(sharedLoginGet_());
   document.getElementById('trackMethod').addEventListener('change', function() {
     document.getElementById('trackListingField').style.display = this.value === '帶看' ? 'block' : 'none';
   });

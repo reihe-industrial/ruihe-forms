@@ -113,22 +113,6 @@
     for (var i = 0; i < links.length; i++) {
       if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
     }
-    // 修改頁：「修改物件」「修改客需」切換
-    if (key === 'edit') {
-      var isNeeds = page === 'client-needs.html';
-      var sw = document.createElement('div');
-      sw.style.cssText = 'display:inline-flex;gap:4px;background:#fff;border:1px solid #dfe2d7;border-radius:999px;padding:3px;margin:0 0 14px;';
-      [['listing.html?mode=edit', '修改物件', !isNeeds], ['client-needs.html?mode=edit', '修改客需', isNeeds]].forEach(function(t) {
-        var a = document.createElement('a');
-        a.href = t[0]; a.textContent = t[1];
-        a.style.cssText = 'padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;text-decoration:none;' +
-          (t[2] ? 'background:#e9f1ec;color:#1e4a32;' : 'color:#66776c;');
-        if (t[2]) a.setAttribute('aria-current', 'page');
-        sw.appendChild(a);
-      });
-      var nav = document.getElementById('siteNav');
-      nav.parentNode.insertBefore(sw, nav.nextSibling);
-    }
   })();
   </script>
 

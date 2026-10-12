@@ -187,22 +187,6 @@
     for (var i = 0; i < links.length; i++) {
       if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
     }
-    // 修改頁：「修改物件」「修改客需」切換
-    if (key === 'edit') {
-      var isNeeds = page === 'client-needs.html';
-      var sw = document.createElement('div');
-      sw.style.cssText = 'display:inline-flex;gap:4px;background:#fff;border:1px solid #dfe2d7;border-radius:999px;padding:3px;margin:0 0 14px;';
-      [['listing.html?mode=edit', '修改物件', !isNeeds], ['client-needs.html?mode=edit', '修改客需', isNeeds]].forEach(function(t) {
-        var a = document.createElement('a');
-        a.href = t[0]; a.textContent = t[1];
-        a.style.cssText = 'padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:600;text-decoration:none;' +
-          (t[2] ? 'background:#e9f1ec;color:#1e4a32;' : 'color:#66776c;');
-        if (t[2]) a.setAttribute('aria-current', 'page');
-        sw.appendChild(a);
-      });
-      var nav = document.getElementById('siteNav');
-      nav.parentNode.insertBefore(sw, nav.nextSibling);
-    }
   })();
   </script>
 
@@ -312,6 +296,22 @@
 
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
+
+// ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
+// 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
+var SHARED_LOGIN_KEY = 'ruihe_login_v1';
+function sharedLoginGet_() {
+  try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
+  catch (e) { return null; }
+}
+function sharedLoginSet_(name, code) {
+  try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code })); } catch (e) {}
+  try { localStorage.setItem('ruihe_summary_last_name', name); } catch (e) {}
+}
+function sharedLoginClear_() {
+  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); } catch (e) {}
+  try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); } catch (e) {}
+}
 
 var CACHE_KEY = 'ruihe_summary_cache_v1';      // 簡表快取（登出會清掉）
 var LAST_NAME_KEY = 'ruihe_summary_last_name';  // 上次登入的姓名（方便選）
@@ -710,9 +710,9 @@ function showLoginError(text) {
   m.textContent = text;
   m.className = 'msg error';
 }
-function login() {
-  var name = $('loginName').value;
-  var code = $('loginCode').value.replace(/\s+/g, '');
+function login(auto) {
+  var name = auto ? auto.name : $('loginName').value;
+  var code = auto ? auto.code : $('loginCode').value.replace(/\s+/g, '');
   if (!name || !code) { showLoginError('請選擇姓名並輸入通關碼。'); return; }
   var btn = $('loginBtn');
   btn.disabled = true;
@@ -720,7 +720,7 @@ function login() {
   $('loginMsg').className = 'msg';
   runServer('summaryVerifyLogin', name, code).then(function(res) {
     auth = { name: res.name, code: code };
-    try { localStorage.setItem(LAST_NAME_KEY, res.name); } catch (e) {}
+    sharedLoginSet_(res.name, code);
     $('loginCode').value = '';
     $('whoName').textContent = res.name;
     $('loginView').hidden = true;
@@ -744,6 +744,7 @@ function login() {
     checkForUpdates(false);
     startPolling();
   }).catch(function(err) {
+    if (auto && isAuthError(err)) sharedLoginClear_();
     showLoginError(err.message || '連不上系統');
   }).then(function() {
     btn.disabled = false;
@@ -751,6 +752,7 @@ function login() {
   });
 }
 function logout(reason) {
+  sharedLoginClear_();
   auth = null;
   data = null;
   items = [];
@@ -764,7 +766,7 @@ function logout(reason) {
 }
 
 // ---------------- 事件 ----------------
-$('loginBtn').addEventListener('click', login);
+$('loginBtn').addEventListener('click', function() { login(); });
 $('loginCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
 $('refreshBtn').addEventListener('click', function() { checkForUpdates(true); });
 $('logoutBtn').addEventListener('click', function() { logout(); });
@@ -814,6 +816,7 @@ window.addEventListener('resize', function() {
 });
 
 loadLoginOptions();
+if (sharedLoginGet_()) login(sharedLoginGet_());
 </script>
 </body>
 </html>
