@@ -260,6 +260,11 @@
     .edit-notice ul { margin: 6px 0 0; padding-left: 20px; }
     .edit-notice li { margin: 2px 0; word-break: break-word; white-space: pre-line; }
     .edit-biz { font-size: 14px; line-height: 1.7; }
+    .broker-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .broker-row select { flex: 0 0 110px; }
+    .broker-row #brokerName { flex: 1 1 140px; }
+    .broker-row .broker-ratio { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 120px; }
+    .broker-row .broker-ratio input { width: 90px; }
     .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 8px 0 12px; }
     .photo-tile { border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: #fbfaf6; display: flex; flex-direction: column; gap: 6px; }
     .photo-tile .thumb { height: 90px; border-radius: 6px; background: #ecebe4 center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); font-weight: 700; }
@@ -291,8 +296,8 @@
       </div>
       <div class="field">
         <label class="required">通關碼</label>
-        <div class="hint">請輸入管理者給你的 6 位數字</div>
-        <input type="password" id="editCode" inputmode="numeric" autocomplete="off" maxlength="12">
+        <div class="hint">請輸入管理者給你的通關碼（英文和數字，不分大小寫）</div>
+        <input type="password" id="editCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20">
       </div>
       <div class="edit-login-actions"><button type="button" class="edit-btn" id="editLoginBtn" style="flex:1;">登入</button></div>
       <div class="msg" id="editLoginMsg"></div>
@@ -374,10 +379,15 @@
           <div class="hint">每位業務填一格，合計要 100%（中人不算在內）。比例最高的是主要業務，其他人是次要業務。</div>
           <div id="businessRatioRows"></div>
         </div>
-        <div class="field">
+        <div class="field" id="brokerField">
           <label class="required">中人比例</label>
-          <div class="hint">例：某中人20%；無則填「無」。中人另外從總額扣，不用算進業務比例</div>
-          <input type="text" data-label="中人比例" placeholder="例：某中人20%；無則填「無」">
+          <div class="hint">沒有中人選「無」；有中人請填姓名和比例。中人另外從總額扣，不用算進業務比例</div>
+          <div class="broker-row">
+            <select id="brokerHas"><option value="">請選擇</option><option value="無">無</option><option value="有">有</option></select>
+            <input type="text" id="brokerName" placeholder="中人姓名" style="display:none;">
+            <span class="broker-ratio" style="display:none;"><input type="number" id="brokerRatio" step="any" min="0" max="100" placeholder="比例"> %</span>
+          </div>
+          <input type="hidden" data-label="中人比例">
         </div>
       </div>
 
@@ -3103,6 +3113,8 @@ document.getElementById('listingForm').addEventListener('submit', async function
   if (currentType !== '土地' && document.getElementById('noBuildingNumber').checked && !String(fieldValues['加蓋面積(m²)'] || '').trim()) {
     missingLabels.push('加蓋面積(m²)（有未保存登記的建物，請填加蓋面積）');
   }
+  var brokerMsg_ = brokerIncomplete_();
+  if (brokerMsg_) missingLabels.push(brokerMsg_);
   var entrust_ = selectedContractType_() === '委託';
   if (entrust_ && String(fieldValues['建築能效標示'] || '').indexOf('是') === 0 && !subVal_('energyGrade')) missingLabels.push('建築能效標示（請填標示等級）');
   if (entrust_ && String(fieldValues['太陽光電發電設備'] || '').indexOf('是') === 0) {
@@ -3178,6 +3190,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
     else if (!bComplete && !document.getElementById('noBuildingNumber').checked) missingLabels.push('建號（請填寫建號，或勾選「另有未保存登記的建物」）');
   }
   missingLabels = missingLabels.filter(function(l, idx) { return missingLabels.indexOf(l) === idx; });
+  if (brokerMsg_) missingLabels = missingLabels.filter(function(l) { return l !== '中人比例'; }); // 已經有比較清楚的中人提示
 
   if (missingLabels.length > 0) {
     msgBox.className = 'msg error';
@@ -3274,6 +3287,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
         msgBox.style.display = 'block';
         showToast(result.message || '送出成功！', 'success');
         document.getElementById('listingForm').reset();
+        brokerParse_();
         onContractTypeChange_();
         updateClientRequiredMarks_();
         refreshRocPreviews_();
@@ -3620,6 +3634,51 @@ function updateEntrustOnlyRequired_() {
 }
 document.querySelectorAll('input[name="contractType"]').forEach(function(r) { r.addEventListener('change', updateEntrustOnlyRequired_); });
 
+// 中人：畫面上是「有沒有中人＋姓名＋比例」，存進試算表的「中人比例」組成一格（「王小明 20%」或「無」）
+function brokerHidden_() { return document.querySelector('#brokerField [data-label="中人比例"]'); }
+function brokerShow_(has) {
+  document.getElementById('brokerName').style.display = has === '有' ? '' : 'none';
+  document.querySelector('#brokerField .broker-ratio').style.display = has === '有' ? '' : 'none';
+}
+function brokerCompose_() {
+  var has = document.getElementById('brokerHas').value;
+  var name = document.getElementById('brokerName').value.trim();
+  var ratio = document.getElementById('brokerRatio').value.trim();
+  brokerShow_(has);
+  var v = '';
+  if (has === '無') v = '無';
+  else if (has === '有' && name && ratio) v = name + ' ' + ratio + '%';
+  brokerHidden_().value = v;
+}
+// 從存好的文字拆回畫面（還原草稿、修改舊案件時）
+function brokerParse_() {
+  var v = String(brokerHidden_().value || '').trim();
+  var has = '', name = '', ratio = '';
+  if (v === '無' || /^0+(\.0+)?\s*%?$/.test(v)) has = '無';
+  else if (v) {
+    has = '有';
+    var m = v.match(/^(.*?)\s*(\d+(?:\.\d+)?)\s*%?\s*$/);
+    if (m) { name = m[1].trim(); ratio = m[2]; } else name = v;
+  }
+  document.getElementById('brokerHas').value = has;
+  document.getElementById('brokerName').value = name;
+  document.getElementById('brokerRatio').value = ratio;
+  brokerShow_(has);
+}
+function brokerIncomplete_() {
+  var has = document.getElementById('brokerHas').value;
+  if (has !== '有') return '';
+  var name = document.getElementById('brokerName').value.trim();
+  var r = parseFloat(document.getElementById('brokerRatio').value);
+  if (!name) return '中人比例（請填中人姓名）';
+  if (isNaN(r) || r <= 0 || r > 100) return '中人比例（請填 0～100 的比例）';
+  return '';
+}
+['brokerHas', 'brokerName', 'brokerRatio'].forEach(function(id) {
+  ['input', 'change'].forEach(function(evt) { document.getElementById(id).addEventListener(evt, brokerCompose_); });
+});
+brokerHidden_().addEventListener('input', brokerParse_); // 修改頁帶入目前的值時
+
 // 勾「另有未保存登記的建物」時，加蓋面積變必填
 function updateExtraAreaRequired_() {
   var el = document.querySelector('#typeFields [data-label="加蓋面積(m²)"]');
@@ -3676,6 +3735,7 @@ var HOUSE_TYPE_OLD_TO_NEW = { '透天厝': '透天', '公寓': '無電梯公寓'
     updateHouseKind_();
     updateExtraAreaRequired_();
     updateEntrustOnlyRequired_();
+    brokerParse_();
   };
 })();
 
@@ -3791,6 +3851,7 @@ function editResetForm_() {
   clearMissingMarks_();
   document.querySelectorAll('#listingForm .deed-filled').forEach(function(el) { el.classList.remove('deed-filled'); });
   updateStatusUi_();
+  brokerParse_();
   var pg = document.getElementById('editPhotoGrid'); if (pg) { pg.innerHTML = ''; pg.style.display = 'none'; }
 }
 
@@ -5065,7 +5126,7 @@ function applyDeed_() {
     blds.forEach(function(b) { total += b.totalAreaM2 || 0; attached += b.attachedAreaM2 || 0; if (b.sharedAreaM2 !== null && b.sharedAreaM2 !== undefined) { shared += b.sharedAreaM2; hasShared = true; } });
     deedSetAuto_('主建物面積(m²)', String(Math.round(total * 100) / 100), res);
     deedSetAuto_('附屬建物面積(m²)', String(Math.round(attached * 100) / 100), res);
-    if (hasShared) deedSetInput_('共同使用面積(m²)', String(Math.round(shared * 100) / 100), res);
+    if (hasShared) deedSetAuto_('共同使用面積(m²)', String(Math.round(shared * 100) / 100), res);
     else if (deedField_('共同使用面積(m²)')) res.notes.push('這份謄本沒有列出共有部分的面積，「共同使用面積」請從權狀填寫');
 
     // 建築完成日
@@ -5215,8 +5276,13 @@ function applyDeed_() {
         if (bfr.every(function(x) { return fracIsOne_(x.f); })) {
           deedSetAuto_('產權範圍', '全部', res);
         } else {
-          var fullB = 0, shareB = 0, fullL = 0;
-          bfr.forEach(function(x) { fullB += x.b.totalAreaM2 || 0; shareB += (x.b.totalAreaM2 || 0) * x.f.n / x.f.d; });
+          var fullB = 0, shareB = 0, fullL = 0, shareAtt = 0, shareCommon = 0, anyCommon = false;
+          bfr.forEach(function(x) {
+            var r = x.f.n / x.f.d;
+            fullB += x.b.totalAreaM2 || 0; shareB += (x.b.totalAreaM2 || 0) * r;
+            shareAtt += (x.b.attachedAreaM2 || 0) * r;
+            if (x.b.sharedAreaM2 !== null && x.b.sharedAreaM2 !== undefined) { shareCommon += x.b.sharedAreaM2 * r; anyCommon = true; }
+          });
           lands.forEach(function(l) { var f = deedOwnerFrac_(l, bOwners); if (l.areaM2 && f) fullL += l.areaM2 * f.n / f.d; });
           var rb = bfr[0].f;
           var sameB = bfr.every(function(x) { return fracText_(x.f) === fracText_(rb); });
@@ -5224,8 +5290,10 @@ function applyDeed_() {
           deedSetAuto_('持分比例', sameB ? fracText_(rb) : bfr.map(function(x) { return '建號' + x.b.number + '：' + fracText_(x.f); }).join('；'), res);
           deedSetAuto_('全筆主建物面積(m²)', String(Math.round(fullB * 100) / 100), res);
           deedSetAuto_('主建物面積(m²)', String(Math.round(shareB * 100) / 100), res);
+          deedSetAuto_('附屬建物面積(m²)', String(Math.round(shareAtt * 100) / 100), res);
+          if (anyCommon) deedSetAuto_('共同使用面積(m²)', String(Math.round(shareCommon * 100) / 100), res);
           if (fullL) deedSetAuto_('全筆土地面積(m²)', String(Math.round(fullL * 100) / 100), res);
-          res.notes.push('這一戶是持分出售（建物權利範圍 ' + fracText_(rb) + '），主建物面積、土地面積已算成賣的那部分；附屬建物、共同使用面積請自己確認是否也要乘上持分');
+          res.notes.push('這一戶是持分出售（建物權利範圍 ' + fracText_(rb) + '），主建物、附屬建物、' + (anyCommon ? '共同使用面積、' : '') + '土地面積都已算成賣的那部分，請確認');
         }
       }
     }
