@@ -80,11 +80,36 @@
   .msg.success { background: var(--brand-soft); color: var(--brand-dark); display: block; }
   .msg.error { background: var(--danger-soft); color: var(--danger); display: block; }
   .other-input { margin-top: 8px; }
+
+    /* 三個網頁共用的導覽列 */
+    .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line);
+      color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
+    .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
 </style>
 </head>
 <body>
 <div id="toastNotice"></div>
 <div class="container">
+  <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="listing.html?mode=edit" data-key="edit">修改案件</a>
+    <a href="client-needs.html" data-key="needs">客需資料</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var key = page === 'client-needs.html' ? 'needs' : page === 'land-registry.html' ? 'registry'
+      : (/[?&]mode=edit(&|$)/.test(location.search) ? 'edit' : 'listing');
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
+
   <h1>調謄本申請表</h1>
   <div class="subtitle">可以一次申請好幾個不同的段，每一段各自勾選需要的謄本種類、各自填備註</div>
 
@@ -440,6 +465,21 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     showToast('送出失敗：' + (err && err.message ? err.message : err), 'error');
     window.scrollTo(0, 0);
   });
+});
+
+// 填到一半要離開這一頁（例如點上面的選單）時先提醒；送出成功後表單會清空，就不會再提醒
+function registryHasContent_() {
+  if (document.getElementById('businessNameSelect').value) return true;
+  var els = document.querySelectorAll('#districtEntries input, #districtEntries select, #districtEntries textarea');
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    if (el.type === 'checkbox' || el.type === 'radio') { if (el.checked) return true; }
+    else if (String(el.value || '').trim()) return true;
+  }
+  return false;
+}
+window.addEventListener('beforeunload', function(e) {
+  if (registryHasContent_()) { e.preventDefault(); e.returnValue = ''; }
 });
 </script>
 </body>

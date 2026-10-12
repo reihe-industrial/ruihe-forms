@@ -225,7 +225,7 @@
     .msg.error { background: var(--danger-soft); color: var(--danger); display: block; }
 
     /* 修改案件頁 */
-    .mode-link { font-size: 13px; margin: -12px 0 18px; }
+    .mode-link { display: none; } /* 改用上面的導覽列 */
     .mode-link a { color: var(--brand); font-weight: 600; }
     .edit-login-actions { display: flex; gap: 8px; margin-top: 4px; }
     .edit-btn {
@@ -278,11 +278,36 @@
     .viewer-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; background: #f3f3f0; }
     .viewer-body img { max-width: 100%; max-height: 100%; }
     .viewer-body iframe { width: 100%; height: 100%; border: none; }
-  </style>
+  
+    /* 三個網頁共用的導覽列 */
+    .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line);
+      color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
+    .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+</style>
 </head>
 <body>
   <div id="toastNotice"></div>
   <div class="container">
+  <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="listing.html?mode=edit" data-key="edit">修改案件</a>
+    <a href="client-needs.html" data-key="needs">客需資料</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var key = page === 'client-needs.html' ? 'needs' : page === 'land-registry.html' ? 'registry'
+      : (/[?&]mode=edit(&|$)/.test(location.search) ? 'edit' : 'listing');
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
+
     <h1>委託物件資料輸入</h1>
     <div class="subtitle" id="pageSubtitle">請依實際委託內容填寫，送出後會自動同步進總彙整表、個人試算表、物件簡表</div>
     <div class="mode-link" id="modeLink"></div>
@@ -2574,9 +2599,14 @@ var draftSaveTimer_ = null;
 ['input', 'change'].forEach(function(evtName) {
   document.getElementById('listingForm').addEventListener(evtName, function() {
     clearTimeout(draftSaveTimer_);
-    draftSaveTimer_ = setTimeout(saveDraftToLocalStorage_, 1000);
+    draftSaveTimer_ = setTimeout(function() { draftSaveTimer_ = null; saveDraftToLocalStorage_(); }, 1000);
   });
 });
+// 離開這一頁（例如點上面的選單）時，還沒存的草稿馬上存起來
+window.addEventListener('pagehide', function() {
+  if (draftSaveTimer_) { clearTimeout(draftSaveTimer_); draftSaveTimer_ = null; saveDraftToLocalStorage_(); }
+});
+
 setInterval(saveDraftToLocalStorage_, 15000);
 
 // 上傳照片下方的資料準備清單提示，網址轉成可點擊連結

@@ -179,11 +179,36 @@
     @media (max-width: 480px) {
       .card, .type-block { grid-template-columns: 1fr; }
     }
-  </style>
+  
+    /* 三個網頁共用的導覽列 */
+    .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line);
+      color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
+    .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+</style>
 </head>
 <body>
 <div id="toastNotice"></div>
 <div class="container">
+  <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="listing.html?mode=edit" data-key="edit">修改案件</a>
+    <a href="client-needs.html" data-key="needs">客需資料</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var key = page === 'client-needs.html' ? 'needs' : page === 'land-registry.html' ? 'registry'
+      : (/[?&]mode=edit(&|$)/.test(location.search) ? 'edit' : 'listing');
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
+
   <h1>客需資料填寫表</h1>
   <div class="subtitle">業務拜訪或電話聯繫客戶後填寫，記錄客戶購買／承租需求</div>
 
@@ -1063,9 +1088,14 @@ var draftSaveTimer_ = null;
   document.querySelector('.container').addEventListener(evtName, function() {
     if (document.getElementById('draftBanner').style.display === 'block') return;
     clearTimeout(draftSaveTimer_);
-    draftSaveTimer_ = setTimeout(saveDraftToLocalStorage_, 1000);
+    draftSaveTimer_ = setTimeout(function() { draftSaveTimer_ = null; saveDraftToLocalStorage_(); }, 1000);
   });
 });
+// 離開這一頁（例如點上面的選單）時，還沒存的草稿馬上存起來
+window.addEventListener('pagehide', function() {
+  if (draftSaveTimer_) { clearTimeout(draftSaveTimer_); draftSaveTimer_ = null; saveDraftToLocalStorage_(); }
+});
+
 setInterval(function() {
   if (document.getElementById('draftBanner').style.display === 'block') return;
   saveDraftToLocalStorage_();
