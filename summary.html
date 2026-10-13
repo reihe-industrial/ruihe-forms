@@ -110,6 +110,7 @@
     .tag.t-land { background: var(--t-land-soft); color: var(--t-land); }
     .tag.t-house { background: var(--t-house-soft); color: var(--t-house); }
     .tag.rs { background: #fff; border: 1px solid var(--line); color: var(--ink); }
+    .tag.ct-warn { background: #fff2cc; border: 1px solid #e0c341; color: #6b5200; }
 
     /* 電腦：表格 */
     .table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 120px); }
@@ -248,6 +249,10 @@
             <div>
               <span class="flabel">租／售</span>
               <div class="chips" id="rsChips" role="group" aria-label="租／售"></div>
+            </div>
+            <div>
+              <span class="flabel">契約類型</span>
+              <div class="chips" id="contractChips" role="group" aria-label="契約類型"></div>
             </div>
             <div>
               <label for="fKeyword">關鍵字</label>
@@ -392,8 +397,15 @@ var DESKTOP_QUERY = window.matchMedia('(min-width: 900px)');
 
 // 卡片上直接顯示的欄位，其他欄位點開才看到
 var C = { type: '類型', name: '案件名稱', rs: '租/售', unit: '單價', total: '總價', place: '坐落',
-  section: '地段', land: '土地面積(坪)', bld: '建物面積(坪)', agent: '業務人員' };
-var CARD_LABELS = [C.type, C.name, C.rs, C.unit, C.total, C.place, C.land, C.bld, C.agent];
+  section: '地段', land: '土地面積(坪)', bld: '建物面積(坪)', agent: '業務人員', contract: '契約類型' };
+var CARD_LABELS = [C.type, C.name, C.rs, C.contract, C.unit, C.total, C.place, C.land, C.bld, C.agent];
+var CONTRACT_ORDER = ['委託', '口約', '訪談紀錄', '授權書'];
+// 契約類型標籤：委託是一般的，其他（口約、訪談紀錄、授權書）用醒目的顏色提醒業務
+function contractTagHtml(v) {
+  var t = String(v || '').trim();
+  if (!t) return '';
+  return '<span class="tag ' + (t === '委託' ? 'rs' : 'ct-warn') + '">' + esc(t) + '</span>';
+}
 var NUMERIC_LABELS = [C.unit, C.total, C.land, C.bld, '面臨路寬'];
 var TYPE_ORDER = ['廠房', '土地', '房屋'];
 // 房屋的「類型」顯示建物類別（後端從總彙整表帶過來），這些都用房屋的顏色
@@ -482,6 +494,7 @@ function buildItems() {
       types: splitTypes(cell(row, C.type)),
       agents: String(cell(row, C.agent)).split(/[、,，\/\s]+/).map(function(x) { return x.trim(); }).filter(Boolean),
       rs: String(cell(row, C.rs)).trim(),
+      contract: String(cell(row, C.contract)).trim(),
       county: place.county, town: place.town,
       land: firstNumber(cell(row, C.land)),
       bld: firstNumber(cell(row, C.bld)),
@@ -500,7 +513,7 @@ function buildItems() {
 
 // ---------------- 篩選 ----------------
 function emptyFilters() {
-  return { type: '', rs: '', county: '', town: '', keyword: '', agent: '',
+  return { type: '', rs: '', contract: '', county: '', town: '', keyword: '', agent: '',
     totalMin: '', totalMax: '', landMin: '', landMax: '', bldMin: '', bldMax: '' };
 }
 function countBy(list, key) {
@@ -539,6 +552,10 @@ function buildFilterOptions() {
   var rs = sortedKeys(countBy(items, 'rs'), ['售', '租']);
   if (filters.rs && rs.indexOf(filters.rs) === -1) filters.rs = '';
   renderChips('rsChips', rs, filters.rs, 'rs');
+  var cts = sortedKeys(countBy(items, 'contract'), CONTRACT_ORDER);
+  if (filters.contract && cts.indexOf(filters.contract) === -1) filters.contract = '';
+  renderChips('contractChips', cts, filters.contract, 'contract');
+  $('contractChips').parentElement.style.display = cts.length ? '' : 'none'; // 後端還沒有契約類型欄時不顯示
 
   var counties = sortedKeys(countBy(items, 'county'));
   if (filters.county && counties.indexOf(filters.county) === -1) { filters.county = ''; filters.town = ''; }
@@ -583,6 +600,7 @@ function activeFilterCount() {
   if (filters.county) n++;
   if (filters.keyword.trim()) n++;
   if (filters.agent) n++;
+  if (filters.contract) n++;
   if (filters.totalMin !== '' || filters.totalMax !== '') n++;
   if (filters.landMin !== '' || filters.landMax !== '') n++;
   if (filters.bldMin !== '' || filters.bldMax !== '') n++;
@@ -593,6 +611,7 @@ function filtered() {
   return items.filter(function(it) {
     if (filters.type && it.types.indexOf(filters.type) === -1) return false;
     if (filters.agent && it.agents.indexOf(filters.agent) === -1) return false;
+    if (filters.contract && it.contract !== filters.contract) return false;
     if (filters.rs && it.rs !== filters.rs) return false;
     if (filters.county && it.county !== filters.county) return false;
     if (filters.town && it.town !== filters.town) return false;
@@ -670,6 +689,7 @@ function tableHtml(list) {
       var v = it.row[i] || '';
       if (c === C.type) return '<td>' + typeTagHtml(it.row) + '</td>';
       if (c === C.name) return '<td class="name">' + esc(v) + '</td>';
+      if (c === C.contract) return '<td>' + contractTagHtml(v) + '</td>';
       if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(v) + '</td>';
       return '<td>' + esc(v) + '</td>';
     }).join('') + '</tr>';
@@ -690,7 +710,7 @@ function cardsHtml(list) {
     var rs = String(cell(r, C.rs)).trim();
     return '<details class="item"><summary>' +
       '<div class="item-top"><span class="item-name">' + esc(cell(r, C.name) || '（未填案名）') + '</span>' +
-        typeTagHtml(r) + (rs ? '<span class="tag rs">' + esc(rs) + '</span>' : '') + '</div>' +
+        typeTagHtml(r) + (rs ? '<span class="tag rs">' + esc(rs) + '</span>' : '') + contractTagHtml(cell(r, C.contract)) + '</div>' +
       '<div class="item-price"><b>' + esc(cell(r, C.total) || '總價未填') + '</b>' +
         (cell(r, C.unit) ? '<span>單價 ' + esc(cell(r, C.unit)) + '</span>' : '') + '</div>' +
       (cell(r, C.place) ? '<div class="item-meta">' + esc(cell(r, C.place)) + '</div>' : '') +

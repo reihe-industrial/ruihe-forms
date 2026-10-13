@@ -38,6 +38,29 @@
       line-height: 1.5;
     }
     .container { max-width: 640px; margin: 0 auto; }
+    /* 土地位置（地圖選點） */
+    .map-point { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; }
+    .map-point .map-point-text { font-size: 13.5px; color: var(--muted); }
+    .map-point .map-point-text.has { color: var(--ink); font-weight: 600; }
+    .map-point .map-point-text a { color: var(--brand); font-weight: 600; margin-left: 6px; }
+    .map-btn { border: 1px solid var(--brand); background: var(--brand); color: #fff; border-radius: 8px; padding: 9px 14px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .map-btn.ghost { background: #fff; color: var(--ink); border-color: var(--line); font-weight: 600; }
+    .map-btn:disabled { background: #b9c3ba; border-color: #b9c3ba; cursor: not-allowed; }
+    .map-modal { position: fixed; inset: 0; background: rgba(20,30,25,.5); display: none; align-items: center; justify-content: center; z-index: 300; padding: 12px; }
+    .map-box { background: #fff; border-radius: 12px; width: min(980px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+    .map-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    .map-head b { flex: 1 1 auto; font-size: 15px; color: var(--brand-dark); }
+    .map-tools { display: flex; flex-wrap: wrap; gap: 8px 10px; padding: 10px 14px; align-items: center; }
+    .map-tools input[type=text] { flex: 1 1 220px; min-width: 0; padding: 8px 10px; font-size: 14px; }
+    .map-tools select { width: auto; padding: 8px 28px 8px 10px; font-size: 13.5px; }
+    .map-tools label { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-size: 13.5px; font-weight: 600; }
+    .map-tools label input { width: auto; }
+    #mapPickBox { height: 56vh; min-height: 280px; width: 100%; background: #e8ebe3; }
+    .map-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+    .map-foot .grow { flex: 1 1 auto; font-size: 13.5px; }
+    .map-note { padding: 0 14px 8px; font-size: 12.5px; color: var(--muted); }
+    .map-note.warn { color: var(--danger); }
+    @media (max-width: 560px) { .map-modal { padding: 0; } .map-box { border-radius: 0; height: 100%; } #mapPickBox { height: auto; flex: 1 1 auto; } }
     /* 螢幕寬的時候放寬版面：欄位排成三欄，兩邊不要留一大片空白 */
     @media (min-width: 900px) { .container { max-width: 860px; } }
     @media (min-width: 1200px) {
@@ -242,6 +265,9 @@
     .edit-btn:disabled { background: #b9c3ba; cursor: not-allowed; }
     .edit-btn.secondary { background: #eee; color: #333; }
     .edit-list-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .edit-filter-row { display: flex; gap: 8px; }
+    .edit-filter-row #editAgentFilter { flex: 0 0 auto; width: auto; max-width: 46%; }
+    .edit-filter-row #editSearch { flex: 1 1 auto; min-width: 0; }
     .edit-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
     .edit-tabs button { flex: 1; border: 1px solid var(--line); background: #fbfaf6; color: var(--ink); border-radius: 999px; padding: 8px 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
     .edit-tabs button[aria-selected="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
@@ -370,7 +396,8 @@
         <button type="button" role="tab" id="editTabCases" aria-selected="true">物件 <span id="editCaseCount"></span></button>
         <button type="button" role="tab" id="editTabNeeds" aria-selected="false">客需 <span id="editNeedsCount"></span></button>
       </div>
-      <div class="field">
+      <div class="field edit-filter-row">
+        <select id="editAgentFilter" aria-label="業務" style="display:none;"><option value="">全部業務</option></select>
         <input type="text" id="editSearch" placeholder="輸入案名或契約編號搜尋">
       </div>
       <div id="editCaseList"></div>
@@ -1163,6 +1190,7 @@ var FIELD_CONFIG = {
     { label: '案件坐落', type: 'text', required: true, autoFromDistrict: true, hint: '請填寫縣市及區，範例：台中市南屯區\n選好上面「地段地號及建號資訊」的縣市／鄉鎮區後會自動帶入' },
     { label: '產業園區名稱(土地)', type: 'select-other', options: [], extraDetailFor: ['區外', '非園區'], skipOtherOption: true, dynamicParkOptions: true, dynamicParkExtraOption: '非園區',
       hint: '先在上面「地段資訊」選好第一筆地號的縣市，這裡會自動列出該縣市的管理局轄下園區；非產業園區管理局管轄之產業園區請選「區外」\n※工業區土地應用系統\nhttps://land.bip.gov.tw/gis/\n※台灣用地供給與服務資訊網-園區資訊查詢\nhttps://land.bip.gov.tw/supply/Environ/' },
+    { label: '土地位置', type: 'map-point', required: true, hint: '按「在地圖上選位置」，在地圖上點一下土地的位置，標記可以拖動調整。' },
     { label: '產權範圍', type: 'select', options: ['全部', '持分'], required: true, controlsGroup: 'share', showWhen: '持分', hint: '整筆出售選「全部」；只賣部分持分選「持分」' },
     { label: '持分比例', type: 'text', required: true, group: 'share', hint: '例：1/2' },
     { label: '全筆土地面積(m²)', type: 'number', required: true, group: 'share', showPing: true, hint: '整筆土地的面積，從謄本或權狀填寫' },
@@ -1521,6 +1549,266 @@ document.querySelectorAll('input[name="typeTab"]').forEach(function(radio) {
 document.getElementById('typeLabel-廠房').classList.add('active');
 
 var districtBlockEl_ = document.getElementById('districtBlock');
+// ============================================================
+// 土地位置（地圖選點）：「座標(緯度)」「座標(經度)」是兩個隱藏欄位（data-label），
+// 草稿、表單狀態、修改頁還原、送出都跟其他欄位一樣處理；這裡只負責畫面和地圖視窗。
+// 底圖用內政部國土測繪中心的圖資（WMTS），讀不到時自動換成 OpenStreetMap。
+// 地圖元件 Leaflet 放在 lib/ 資料夾，第一次按「在地圖上選位置」才會載入。
+// ============================================================
+var MAP_NLSC_ = 'https://wmts.nlsc.gov.tw/wmts/';
+var MAP_BASES_ = [
+  { id: 'emap', name: '電子地圖', url: MAP_NLSC_ + 'EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}', attr: '© 內政部國土測繪中心' },
+  { id: 'photo', name: '衛星影像', url: MAP_NLSC_ + 'PHOTO2/default/GoogleMapsCompatible/{z}/{y}/{x}', attr: '© 內政部國土測繪中心' },
+  { id: 'osm', name: 'OpenStreetMap', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '© OpenStreetMap' }
+];
+// 地籍（段籍）圖層：依序試，前面的讀不到（一直失敗）就換下一個
+var MAP_CADASTRE_LAYER_IDS_ = ['LANDSECT2', 'LANDSECT'];
+var MAP_BLANK_TILE_ = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+var mapPick_ = { map: null, base: null, overlay: null, marker: null, cadIdx: 0, onDone: null };
+
+function mapCoordOk_(lat, lng) { return isFinite(lat) && isFinite(lng) && lat >= 21 && lat <= 27 && lng >= 117 && lng <= 123; }
+function mapPointInputs_(root) {
+  var scope = root || document;
+  return { lat: scope.querySelector('[data-label="座標(緯度)"]'), lng: scope.querySelector('[data-label="座標(經度)"]') };
+}
+function mapPointHasValue_() {
+  var c = mapPointInputs_(document.getElementById('typeFields'));
+  return !!(c.lat && c.lng && String(c.lat.value).trim() && String(c.lng.value).trim());
+}
+function buildMapPointField_(wrap) {
+  var box = document.createElement('div');
+  box.className = 'map-point';
+  var btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'map-btn'; btn.textContent = '在地圖上選位置';
+  var text = document.createElement('span');
+  text.className = 'map-point-text'; text.textContent = '還沒選位置';
+  var clear = document.createElement('button');
+  clear.type = 'button'; clear.className = 'map-btn ghost'; clear.textContent = '清除'; clear.style.display = 'none';
+  var lat = document.createElement('input'); lat.type = 'hidden'; lat.setAttribute('data-label', '座標(緯度)');
+  var lng = document.createElement('input'); lng.type = 'hidden'; lng.setAttribute('data-label', '座標(經度)');
+  [lat, lng].forEach(function(el) {
+    el.addEventListener('input', refreshMapPointUi_);
+    el.addEventListener('change', refreshMapPointUi_);
+  });
+  btn.addEventListener('click', function() {
+    var la = parseFloat(lat.value), lo = parseFloat(lng.value);
+    openMapPicker_(mapCoordOk_(la, lo) ? { lat: la, lng: lo } : null, function(nla, nlo) {
+      lat.value = nla.toFixed(6); lng.value = nlo.toFixed(6);
+      lat.dispatchEvent(new Event('input', { bubbles: true }));
+      lng.dispatchEvent(new Event('input', { bubbles: true }));
+      refreshMapPointUi_();
+    });
+  });
+  clear.addEventListener('click', function() {
+    lat.value = ''; lng.value = '';
+    lat.dispatchEvent(new Event('input', { bubbles: true }));
+    refreshMapPointUi_();
+  });
+  box.appendChild(btn); box.appendChild(text); box.appendChild(clear); box.appendChild(lat); box.appendChild(lng);
+  wrap.appendChild(box);
+}
+function refreshMapPointUi_() {
+  document.querySelectorAll('#typeFields .map-point').forEach(function(box) {
+    var c = mapPointInputs_(box);
+    var la = c.lat ? String(c.lat.value).trim() : '', lo = c.lng ? String(c.lng.value).trim() : '';
+    var has = !!(la && lo);
+    var text = box.querySelector('.map-point-text');
+    if (has) {
+      text.className = 'map-point-text has';
+      text.innerHTML = '';
+      text.appendChild(document.createTextNode('已選位置：' + la + ', ' + lo));
+      var a = document.createElement('a');
+      a.href = 'https://www.google.com/maps?q=' + encodeURIComponent(la + ',' + lo); a.target = '_blank'; a.rel = 'noopener'; a.textContent = '在 Google 地圖開啟核對';
+      text.appendChild(a);
+    } else {
+      text.className = 'map-point-text'; text.textContent = '還沒選位置';
+    }
+    box.querySelector('.map-btn').textContent = has ? '重新選位置' : '在地圖上選位置';
+    box.querySelector('.map-btn.ghost').style.display = has ? '' : 'none';
+  });
+}
+document.getElementById('listingForm').addEventListener('reset', function() { setTimeout(refreshMapPointUi_, 0); });
+
+var leafletReady_ = null;
+function loadLeaflet_() {
+  if (window.L) return Promise.resolve();
+  if (leafletReady_) return leafletReady_;
+  leafletReady_ = new Promise(function(resolve, reject) {
+    var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'lib/leaflet.css'; document.head.appendChild(css);
+    var sc = document.createElement('script'); sc.src = 'lib/leaflet.js';
+    sc.onload = function() {
+      if (window.L) { L.Icon.Default.imagePath = 'lib/images/'; resolve(); }
+      else { leafletReady_ = null; reject(new Error('地圖元件載入失敗')); }
+    };
+    sc.onerror = function() { leafletReady_ = null; reject(new Error('地圖元件載入失敗，請重新整理頁面再試')); };
+    document.head.appendChild(sc);
+  });
+  return leafletReady_;
+}
+function mapGeocode_(q) {
+  return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tw&accept-language=zh-TW&q=' + encodeURIComponent(q))
+    .then(function(r) { return r.json(); })
+    .then(function(a) { return a && a[0] ? { lat: parseFloat(a[0].lat), lng: parseFloat(a[0].lon) } : null; });
+}
+function mapSetNote_(text, warn) {
+  var el = document.getElementById('mapNote');
+  el.textContent = text || ''; el.className = 'map-note' + (warn ? ' warn' : '');
+}
+function buildMapModal_() {
+  if (document.getElementById('mapModal')) return;
+  var m = document.createElement('div');
+  m.id = 'mapModal'; m.className = 'map-modal';
+  m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-labelledby', 'mapTitle');
+  m.innerHTML =
+    '<div class="map-box">' +
+      '<div class="map-head"><b id="mapTitle">選擇土地位置</b><button type="button" class="map-btn ghost" id="mapCloseBtn">關閉</button></div>' +
+      '<div class="map-tools">' +
+        '<input type="text" id="mapSearch" placeholder="搜尋地名或地址，或輸入「緯度, 經度」" autocomplete="off">' +
+        '<button type="button" class="map-btn ghost" id="mapSearchBtn">搜尋</button>' +
+        '<button type="button" class="map-btn ghost" id="mapLocateBtn">用目前位置</button>' +
+        '<select id="mapBaseSel" aria-label="底圖"></select>' +
+        '<label><input type="checkbox" id="mapCadCb" checked> 地籍線</label>' +
+      '</div>' +
+      '<div class="map-note" id="mapNote"></div>' +
+      '<div id="mapPickBox"></div>' +
+      '<div class="map-foot"><span class="grow" id="mapCoordText">點地圖放上標記（放大到看得到地籍線再點會更準，標記可以拖動）</span>' +
+        '<button type="button" class="map-btn ghost" id="mapCancelBtn">取消</button>' +
+        '<button type="button" class="map-btn" id="mapOkBtn" disabled>確定</button></div>' +
+    '</div>';
+  document.body.appendChild(m);
+  var sel = document.getElementById('mapBaseSel');
+  MAP_BASES_.forEach(function(b) { var o = document.createElement('option'); o.value = b.id; o.textContent = b.name; sel.appendChild(o); });
+  function close() { m.style.display = 'none'; document.body.style.overflow = ''; }
+  document.getElementById('mapCloseBtn').addEventListener('click', close);
+  document.getElementById('mapCancelBtn').addEventListener('click', close);
+  m.addEventListener('click', function(e) { if (e.target === m) close(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && m.style.display === 'flex') close(); });
+  document.getElementById('mapOkBtn').addEventListener('click', function() {
+    var ll = mapPick_.marker ? mapPick_.marker.getLatLng() : null;
+    if (!ll) return;
+    if (!mapCoordOk_(ll.lat, ll.lng)) { mapSetNote_('這個位置不在台灣範圍內，請重新點選。', true); return; }
+    var done = mapPick_.onDone; close();
+    if (done) done(ll.lat, ll.lng);
+  });
+  sel.addEventListener('change', function() { mapSetBase_(sel.value); });
+  document.getElementById('mapCadCb').addEventListener('change', function() { mapPick_.cadIdx = 0; mapSetCadastre_(this.checked); });
+  document.getElementById('mapSearchBtn').addEventListener('click', mapDoSearch_);
+  document.getElementById('mapSearch').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); mapDoSearch_(); } });
+  document.getElementById('mapLocateBtn').addEventListener('click', function() {
+    if (!navigator.geolocation) { mapSetNote_('這個瀏覽器不支援定位。', true); return; }
+    mapSetNote_('定位中…');
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      mapSetNote_('');
+      mapSetMarker_(pos.coords.latitude, pos.coords.longitude);
+      mapPick_.map.setView([pos.coords.latitude, pos.coords.longitude], 18);
+    }, function() { mapSetNote_('拿不到目前位置（請確認瀏覽器允許定位）。', true); }, { enableHighAccuracy: true, timeout: 15000 });
+  });
+}
+function mapSetBase_(id) {
+  var b = MAP_BASES_.filter(function(x) { return x.id === id; })[0] || MAP_BASES_[0];
+  var map = mapPick_.map;
+  if (mapPick_.base) map.removeLayer(mapPick_.base);
+  var loaded = 0, errs = 0;
+  var layer = L.tileLayer(b.url, { maxZoom: 19, attribution: b.attr, errorTileUrl: MAP_BLANK_TILE_ });
+  layer.on('tileload', function() { loaded++; });
+  layer.on('tileerror', function() {
+    errs++;
+    if (!loaded && errs >= 6 && b.id !== 'osm') {
+      mapSetNote_('國土測繪中心的底圖讀不到，已改用 OpenStreetMap。', true);
+      document.getElementById('mapBaseSel').value = 'osm';
+      mapSetBase_('osm');
+    }
+  });
+  layer.addTo(map); layer.bringToBack();
+  mapPick_.base = layer;
+  document.getElementById('mapBaseSel').value = b.id;
+}
+function mapSetCadastre_(on) {
+  var map = mapPick_.map;
+  if (mapPick_.overlay) { map.removeLayer(mapPick_.overlay); mapPick_.overlay = null; }
+  if (!on) return;
+  var id = MAP_CADASTRE_LAYER_IDS_[mapPick_.cadIdx];
+  if (!id) {
+    mapSetNote_('地籍線圖層讀不到，請直接用底圖點選位置。', true);
+    document.getElementById('mapCadCb').checked = false;
+    return;
+  }
+  var loaded = 0, errs = 0;
+  var layer = L.tileLayer(MAP_NLSC_ + id + '/default/GoogleMapsCompatible/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.9, errorTileUrl: MAP_BLANK_TILE_ });
+  layer.on('tileload', function() { loaded++; });
+  layer.on('tileerror', function() {
+    errs++;
+    if (!loaded && errs >= 8 && map.getZoom() >= 14 && mapPick_.overlay === layer) { mapPick_.cadIdx++; mapSetCadastre_(true); }
+  });
+  layer.addTo(map);
+  mapPick_.overlay = layer;
+}
+function mapSetMarker_(lat, lng) {
+  var map = mapPick_.map;
+  if (!mapPick_.marker) {
+    mapPick_.marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    mapPick_.marker.on('dragend', function() { mapUpdateCoordText_(); });
+  } else {
+    mapPick_.marker.setLatLng([lat, lng]);
+  }
+  mapUpdateCoordText_();
+}
+function mapUpdateCoordText_() {
+  var ll = mapPick_.marker ? mapPick_.marker.getLatLng() : null;
+  document.getElementById('mapOkBtn').disabled = !ll;
+  document.getElementById('mapCoordText').textContent = ll ? ('緯度 ' + ll.lat.toFixed(6) + '　經度 ' + ll.lng.toFixed(6)) : '點地圖放上標記（放大到看得到地籍線再點會更準，標記可以拖動）';
+}
+function mapDoSearch_() {
+  var q = document.getElementById('mapSearch').value.trim();
+  if (!q) return;
+  var m = q.match(/^(-?\d+(?:\.\d+)?)\s*[,，\s]\s*(-?\d+(?:\.\d+)?)$/);
+  if (m) {
+    var a = parseFloat(m[1]), b = parseFloat(m[2]);
+    var la = a > 100 ? b : a, lo = a > 100 ? a : b;
+    if (!mapCoordOk_(la, lo)) { mapSetNote_('座標不在台灣範圍內。', true); return; }
+    mapSetMarker_(la, lo); mapPick_.map.setView([la, lo], 18); mapSetNote_('');
+    return;
+  }
+  mapSetNote_('搜尋中…');
+  mapGeocode_(q).then(function(r) {
+    if (!r) { mapSetNote_('找不到這個地名或地址，換個寫法試試（例如只寫路名或地標）。', true); return; }
+    mapSetNote_('');
+    mapPick_.map.setView([r.lat, r.lng], 17);
+  }).catch(function() { mapSetNote_('搜尋失敗，請稍後再試。', true); });
+}
+function openMapPicker_(initial, onDone) {
+  buildMapModal_();
+  var modal = document.getElementById('mapModal');
+  modal.style.display = 'flex'; document.body.style.overflow = 'hidden';
+  mapPick_.onDone = onDone;
+  mapSetNote_('地圖載入中…');
+  loadLeaflet_().then(function() {
+    if (!mapPick_.map) {
+      mapPick_.map = L.map('mapPickBox', { center: [23.7, 121], zoom: 8, zoomControl: true });
+      mapPick_.map.on('click', function(e) { mapSetMarker_(e.latlng.lat, e.latlng.lng); });
+      mapSetBase_('emap');
+      mapPick_.cadIdx = 0; mapSetCadastre_(document.getElementById('mapCadCb').checked);
+    }
+    setTimeout(function() { mapPick_.map.invalidateSize(); }, 50);
+    mapSetNote_('');
+    document.getElementById('mapSearch').value = '';
+    if (initial) {
+      mapSetMarker_(initial.lat, initial.lng);
+      mapPick_.map.setView([initial.lat, initial.lng], 17);
+      return;
+    }
+    if (mapPick_.marker) { mapPick_.map.removeLayer(mapPick_.marker); mapPick_.marker = null; mapUpdateCoordText_(); }
+    // 沒有座標：移到表單上已經選好的縣市、鄉鎮
+    var row = document.querySelector('#lotEntries .district-entry');
+    var county = row && row.querySelector('.countySelect') ? row.querySelector('.countySelect').value : '';
+    var town = row && row.querySelector('.townSelect') ? row.querySelector('.townSelect').value : '';
+    var q = (county + town) || ((document.querySelector('#typeFields [data-label="案件坐落"]') || {}).value || '');
+    if (q) {
+      mapGeocode_(q.replace(/\s+/g, '')).then(function(r) { if (r) mapPick_.map.setView([r.lat, r.lng], town ? 14 : 11); }).catch(function() {});
+    }
+  }).catch(function(err) { mapSetNote_(err.message || '地圖載入失敗', true); });
+}
+
 function renderTypeFields(typeTab) {
   var container = document.getElementById('typeFields');
   // 先把地段區塊搬回暫存區，不然清空欄位時它會跟著被清掉
@@ -1529,7 +1817,7 @@ function renderTypeFields(typeTab) {
   var fields = FIELD_CONFIG[typeTab] || [];
   var urbanPlanSelectRef = null; // 「都市或非都市計畫」的 select 元素，「使用分區」用它決定選項
   var landUseRebuildFn = null; // 「使用分區」選項的重建函式，plan select 改變時呼叫
-  var WIDE_FIELD_TYPES = ['textarea', 'per-floor-height', 'checkbox', 'checkbox-region', 'checkbox-other', 'checkbox-other-conditional', 'multi-text', 'address-detail'];
+  var WIDE_FIELD_TYPES = ['map-point', 'textarea', 'per-floor-height', 'checkbox', 'checkbox-region', 'checkbox-other', 'checkbox-other-conditional', 'multi-text', 'address-detail'];
   fields.forEach(function(f) {
     if (f.type === 'district-block') { container.appendChild(districtBlockEl_); return; }
     var wrap = document.createElement('div');
@@ -1550,6 +1838,7 @@ function renderTypeFields(typeTab) {
       wrap.appendChild(hintElTop);
     }
 
+    if (f.type === 'map-point') { buildMapPointField_(wrap); container.appendChild(wrap); return; }
     var el;
     if (f.type === 'select') {
       el = document.createElement('select');
@@ -3223,14 +3512,20 @@ document.getElementById('listingForm').addEventListener('submit', async function
     if (f.requiredIf) {
       isRequired = fieldValues[f.requiredIf.label] === f.requiredIf.value;
     }
+    if (f.type === 'map-point' && EDIT_MODE && !(editCase_ && editCase_.hadCoords)) return; // 修改舊案件：原本沒有座標的不強制補
     if (!isRequired) return;
     if (f.group) {
       var wrapEl = document.querySelector('#typeFields [data-group="' + f.group + '"]');
       if (wrapEl && wrapEl.style.display === 'none') return; // 目前被收起來，不強制檢查
     }
-    var val = fieldValues[f.label];
+    var val = f.type === 'map-point' ? ((fieldValues['座標(緯度)'] && fieldValues['座標(經度)']) ? '1' : '') : fieldValues[f.label];
     if (!val || !String(val).trim()) missingLabels.push(f.label);
   });
+  (function() { // 有座標的，檢查在台灣範圍內
+    var la = parseFloat(fieldValues['座標(緯度)']), lo = parseFloat(fieldValues['座標(經度)']);
+    if (isNaN(la) && isNaN(lo)) return;
+    if (!mapCoordOk_(la, lo)) missingLabels.push('土地位置（座標不在台灣範圍內，請重新選擇）');
+  })();
   implausibleDateLabels_.forEach(function(l) { missingLabels.push(l + '（年份看起來不正確，請重新選擇日期）'); });
   (function() {
     var startEl = document.querySelector('[data-label="合約起始"]');
@@ -3987,6 +4282,7 @@ function editLogin_(auto) {
 
 function editLogout_() {
   sharedLoginClear_();
+  editAgentFilter_ = ''; try { sessionStorage.removeItem(EDIT_AGENT_KEY); } catch (e) {}
   editRole_ = '業務';
   editNeeds_ = null; editNeedsError_ = '';
   editAuth_ = null; editCase_ = null; editCases_ = [];
@@ -4035,6 +4331,7 @@ function editRenderNeeds_() {
   }
   var q = document.getElementById('editSearch').value.trim().toLowerCase();
   var shown = editNeeds_.filter(function(c) {
+    if (!editAgentMatch_(c.business)) return false;
     return !q || [c.clientName, c.contact, c.region, c.propertyTypes, c.business].join(' ').toLowerCase().indexOf(q) !== -1;
   });
   if (!shown.length) {
@@ -4060,11 +4357,35 @@ function editSetTab_(tab) {
   editRenderList_();
 }
 
+// 秘書：依業務篩選（只有秘書看得到「全部業務」下拉選單；選的業務存在這個分頁，換頁回來還在）
+var EDIT_AGENT_KEY = 'ruihe_edit_agent_v1';
+var editAgentFilter_ = '';
+try { editAgentFilter_ = sessionStorage.getItem(EDIT_AGENT_KEY) || ''; } catch (e) {}
+function editAgentNames_(text) { return String(text || '').split(/[、,，\/\s]+/).map(function(x) { return x.trim(); }).filter(Boolean); }
+function editAgentMatch_(text) { return !editAgentFilter_ || editAgentNames_(text).indexOf(editAgentFilter_) !== -1; }
+function editRebuildAgentFilter_(needsTab) {
+  var sel = document.getElementById('editAgentFilter');
+  var show = editRole_ === '秘書';
+  sel.style.display = show ? '' : 'none';
+  if (!show) { editAgentFilter_ = ''; return; }
+  var counts = {};
+  var list = needsTab ? (editNeeds_ || []) : editCases_;
+  list.forEach(function(c) { editAgentNames_(needsTab ? c.business : c.agents).forEach(function(n) { counts[n] = (counts[n] || 0) + 1; }); });
+  // 另一個分頁才有的業務也列出來（筆數 0），切換分頁時選的業務不會不見
+  (needsTab ? editCases_ : (editNeeds_ || [])).forEach(function(c) { editAgentNames_(needsTab ? c.agents : c.business).forEach(function(n) { if (!(n in counts)) counts[n] = 0; }); });
+  var names = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a] || a.localeCompare(b, 'zh-Hant'); });
+  if (editAgentFilter_ && names.indexOf(editAgentFilter_) === -1) editAgentFilter_ = '';
+  sel.innerHTML = '';
+  var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '全部業務'; sel.appendChild(o0);
+  names.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n + '（' + counts[n] + '）'; sel.appendChild(o); });
+  sel.value = editAgentFilter_;
+}
 function editRenderList_() {
   document.getElementById('editListTitle').textContent = !editAuth_ ? '我的物件和客需' : (editRole_ === '秘書' ? '全部的物件和客需（秘書）' : editAuth_.name + ' 負責的物件和客需');
-  document.getElementById('editCaseCount').textContent = '（' + editCases_.length + '）';
-  document.getElementById('editNeedsCount').textContent = editNeeds_ ? '（' + editNeeds_.length + '）' : '';
   var needsTab = editTab_ === 'needs';
+  editRebuildAgentFilter_(needsTab);
+  document.getElementById('editCaseCount').textContent = '（' + editCases_.filter(function(c) { return editAgentMatch_(c.agents); }).length + '）';
+  document.getElementById('editNeedsCount').textContent = editNeeds_ ? '（' + editNeeds_.filter(function(c) { return editAgentMatch_(c.business); }).length + '）' : '';
   document.getElementById('editTabCases').setAttribute('aria-selected', String(!needsTab));
   document.getElementById('editTabNeeds').setAttribute('aria-selected', String(needsTab));
   document.getElementById('editCaseList').style.display = needsTab ? 'none' : '';
@@ -4075,6 +4396,7 @@ function editRenderList_() {
   var q = document.getElementById('editSearch').value.trim();
   box.innerHTML = '';
   var shown = editCases_.filter(function(c) {
+    if (!editAgentMatch_(c.agents)) return false;
     return !q || String(c.caseName).indexOf(q) !== -1 || String(c.contractNo).indexOf(q) !== -1 || String(c.agents || '').indexOf(q) !== -1;
   });
   if (!shown.length) {
@@ -4227,7 +4549,8 @@ function editOpenCase_(key, btn) {
 
       var tcEl = document.querySelector('#typeFields [data-label="轉讓證明書"]');
       editCase_ = { key: data.key, typeTab: data.typeTab, version: data.version, caseName: data.caseName, bizText: bizText,
-        loadedTransferCert: tcEl ? tcEl.value : '', legacy: !!data.legacy, baseline: legacyBaseline };
+        loadedTransferCert: tcEl ? tcEl.value : '', legacy: !!data.legacy, baseline: legacyBaseline, hadCoords: mapPointHasValue_() };
+      refreshMapPointUi_();
       updateTransferCertUi_();
       document.getElementById('editBarTitle').textContent = '正在修改：' + (data.caseName || '') + '（' + data.typeTab + '）';
       editShow_('form');
@@ -4532,6 +4855,11 @@ function submitEditCase_(fieldValues, photoUrls) {
   document.getElementById('editLogoutBtn').addEventListener('click', editLogout_);
   document.getElementById('editBackBtn').addEventListener('click', editBackToList_);
   document.getElementById('editSearch').addEventListener('input', editRenderList_);
+  document.getElementById('editAgentFilter').addEventListener('change', function() {
+    editAgentFilter_ = this.value;
+    try { sessionStorage.setItem(EDIT_AGENT_KEY, editAgentFilter_); } catch (e) {}
+    editRenderList_();
+  });
   ['input', 'change'].forEach(function(evt) {
     document.getElementById('listingForm').addEventListener(evt, function() { if (editCase_) editDirty_ = true; });
   });
