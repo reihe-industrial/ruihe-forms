@@ -99,6 +99,7 @@
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
   </nav>
   <script>
@@ -106,9 +107,20 @@
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'master-table.html' ? 'master'
       : page === 'client-summary.html' ? 'csummary'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
+    // 只有某些身分看得到的連結（data-roles）：依這個分頁登入的身分顯示
+    window.ruiheUpdateNav_ = function() {
+      var role = '';
+      try { var o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); role = (o && o.role) || ''; } catch (e) {}
+      var rl = document.querySelectorAll('#siteNav a[data-roles]');
+      for (var j = 0; j < rl.length; j++) {
+        rl[j].style.display = (rl[j].getAttribute('data-roles').split(',').indexOf(role) !== -1 || rl[j].getAttribute('data-key') === key) ? '' : 'none';
+      }
+    };
+    window.ruiheUpdateNav_();
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
       if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }

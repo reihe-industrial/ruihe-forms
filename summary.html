@@ -173,6 +173,7 @@
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
   </nav>
   <script>
@@ -180,9 +181,20 @@
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'master-table.html' ? 'master'
       : page === 'client-summary.html' ? 'csummary'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
+    // 只有某些身分看得到的連結（data-roles）：依這個分頁登入的身分顯示
+    window.ruiheUpdateNav_ = function() {
+      var role = '';
+      try { var o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); role = (o && o.role) || ''; } catch (e) {}
+      var rl = document.querySelectorAll('#siteNav a[data-roles]');
+      for (var j = 0; j < rl.length; j++) {
+        rl[j].style.display = (rl[j].getAttribute('data-roles').split(',').indexOf(role) !== -1 || rl[j].getAttribute('data-key') === key) ? '' : 'none';
+      }
+    };
+    window.ruiheUpdateNav_();
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
       if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
@@ -300,17 +312,70 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAq
 // ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
+// 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
+var IDLE_LIMIT_MS = 30 * 60 * 1000;
+var IDLE_KEY = 'ruihe_last_active_v1';
+var idleLastWrite_ = 0;
+function idleTouch_(force) {
+  var now = Date.now();
+  if (!force && now - idleLastWrite_ < 15000) return;
+  idleLastWrite_ = now;
+  try { sessionStorage.setItem(IDLE_KEY, String(now)); } catch (e) {}
+}
+function idleExpired_() {
+  var t = 0;
+  try { t = parseInt(sessionStorage.getItem(IDLE_KEY), 10) || 0; } catch (e) {}
+  return t > 0 && Date.now() - t > IDLE_LIMIT_MS;
+}
+// isLoggedIn()：這一頁現在有沒有登入；onTimeout(訊息)：這一頁的登出
+function idleWatch_(isLoggedIn, onTimeout) {
+  ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
+    window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
+  });
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout('30 分鐘沒有動作，已自動登出，請重新登入。'); }
+  setInterval(check, 30000);
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
+}
 function sharedLoginGet_() {
+  if (idleExpired_()) { sharedLoginClear_(); return null; }
   try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
   catch (e) { return null; }
 }
-function sharedLoginSet_(name, code) {
-  try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code })); } catch (e) {}
+function sharedLoginSet_(name, code, role) {
+  if (!role) { var prev = null; try { prev = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); } catch (e) {} role = prev && prev.name === name ? prev.role : ''; }
+  try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code, role: role || '業務' })); } catch (e) {}
+  if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.setItem('ruihe_summary_last_name', name); } catch (e) {}
+  idleTouch_(true);
+}
+function sharedRole_() {
+  try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return (o && o.role) || '業務'; } catch (e) { return '業務'; }
 }
 function sharedLoginClear_() {
-  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); } catch (e) {}
+  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
   try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); } catch (e) {}
+  try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
+}
+// 姓名清單：先用上次存在這台裝置的清單（馬上可以選），同時到後端拿最新的換上
+var LOGIN_NAMES_KEY = 'ruihe_login_names_v1';
+function fillLoginNames_(sel, names) {
+  var keep = sel.value, last = '';
+  try { last = localStorage.getItem('ruihe_summary_last_name') || ''; } catch (e) {}
+  sel.innerHTML = '';
+  var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '請選擇'; sel.appendChild(o0);
+  names.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+  var want = keep || last;
+  if (want && names.indexOf(want) !== -1) sel.value = want;
+}
+function loadLoginNames_(sel, fetchNames, onError) {
+  var cached = null;
+  try { cached = JSON.parse(localStorage.getItem(LOGIN_NAMES_KEY) || 'null'); } catch (e) {}
+  var hasCache = Array.isArray(cached) && cached.length > 0;
+  if (hasCache) fillLoginNames_(sel, cached);
+  fetchNames().then(function(names) {
+    try { localStorage.setItem(LOGIN_NAMES_KEY, JSON.stringify(names)); } catch (e) {}
+    fillLoginNames_(sel, names);
+  }).catch(function(err) { if (!hasCache) onError(err); });
 }
 
 var CACHE_KEY = 'ruihe_summary_cache_v1';      // 簡表快取（登出會清掉）
@@ -692,15 +757,9 @@ document.addEventListener('visibilitychange', function() {
 
 // ---------------- 登入／登出 ----------------
 function loadLoginOptions() {
-  runServer('getEditLoginOptions').then(function(res) {
-    var sel = $('loginName');
-    var last = '';
-    try { last = localStorage.getItem(LAST_NAME_KEY) || ''; } catch (e) {}
-    sel.innerHTML = '<option value="">請選擇</option>' + (res.personList || []).map(function(n) {
-      return '<option value="' + esc(n) + '">' + esc(n) + '</option>';
-    }).join('');
-    if (last && (res.personList || []).indexOf(last) !== -1) sel.value = last;
-  }).catch(function(err) {
+  loadLoginNames_($('loginName'), function() {
+    return runServer('getEditLoginOptions').then(function(res) { return res.personList || []; });
+  }, function(err) {
     $('loginName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>';
     showLoginError(err.message || '連不上系統');
   });
@@ -718,9 +777,10 @@ function login(auto) {
   btn.disabled = true;
   btn.textContent = '登入中…';
   $('loginMsg').className = 'msg';
-  runServer('summaryVerifyLogin', name, code).then(function(res) {
+  // 自動登入（這個分頁已經登入過）：不另外驗證，直接先顯示上次的資料；背景檢查時後端會再驗證
+  (auto ? Promise.resolve({ name: name }) : runServer('summaryVerifyLogin', name, code)).then(function(res) {
     auth = { name: res.name, code: code };
-    sharedLoginSet_(res.name, code);
+    sharedLoginSet_(res.name, code, res.role);
     $('loginCode').value = '';
     $('whoName').textContent = res.name;
     $('loginView').hidden = true;
@@ -816,6 +876,7 @@ window.addEventListener('resize', function() {
 });
 
 loadLoginOptions();
+idleWatch_(function() { return !!auth; }, function(msg) { logout(msg); });
 if (sharedLoginGet_()) login(sharedLoginGet_());
 </script>
 </body>

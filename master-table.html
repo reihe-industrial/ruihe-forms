@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>物件總表｜瑞禾不動產</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --ink: #1c2b22;
+      --muted: #66776c;
+      --paper: #f3f1e9;
+      --card: #ffffff;
+      --line: #dfe2d7;
+      --brand: #2f6f4e;
+      --brand-dark: #1e4a32;
+      --brand-soft: #e9f1ec;
+      --danger: #a3352c;
+      --danger-soft: #fbebe9;
+      --radius: 10px;
+      --t-factory: #3d5a80;  --t-factory-soft: #e6ecf4;
+      --t-land: #8a6a1f;     --t-land-soft: #f5eedb;
+      --t-house: #8c3f5a;    --t-house-soft: #f6e7ec;
+    }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: var(--paper); margin: 0; padding: 20px 16px 60px;
+      color: var(--ink); line-height: 1.5;
+    }
+    .container { max-width: 1180px; margin: 0 auto; }
+    .narrow { max-width: 640px; }
+
+    .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line);
+      color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
+    .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+    h1 {
+      font-family: "Noto Serif TC", "Noto Sans TC", serif;
+      font-size: 23px; font-weight: 700; letter-spacing: 0.02em;
+      margin: 4px 0 6px; color: var(--brand-dark);
+    }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
+    .card h2 { font-size: 15px; font-weight: 700; margin: 0 0 16px; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
+    .card h2::before { content: ""; display: inline-block; width: 4px; height: 15px; background: var(--brand); border-radius: 2px; flex-shrink: 0; }
+
+    .field { margin-bottom: 16px; }
+    label, .flabel { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
+    label.required::after { content: " *"; color: var(--danger); font-weight: 700; }
+    .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; line-height: 1.55; }
+    input, select {
+      width: 100%; padding: 10px 12px; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font-family: inherit;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+    select { appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366776c' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 10px center; background-size: 18px; padding-right: 34px; }
+    button { font-family: inherit; }
+    button:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid var(--brand-soft); outline-offset: 2px; }
+
+    .btn { border: none; border-radius: 8px; background: var(--brand); color: #fff; font-size: 15px; font-weight: 700; padding: 11px 18px; cursor: pointer; }
+    .btn:disabled { background: #b9c3ba; cursor: not-allowed; }
+    .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 600; font-size: 13.5px; padding: 7px 13px; }
+    .btn.ghost:hover { border-color: var(--brand); color: var(--brand); }
+    .btn.ghost:disabled { background: #fff; color: #a9b0a2; }
+
+    .msg { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+    .msg.error { display: block; background: var(--danger-soft); color: var(--danger); }
+    .login-note { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+
+    /* 登入後的頂列 */
+    .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 14px; }
+    .topbar .who { font-weight: 700; font-size: 14px; }
+    .topbar .status { font-size: 13px; color: var(--muted); flex: 1 1 auto; }
+    .topbar .status.warn { color: var(--danger); }
+    .topbar .actions { display: flex; gap: 6px; }
+
+    /* 篩選 */
+    .filters { padding: 16px 18px; }
+    .filter-toggle { display: none; }
+    .filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 18px; align-items: end; }
+    .filter-grid .span2 { grid-column: span 2; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chips button {
+      border: 1px solid var(--line); background: #fbfaf6; color: var(--ink); border-radius: 999px;
+      padding: 6px 13px; font-size: 13.5px; cursor: pointer;
+    }
+    .chips button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+    .range { display: flex; align-items: center; gap: 6px; }
+    .range input { padding: 9px 10px; }
+    .range span { color: var(--muted); flex: 0 0 auto; }
+    .row-sel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .filter-foot { grid-column: 2 / -1; display: flex; justify-content: flex-end; }
+    @media (max-width: 899px) { .filter-foot { grid-column: auto; } }
+
+    /* 結果列 */
+    .resultbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 2px 10px; }
+    .count { font-size: 15px; font-weight: 700; color: var(--brand-dark); }
+    .count small { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 6px; }
+    .sort-mobile { display: none; max-width: 180px; padding: 7px 30px 7px 10px; font-size: 13.5px; }
+
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 5px; padding: 1px 7px; white-space: nowrap; background: #eef0ea; color: var(--muted); }
+    .tag.t-factory { background: var(--t-factory-soft); color: var(--t-factory); }
+    .tag.t-land { background: var(--t-land-soft); color: var(--t-land); }
+    .tag.t-house { background: var(--t-house-soft); color: var(--t-house); }
+    .tag.rs { background: #fff; border: 1px solid var(--line); color: var(--ink); }
+
+    /* 電腦：表格 */
+    .table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 120px); }
+    table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: #f8f7f2; z-index: 1; white-space: nowrap; padding: 0; }
+    th button { all: unset; display: block; padding: 10px; font-weight: 700; font-size: 13px; color: var(--brand-dark); cursor: pointer; white-space: nowrap; }
+    th button:focus-visible { outline: 3px solid var(--brand-soft); }
+    th .arrow { color: var(--brand); margin-left: 3px; font-size: 11px; }
+    td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    td { white-space: nowrap; max-width: 22em; overflow: hidden; text-overflow: ellipsis; }
+    td.name { font-weight: 700; white-space: normal; min-width: 8em; max-width: 14em; }
+    tbody tr.main { cursor: pointer; }
+    tbody tr.main.open { background: #f4f8f5; }
+    tr.detail td { background: #fbfbf8; white-space: normal; max-width: none; }
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px 22px; font-size: 13.5px; }
+    .detail-grid div { display: grid; grid-template-columns: 9.5em 1fr; gap: 8px; }
+    .detail-grid span:first-child { color: var(--muted); }
+    .detail-grid span:last-child { white-space: pre-wrap; word-break: break-word; }
+    .type-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .type-tabs button { flex: 1; max-width: 160px; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 8px 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .type-tabs button[aria-selected="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .role-note { font-size: 12.5px; color: var(--muted); margin: -6px 0 12px; }
+    tbody tr:hover { background: #fafaf5; }
+
+    /* 手機：卡片 */
+    .cards { display: grid; gap: 10px; }
+    .item { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+    .item > summary { list-style: none; cursor: pointer; padding: 14px 14px 12px; }
+    .item > summary::-webkit-details-marker { display: none; }
+    .item-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .item-name { font-size: 16px; font-weight: 700; margin-right: auto; }
+    .item-price { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+    .item-price b { font-size: 19px; color: var(--brand-dark); }
+    .item-price span { font-size: 13.5px; color: var(--muted); }
+    .item-meta { font-size: 13.5px; color: var(--ink); margin-top: 3px; }
+    .item-meta.muted { color: var(--muted); }
+    .item-more-hint { font-size: 12.5px; color: var(--brand); margin-top: 6px; }
+    .item[open] .item-more-hint .open-t { display: none; }
+    .item:not([open]) .item-more-hint .close-t { display: none; }
+    .item-more { margin: 0; padding: 4px 14px 14px; border-top: 1px dashed var(--line); display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13.5px; }
+    .item-more dt { color: var(--muted); padding-top: 6px; }
+    .item-more dd { margin: 0; padding-top: 6px; }
+
+    .empty { text-align: center; padding: 40px 16px; color: var(--muted); background: var(--card); border: 1px dashed var(--line); border-radius: var(--radius); }
+    .loading { text-align: center; padding: 40px 16px; color: var(--muted); }
+
+    #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 50; background: var(--brand-dark); color: #fff;
+      padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,.18); display: none; max-width: 90%; text-align: center; }
+    #toast.error { background: var(--danger); }
+
+    @media (max-width: 899px) {
+      .filter-toggle { display: flex; width: 100%; justify-content: space-between; align-items: center; background: none; border: none; padding: 0; font-size: 15px; font-weight: 700; color: var(--brand-dark); cursor: pointer; }
+      .filters:not(.open) .filter-body { display: none; }
+      .filters.open .filter-toggle { margin-bottom: 14px; }
+      .filter-grid { grid-template-columns: 1fr; gap: 14px; }
+      .filter-grid .span2 { grid-column: auto; }
+      .sort-mobile { display: block; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .item[open] .item-more { animation: open .15s ease-out; }
+      @keyframes open { from { opacity: 0; } to { opacity: 1; } }
+    }
+  </style>
+</head>
+<body>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div class="container">
+    <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
+    <a href="summary.html" data-key="summary">物件簡表</a>
+    <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'master-table.html' ? 'master'
+      : page === 'client-summary.html' ? 'csummary'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
+    // 只有某些身分看得到的連結（data-roles）：依這個分頁登入的身分顯示
+    window.ruiheUpdateNav_ = function() {
+      var role = '';
+      try { var o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); role = (o && o.role) || ''; } catch (e) {}
+      var rl = document.querySelectorAll('#siteNav a[data-roles]');
+      for (var j = 0; j < rl.length; j++) {
+        rl[j].style.display = (rl[j].getAttribute('data-roles').split(',').indexOf(role) !== -1 || rl[j].getAttribute('data-key') === key) ? '' : 'none';
+      }
+    };
+    window.ruiheUpdateNav_();
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
+
+    <h1>物件總表</h1>
+    <div class="subtitle">全公司的物件（總彙整表），主管、秘書可以看</div>
+
+    <div class="card narrow" id="loginView">
+      <h2>登入</h2>
+      <div class="field">
+        <label class="required" for="loginName">姓名</label>
+        <select id="loginName"><option value="">載入中…</option></select>
+      </div>
+      <div class="field">
+        <label class="required" for="loginCode">通關碼</label>
+        <div class="hint">輸入修改案件用的同一組通關碼（英文和數字，不分大小寫）</div>
+        <input type="password" id="loginCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20">
+      </div>
+      <button type="button" class="btn" id="loginBtn" style="width:100%;">登入</button>
+      <div class="msg" id="loginMsg"></div>
+      <div class="login-note">在共用電腦上看完，請按「登出」。</div>
+    </div>
+
+    <div id="mainView" hidden>
+      <div class="topbar">
+        <span class="who" id="whoName"></span>
+        <span class="status" id="statusText"></span>
+        <span class="actions">
+          <button type="button" class="btn ghost" id="refreshBtn">重新整理</button>
+          <button type="button" class="btn ghost" id="logoutBtn">登出</button>
+        </span>
+      </div>
+      <div class="role-note" id="roleNote"></div>
+
+      <div class="type-tabs" role="tablist" id="typeTabs"></div>
+
+      <div class="card filters" id="filterCard">
+        <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterBody">
+          <span id="filterToggleText">篩選</span><span aria-hidden="true">▾</span>
+        </button>
+        <div class="filter-body" id="filterBody">
+          <div class="filter-grid">
+            <div class="span2">
+              <span class="flabel">案件狀態</span>
+              <div class="chips" id="statusChips" role="group" aria-label="案件狀態"></div>
+            </div>
+            <div>
+              <label for="fAgent">業務</label>
+              <select id="fAgent"><option value="">全部業務</option></select>
+            </div>
+            <div>
+              <label for="fKeyword">關鍵字</label>
+              <input type="search" id="fKeyword" placeholder="案名、地段、契約編號…" autocomplete="off">
+            </div>
+            <div class="filter-foot"><button type="button" class="btn ghost" id="clearBtn">清除篩選</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resultbar"><div class="count" id="countText" aria-live="polite"></div></div>
+      <div id="results"><div class="loading">讀取中…</div></div>
+    </div>
+  </div>
+
+<script>
+var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
+// ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
+// 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
+var SHARED_LOGIN_KEY = 'ruihe_login_v1';
+// 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
+var IDLE_LIMIT_MS = 30 * 60 * 1000;
+var IDLE_KEY = 'ruihe_last_active_v1';
+var idleLastWrite_ = 0;
+function idleTouch_(force) {
+  var now = Date.now();
+  if (!force && now - idleLastWrite_ < 15000) return;
+  idleLastWrite_ = now;
+  try { sessionStorage.setItem(IDLE_KEY, String(now)); } catch (e) {}
+}
+function idleExpired_() {
+  var t = 0;
+  try { t = parseInt(sessionStorage.getItem(IDLE_KEY), 10) || 0; } catch (e) {}
+  return t > 0 && Date.now() - t > IDLE_LIMIT_MS;
+}
+// isLoggedIn()：這一頁現在有沒有登入；onTimeout(訊息)：這一頁的登出
+function idleWatch_(isLoggedIn, onTimeout) {
+  ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
+    window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
+  });
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout('30 分鐘沒有動作，已自動登出，請重新登入。'); }
+  setInterval(check, 30000);
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
+}
+function sharedLoginGet_() {
+  if (idleExpired_()) { sharedLoginClear_(); return null; }
+  try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
+  catch (e) { return null; }
+}
+function sharedLoginSet_(name, code, role) {
+  if (!role) { var prev = null; try { prev = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); } catch (e) {} role = prev && prev.name === name ? prev.role : ''; }
+  try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code, role: role || '業務' })); } catch (e) {}
+  if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
+  try { localStorage.setItem('ruihe_summary_last_name', name); } catch (e) {}
+  idleTouch_(true);
+}
+function sharedRole_() {
+  try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return (o && o.role) || '業務'; } catch (e) { return '業務'; }
+}
+function sharedLoginClear_() {
+  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
+  try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); } catch (e) {}
+  try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
+}
+// 姓名清單：先用上次存在這台裝置的清單（馬上可以選），同時到後端拿最新的換上
+var LOGIN_NAMES_KEY = 'ruihe_login_names_v1';
+function fillLoginNames_(sel, names) {
+  var keep = sel.value, last = '';
+  try { last = localStorage.getItem('ruihe_summary_last_name') || ''; } catch (e) {}
+  sel.innerHTML = '';
+  var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '請選擇'; sel.appendChild(o0);
+  names.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+  var want = keep || last;
+  if (want && names.indexOf(want) !== -1) sel.value = want;
+}
+function loadLoginNames_(sel, fetchNames, onError) {
+  var cached = null;
+  try { cached = JSON.parse(localStorage.getItem(LOGIN_NAMES_KEY) || 'null'); } catch (e) {}
+  var hasCache = Array.isArray(cached) && cached.length > 0;
+  if (hasCache) fillLoginNames_(sel, cached);
+  fetchNames().then(function(names) {
+    try { localStorage.setItem(LOGIN_NAMES_KEY, JSON.stringify(names)); } catch (e) {}
+    fillLoginNames_(sel, names);
+  }).catch(function(err) { if (!hasCache) onError(err); });
+}
+
+var POLL_MS = 5 * 60 * 1000;
+var DESKTOP_QUERY = window.matchMedia('(min-width: 900px)');
+var TYPES = ['廠房', '土地', '房屋'];
+var STATUSES = ['銷售中', '已下架', '已成交'];
+// 手機卡片上直接顯示的欄位（有的才顯示）
+var CARD_LABELS = ['案名', '契約編號', '總價', '單價', '詳細地址', '地段', '主要業務名稱', '次要業務名稱', '合約到期', '案件狀態'];
+
+// 資料只放在這個頁面的記憶體（有委託人資料，不存進瀏覽器）
+var auth = null, data = null, role = '';
+var tab = '廠房', sortState = { col: '', dir: 1 }, openKeys = {};
+var filters = { status: '', agent: '', keyword: '' };
+var pollTimer = null, busy = false, lastCheckFailed = false, checkedAt = 0;
+
+function $(id) { return document.getElementById(id); }
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function runServer(fnName) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fnName, args: args }) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.ok) { var e = new Error(res.message || '系統發生錯誤'); e.fromServer = true; throw e; }
+      return res.result;
+    });
+}
+function isAuthError(err) { return err && err.fromServer && /通關碼|請選擇姓名/.test(err.message); }
+var toastTimer = null;
+function toast(text, isError) {
+  var el = $('toast'); el.textContent = text; el.className = isError ? 'error' : ''; el.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(function() { el.style.display = 'none'; }, 2600);
+}
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function timeText(ms) { var d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+
+function current() { return data ? (data.tabs.filter(function(t) { return t.type === tab; })[0] || { columns: [], rows: [] }) : { columns: [], rows: [] }; }
+function colIdx(t, label) { return t.columns.indexOf(label); }
+function val(t, row, label) { var i = colIdx(t, label); return i === -1 ? '' : (row[i] || ''); }
+function statusOf(t, row) { return String(val(t, row, '案件狀態')).trim() || '銷售中'; }
+function agentsOf(t, row) {
+  return [val(t, row, '主要業務名稱'), val(t, row, '次要業務名稱')].join('、').split(/[、,，\/\s]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+}
+function rowKey(t, row, i) { return tab + ':' + (val(t, row, '契約編號') || '') + ':' + (val(t, row, '案名') || '') + ':' + i; }
+
+function renderTabs() {
+  $('typeTabs').innerHTML = TYPES.map(function(ty) {
+    var t = data ? data.tabs.filter(function(x) { return x.type === ty; })[0] : null;
+    return '<button type="button" role="tab" data-type="' + ty + '" aria-selected="' + (ty === tab) + '">' + ty + (t ? '（' + t.rows.length + '）' : '') + '</button>';
+  }).join('');
+}
+function renderFilters() {
+  var html = [['', '全部']].concat(STATUSES.map(function(s) { return [s, s]; })).map(function(v) {
+    return '<button type="button" data-v="' + v[0] + '" aria-pressed="' + (filters.status === v[0]) + '">' + v[1] + '</button>';
+  }).join('');
+  $('statusChips').innerHTML = html;
+  var t = current(), names = {};
+  t.rows.forEach(function(r) { agentsOf(t, r).forEach(function(n) { names[n] = (names[n] || 0) + 1; }); });
+  var list = Object.keys(names).sort(function(a, b) { return names[b] - names[a] || a.localeCompare(b, 'zh-Hant'); });
+  if (filters.agent && list.indexOf(filters.agent) === -1) filters.agent = '';
+  $('fAgent').innerHTML = '<option value="">全部業務</option>' + list.map(function(n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+  $('fAgent').value = filters.agent;
+}
+function filtered() {
+  var t = current();
+  var words = filters.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return t.rows.map(function(r, i) { return { r: r, i: i }; }).filter(function(x) {
+    if (filters.status && statusOf(t, x.r) !== filters.status) return false;
+    if (filters.agent && agentsOf(t, x.r).indexOf(filters.agent) === -1) return false;
+    if (words.length) {
+      var hay = x.r.join(' ').toLowerCase();
+      for (var k = 0; k < words.length; k++) if (hay.indexOf(words[k]) === -1) return false;
+    }
+    return true;
+  });
+}
+function numOf(v) { var t = String(v || '').replace(/,/g, ''); var m = t.match(/^-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : null; }
+function sorted(list) {
+  if (!sortState.col) return list;
+  var t = current(), i = colIdx(t, sortState.col), dir = sortState.dir;
+  return list.slice().sort(function(a, b) {
+    var va = String(a.r[i] || '').trim(), vb = String(b.r[i] || '').trim();
+    if (!va && !vb) return a.i - b.i;
+    if (!va) return 1;
+    if (!vb) return -1;
+    var na = numOf(va), nb = numOf(vb);
+    var c = (na !== null && nb !== null) ? na - nb : va.localeCompare(vb, 'zh-Hant');
+    return c ? c * dir : a.i - b.i;
+  });
+}
+function detailHtml(t, row) {
+  return '<div class="detail-grid">' + t.columns.map(function(c, i) {
+    var v = String(row[i] || '').trim();
+    return v ? '<div><span>' + esc(c) + '</span><span>' + esc(v) + '</span></div>' : '';
+  }).join('') + '</div>';
+}
+function render() {
+  renderTabs();
+  if (!data) return;
+  var t = current();
+  var list = sorted(filtered());
+  var n = (filters.status ? 1 : 0) + (filters.agent ? 1 : 0) + (filters.keyword.trim() ? 1 : 0);
+  $('filterToggleText').textContent = n ? '篩選（已套用 ' + n + ' 項）' : '篩選';
+  $('countText').innerHTML = '共 ' + list.length + ' 件' + (list.length !== t.rows.length ? '<small>' + tab + '全部 ' + t.rows.length + ' 件</small>' : '');
+  if (!t.rows.length) { $('results').innerHTML = '<div class="empty">沒有' + tab + '的資料。</div>'; return; }
+  if (!list.length) { $('results').innerHTML = '<div class="empty">沒有符合條件的物件。</div>'; return; }
+  if (DESKTOP_QUERY.matches) {
+    var head = t.columns.map(function(c) {
+      var on = sortState.col === c;
+      return '<th aria-sort="' + (on ? (sortState.dir === 1 ? 'ascending' : 'descending') : 'none') + '"><button type="button" data-col="' + esc(c) + '">' + esc(c) +
+        (on ? '<span class="arrow">' + (sortState.dir === 1 ? '▲' : '▼') + '</span>' : '') + '</button></th>';
+    }).join('');
+    var nameI = colIdx(t, '案名');
+    var body = list.map(function(x) {
+      var k = rowKey(t, x.r, x.i), open = !!openKeys[k];
+      return '<tr class="main' + (open ? ' open' : '') + '" data-k="' + esc(k) + '">' + t.columns.map(function(c, i) {
+        return '<td' + (i === nameI ? ' class="name"' : '') + ' title="' + esc(x.r[i]) + '">' + esc(x.r[i]) + '</td>';
+      }).join('') + '</tr>' + (open ? '<tr class="detail"><td colspan="' + t.columns.length + '">' + detailHtml(t, x.r) + '</td></tr>' : '');
+    }).join('');
+    $('results').innerHTML = '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+  } else {
+    $('results').innerHTML = '<div class="cards">' + list.map(function(x) {
+      var k = rowKey(t, x.r, x.i), st = statusOf(t, x.r);
+      var lines = CARD_LABELS.filter(function(l) { return l !== '案名' && l !== '案件狀態' && val(t, x.r, l); }).map(function(l) {
+        return '<div class="item-meta"><span style="color:var(--muted);">' + esc(l) + '：</span>' + esc(val(t, x.r, l)) + '</div>';
+      }).join('');
+      return '<details class="item" data-k="' + esc(k) + '"' + (openKeys[k] ? ' open' : '') + '><summary>' +
+        '<div class="item-top"><span class="item-name">' + esc(val(t, x.r, '案名') || '（沒有案名）') + '</span><span class="tag ' + (st === '銷售中' ? 'rs' : '') + '">' + esc(st) + '</span></div>' +
+        lines + '<div class="item-more-hint"><span class="open-t">看全部欄位</span><span class="close-t">收起</span></div>' +
+        '</summary><div class="item-more" style="display:block;">' + detailHtml(t, x.r) + '</div></details>';
+    }).join('') + '</div>';
+  }
+}
+function updateStatus() {
+  var el = $('statusText');
+  if (busy) { el.textContent = '讀取中…'; el.className = 'status'; return; }
+  if (!data) { el.textContent = ''; return; }
+  el.textContent = lastCheckFailed ? '連不上系統，顯示的是 ' + timeText(checkedAt) + ' 的資料' : '最後檢查 ' + timeText(checkedAt) + '（每 5 分鐘自動檢查）';
+  el.className = lastCheckFailed ? 'status warn' : 'status';
+}
+
+function check(manual, isLogin) {
+  if (!auth || busy) return Promise.resolve();
+  busy = true; $('refreshBtn').disabled = true; updateStatus();
+  return runServer('masterTableGet', auth.name, auth.code, data ? data.version : '')
+    .then(function(res) {
+      lastCheckFailed = false; checkedAt = Date.now();
+      role = res.role || role;
+      $('roleNote').textContent = role === '秘書' ? '秘書：顯示全部欄位（含委託人資料）' : '主管：不顯示委託人資料';
+      if (res.unchanged && data) { if (manual) toast('已經是最新資料'); }
+      else {
+        var had = !!data;
+        data = { version: res.version, tabs: res.tabs || [] };
+        renderFilters(); render();
+        if (had) toast('已更新到最新資料');
+      }
+      return res;
+    })
+    .catch(function(err) {
+      if (isAuthError(err)) { logout(err.message); throw err; }
+      if (isLogin) throw err;
+      lastCheckFailed = true;
+      if (manual) toast('連不上系統，請稍後再試', true);
+    })
+    .then(function(r) { busy = false; $('refreshBtn').disabled = false; updateStatus(); return r; },
+          function(err) { busy = false; $('refreshBtn').disabled = false; updateStatus(); throw err; });
+}
+function startPolling() { stopPolling(); pollTimer = setInterval(function() { if (!document.hidden) check(false).catch(function() {}); }, POLL_MS); }
+function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+function showLoginError(text) { var m = $('loginMsg'); m.textContent = text; m.className = 'msg error'; }
+function login(auto) {
+  var name = auto ? auto.name : $('loginName').value, code = auto ? auto.code : $('loginCode').value.replace(/\s+/g, '');
+  if (!name || !code) { showLoginError('請選擇姓名並輸入通關碼。'); return; }
+  var btn = $('loginBtn');
+  btn.disabled = true; btn.textContent = '讀取中…'; $('loginMsg').className = 'msg';
+  auth = { name: name, code: code };
+  check(false, true).then(function(res) {
+    sharedLoginSet_(name, code, res && res.role);
+    $('loginCode').value = '';
+    $('whoName').textContent = name;
+    $('loginView').hidden = true; $('mainView').hidden = false;
+    render(); updateStatus(); startPolling();
+  }).catch(function(err) {
+    auth = null; data = null;
+    if (auto && isAuthError(err)) sharedLoginClear_();
+    showLoginError(err.message || '連不上系統');
+  }).then(function() { btn.disabled = false; btn.textContent = '登入'; });
+}
+function logout(reason) {
+  sharedLoginClear_();
+  auth = null; data = null; role = ''; openKeys = {};
+  stopPolling();
+  $('mainView').hidden = true; $('loginView').hidden = false;
+  $('results').innerHTML = '<div class="loading">讀取中…</div>';
+  if (reason) showLoginError(reason); else $('loginMsg').className = 'msg';
+}
+
+$('loginBtn').addEventListener('click', function() { login(); });
+$('loginCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
+$('refreshBtn').addEventListener('click', function() { check(true).catch(function() {}); });
+$('logoutBtn').addEventListener('click', function() { logout(); });
+$('typeTabs').addEventListener('click', function(e) {
+  var b = e.target.closest('button[data-type]');
+  if (!b) return;
+  tab = b.getAttribute('data-type'); sortState = { col: '', dir: 1 }; openKeys = {};
+  renderFilters(); render();
+});
+$('statusChips').addEventListener('click', function(e) {
+  var b = e.target.closest('button'); if (!b) return;
+  filters.status = b.getAttribute('data-v'); renderFilters(); render();
+});
+$('fAgent').addEventListener('change', function() { filters.agent = this.value; render(); });
+var kwTimer = null;
+$('fKeyword').addEventListener('input', function() { var v = this.value; clearTimeout(kwTimer); kwTimer = setTimeout(function() { filters.keyword = v; render(); }, 200); });
+$('clearBtn').addEventListener('click', function() { filters = { status: '', agent: '', keyword: '' }; $('fKeyword').value = ''; renderFilters(); render(); });
+$('filterToggle').addEventListener('click', function() {
+  var card = $('filterCard'), open = !card.classList.contains('open');
+  card.classList.toggle('open', open); this.setAttribute('aria-expanded', String(open));
+});
+$('results').addEventListener('click', function(e) {
+  var b = e.target.closest('th button[data-col]');
+  if (b) {
+    var c = b.getAttribute('data-col');
+    if (sortState.col !== c) sortState = { col: c, dir: 1 };
+    else if (sortState.dir === 1) sortState = { col: c, dir: -1 };
+    else sortState = { col: '', dir: 1 };
+    render(); return;
+  }
+  var tr = e.target.closest('tr.main');
+  if (tr) { var k = tr.getAttribute('data-k'); openKeys[k] = !openKeys[k]; render(); }
+});
+$('results').addEventListener('toggle', function(e) {
+  var d = e.target; if (d.classList && d.classList.contains('item')) openKeys[d.getAttribute('data-k')] = d.open;
+}, true);
+var lastDesktop = DESKTOP_QUERY.matches;
+window.addEventListener('resize', function() { if (DESKTOP_QUERY.matches !== lastDesktop) { lastDesktop = DESKTOP_QUERY.matches; if (data) render(); } });
+
+loadLoginNames_($('loginName'), function() {
+  return runServer('getEditLoginOptions').then(function(res) { return res.personList || []; });
+}, function(err) { $('loginName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>'; showLoginError(err.message || '連不上系統'); });
+idleWatch_(function() { return !!auth; }, function(msg) { logout(msg); });
+renderTabs();
+if (sharedLoginGet_()) login(sharedLoginGet_());
+</script>
+</body>
+</html>

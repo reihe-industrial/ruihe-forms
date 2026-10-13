@@ -132,6 +132,8 @@
     .edit-link { color: var(--brand); font-weight: 600; font-size: 13.5px; text-decoration: none; }
     .demand-lines { font-size: 13.5px; }
     .demand-lines div + div { margin-top: 2px; }
+    .tracks .track-row { border-top: 1px dashed var(--line); padding: 8px 0; font-size: 13.5px; }
+    .tracks .hint { margin: 2px 0; }
     tbody tr:hover { background: #fafaf5; }
 
     /* 手機：卡片 */
@@ -183,6 +185,7 @@
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
   </nav>
   <script>
@@ -190,9 +193,20 @@
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'master-table.html' ? 'master'
       : page === 'client-summary.html' ? 'csummary'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
+    // 只有某些身分看得到的連結（data-roles）：依這個分頁登入的身分顯示
+    window.ruiheUpdateNav_ = function() {
+      var role = '';
+      try { var o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); role = (o && o.role) || ''; } catch (e) {}
+      var rl = document.querySelectorAll('#siteNav a[data-roles]');
+      for (var j = 0; j < rl.length; j++) {
+        rl[j].style.display = (rl[j].getAttribute('data-roles').split(',').indexOf(role) !== -1 || rl[j].getAttribute('data-key') === key) ? '' : 'none';
+      }
+    };
+    window.ruiheUpdateNav_();
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
       if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
@@ -279,8 +293,6 @@
         <div class="count" id="countText" aria-live="polite"></div>
         <select class="sort-mobile" id="sortMobile" aria-label="排序">
           <option value="">最新在前</option>
-          <option value="lastTrack|-1">最近追蹤在前</option>
-          <option value="lastTrack|1">最久沒追蹤在前</option>
           <option value="urgency|1">最急的在前</option>
         </select>
       </div>
@@ -296,20 +308,73 @@ var LISTING_API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom
 // ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
+// 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
+var IDLE_LIMIT_MS = 30 * 60 * 1000;
+var IDLE_KEY = 'ruihe_last_active_v1';
+var idleLastWrite_ = 0;
+function idleTouch_(force) {
+  var now = Date.now();
+  if (!force && now - idleLastWrite_ < 15000) return;
+  idleLastWrite_ = now;
+  try { sessionStorage.setItem(IDLE_KEY, String(now)); } catch (e) {}
+}
+function idleExpired_() {
+  var t = 0;
+  try { t = parseInt(sessionStorage.getItem(IDLE_KEY), 10) || 0; } catch (e) {}
+  return t > 0 && Date.now() - t > IDLE_LIMIT_MS;
+}
+// isLoggedIn()：這一頁現在有沒有登入；onTimeout(訊息)：這一頁的登出
+function idleWatch_(isLoggedIn, onTimeout) {
+  ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
+    window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
+  });
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout('30 分鐘沒有動作，已自動登出，請重新登入。'); }
+  setInterval(check, 30000);
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
+}
 function sharedLoginGet_() {
+  if (idleExpired_()) { sharedLoginClear_(); return null; }
   try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
   catch (e) { return null; }
 }
-function sharedLoginSet_(name, code) {
-  try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code })); } catch (e) {}
+function sharedLoginSet_(name, code, role) {
+  if (!role) { var prev = null; try { prev = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); } catch (e) {} role = prev && prev.name === name ? prev.role : ''; }
+  try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code, role: role || '業務' })); } catch (e) {}
+  if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.setItem('ruihe_summary_last_name', name); } catch (e) {}
+  idleTouch_(true);
+}
+function sharedRole_() {
+  try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return (o && o.role) || '業務'; } catch (e) { return '業務'; }
 }
 function sharedLoginClear_() {
-  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); } catch (e) {}
+  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
   try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); } catch (e) {}
+  try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
+}
+// 姓名清單：先用上次存在這台裝置的清單（馬上可以選），同時到後端拿最新的換上
+var LOGIN_NAMES_KEY = 'ruihe_login_names_v1';
+function fillLoginNames_(sel, names) {
+  var keep = sel.value, last = '';
+  try { last = localStorage.getItem('ruihe_summary_last_name') || ''; } catch (e) {}
+  sel.innerHTML = '';
+  var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '請選擇'; sel.appendChild(o0);
+  names.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+  var want = keep || last;
+  if (want && names.indexOf(want) !== -1) sel.value = want;
+}
+function loadLoginNames_(sel, fetchNames, onError) {
+  var cached = null;
+  try { cached = JSON.parse(localStorage.getItem(LOGIN_NAMES_KEY) || 'null'); } catch (e) {}
+  var hasCache = Array.isArray(cached) && cached.length > 0;
+  if (hasCache) fillLoginNames_(sel, cached);
+  fetchNames().then(function(names) {
+    try { localStorage.setItem(LOGIN_NAMES_KEY, JSON.stringify(names)); } catch (e) {}
+    fillLoginNames_(sel, names);
+  }).catch(function(err) { if (!hasCache) onError(err); });
 }
 
-var CACHE_KEY = 'ruihe_client_summary_cache_v1';
+var CACHE_KEY = 'ruihe_client_summary_cache_v1'; // 欄位變了也沒關係：版本號不同就會重新下載
 var LAST_NAME_KEY = 'ruihe_summary_last_name';
 var FILTER_KEY = 'ruihe_client_summary_filters_v1';
 var POLL_MS = 5 * 60 * 1000;
@@ -324,7 +389,7 @@ var NEED_COLS = {
   '房屋': { buyArea: '房屋需求坪數', rentArea: '房屋需求坪數(承租)', price: '房屋總價(萬元)', rent: '房屋租金(元/月)', rentUnit: '元/月' }
 };
 // 表格和卡片上直接顯示的欄位；其他欄位點開看
-var SHOWN = ['負責業務', '填表日期', '物件類型', '需求類型', '目標區域', '產業類別', '進駐時間', '客戶急迫程度', '最後追蹤日', '追蹤次數'];
+var SHOWN = ['負責業務', '填表日期', '物件類型', '需求類型', '目標區域', '產業類別', '進駐時間', '客戶急迫程度'];
 (function() {
   Object.keys(NEED_COLS).forEach(function(t) {
     var c = NEED_COLS[t];
@@ -333,6 +398,7 @@ var SHOWN = ['負責業務', '填表日期', '物件類型', '需求類型', '�
 })();
 
 var auth = null, data = null, items = [], colIndex = {};
+var serverRole_ = ''; // 後端回報的身分（業務／主管／秘書）
 var sortState = { key: '', dir: 1 };
 var filters = emptyFilters();
 var pollTimer = null, busy = false, lastCheckFailed = false;
@@ -470,7 +536,6 @@ function buildItems() {
       demand: String(cell(row, '需求類型')).trim(),
       agents: splitList(cell(row, '負責業務')),
       regions: splitRegions(cell(row, '目標區域')),
-      lastTrackNum: rocNum(cell(row, '最後追蹤日')),
       urgency: URGENCY_ORDER.indexOf(String(cell(row, '客戶急迫程度')).trim()),
       search: data.columns.filter(function(c) { return c !== '_key'; }).map(function(c) { return cell(row, c); }).join(' ').toLowerCase(),
     };
@@ -597,7 +662,6 @@ var SORT_KEYS = {
   industry: function(it) { return cell(it.row, '產業類別') || null; },
   moveIn: function(it) { return cell(it.row, '進駐時間') || null; },
   urgency: function(it) { return it.urgency === -1 ? null : it.urgency; },
-  lastTrack: function(it) { return it.lastTrackNum || null; },
 };
 function sortList(list) {
   if (!sortState.key) return list.slice().sort(function(a, b) { return a.order - b.order; });
@@ -646,26 +710,51 @@ function typeTags(it) {
   }).join(' ');
 }
 function isMine(it) { return auth && it.agents.indexOf(auth.name) !== -1; }
+function myRole() { return serverRole_ || sharedRole_(); }
+function isManager() { return myRole() === '主管' || myRole() === '秘書'; }
+var trackCache_ = {}; // 主管、秘書看過的追蹤紀錄 { key: { loading, error, records } }
+function tracksHtml(it) {
+  if (!isManager()) return '';
+  var t = trackCache_[it.key];
+  var inner;
+  if (!t) inner = '<button type="button" class="btn ghost track-btn" data-key="' + esc(it.key) + '">看追蹤紀錄</button>';
+  else if (t.loading) inner = '<div class="hint">讀取中…</div>';
+  else if (t.error) inner = '<div class="hint">讀取失敗：' + esc(t.error) + '</div><button type="button" class="btn ghost track-btn" data-key="' + esc(it.key) + '">再試一次</button>';
+  else if (!t.records.length) inner = '<div class="hint">還沒有追蹤紀錄。</div>';
+  else inner = t.records.map(function(r) {
+    return '<div class="track-row"><b>' + esc(r.date) + '</b> <span class="tag">' + esc(r.method) + '</span> <span class="hint" style="display:inline;">' + esc(r.author) + '</span>' +
+      (r.listing ? '<div class="hint">帶看：' + esc(r.listing) + '</div>' : '') +
+      '<div style="white-space:pre-wrap;">' + esc(r.content) + '</div>' + (r.next ? '<div class="hint">下次聯絡：' + esc(r.next) + '</div>' : '') + '</div>';
+  }).join('');
+  return '<div class="tracks"><div class="flabel" style="margin-top:12px;">追蹤紀錄</div>' + inner + '</div>';
+}
+function loadTracks(key) {
+  trackCache_[key] = { loading: true };
+  applyAndRender();
+  post(API_URL, 'clientTracksView', [auth.name, auth.code, key])
+    .then(function(res) { trackCache_[key] = { records: res.records || [] }; })
+    .catch(function(err) {
+      if (isAuthError(err)) { logout(err.message); return; }
+      trackCache_[key] = { error: err.message || '連不上系統' };
+    })
+    .then(function() { if (data) applyAndRender(); });
+}
 function agentHtml(it) {
   return esc(cell(it.row, '負責業務')) + (isMine(it) ? '<span class="mine">我的</span>' : '');
 }
 function editLinkHtml(it) {
-  return isMine(it) ? '<a class="edit-link" href="client-needs.html?mode=edit&key=' + encodeURIComponent(it.key) + '">修改／追蹤</a>' : '';
-}
-function trackText(it) {
-  var d = cell(it.row, '最後追蹤日');
-  return d ? d + '（' + (cell(it.row, '追蹤次數') || 0) + ' 筆）' : '還沒有追蹤';
+  return isMine(it) || myRole() === '秘書' ? '<a class="edit-link" href="client-needs.html?mode=edit&key=' + encodeURIComponent(it.key) + '">修改／追蹤</a>' : '';
 }
 function detailHtml(it) {
   var rest = data.columns.filter(function(c) { return c !== '_key' && SHOWN.indexOf(c) === -1 && String(cell(it.row, c)).trim() !== ''; });
-  if (!rest.length) return '<div class="hint">沒有其他資料</div>';
-  return '<div class="detail-grid">' + rest.map(function(c) {
+  var body = !rest.length ? '<div class="hint">沒有其他資料</div>' : '<div class="detail-grid">' + rest.map(function(c) {
     return '<div><span>' + esc(c) + '</span><span>' + esc(cell(it.row, c)) + '</span></div>';
   }).join('') + '</div>';
+  return body + tracksHtml(it);
 }
 var TABLE_COLS = [
   ['agent', '負責業務'], ['fillDate', '填表日期'], ['types', '物件類型'], ['demand', '需求類型'], [null, '坪數／預算'],
-  ['region', '目標區域'], ['industry', '產業類別'], ['moveIn', '進駐時間'], ['urgency', '急迫程度'], ['lastTrack', '最後追蹤'], [null, '']
+  ['region', '目標區域'], ['industry', '產業類別'], ['moveIn', '進駐時間'], ['urgency', '急迫程度'], [null, '']
 ];
 function tableHtml(list) {
   var head = TABLE_COLS.map(function(c) {
@@ -681,7 +770,7 @@ function tableHtml(list) {
       '<td>' + agentHtml(it) + '</td><td>' + esc(cell(r, '填表日期')) + '</td><td>' + typeTags(it) + '</td><td>' + esc(it.demand) + '</td>' +
       '<td class="wrap"><div class="demand-lines">' + demandLines(it).map(function(l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div></td>' +
       '<td class="wrap">' + esc(cell(r, '目標區域')) + '</td><td class="wrap">' + esc(cell(r, '產業類別')) + '</td>' +
-      '<td>' + esc(cell(r, '進駐時間')) + '</td><td>' + esc(cell(r, '客戶急迫程度')) + '</td><td>' + esc(trackText(it)) + '</td>' +
+      '<td>' + esc(cell(r, '進駐時間')) + '</td><td>' + esc(cell(r, '客戶急迫程度')) + '</td>' +
       '<td>' + editLinkHtml(it) + '</td></tr>';
     return main + (open ? '<tr class="detail"><td colspan="' + TABLE_COLS.length + '">' + detailHtml(it) + '</td></tr>' : '');
   }).join('');
@@ -696,11 +785,10 @@ function cardsHtml(list) {
       '<div class="item-meta demand-lines" style="margin-top:6px;">' + demandLines(it).map(function(l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>' +
       (cell(r, '目標區域') ? '<div class="item-meta">區域：' + esc(cell(r, '目標區域')) + '</div>' : '') +
       (cell(r, '產業類別') ? '<div class="item-meta">產業：' + esc(cell(r, '產業類別')) + '</div>' : '') +
-      '<div class="item-meta muted">' + esc([cell(r, '進駐時間'), cell(r, '客戶急迫程度')].filter(Boolean).join('｜') || '') +
-        (cell(r, '進駐時間') || cell(r, '客戶急迫程度') ? '｜' : '') + '追蹤：' + esc(trackText(it)) + '</div>' +
+      ([cell(r, '進駐時間'), cell(r, '客戶急迫程度')].filter(Boolean).length ? '<div class="item-meta muted">' + esc([cell(r, '進駐時間'), cell(r, '客戶急迫程度')].filter(Boolean).join('｜')) + '</div>' : '') +
       '<div class="item-more-hint"><span class="open-t">看其他欄位</span><span class="close-t">收起</span></div>' +
       '</summary><div class="item-more" style="display:block;">' + detailHtml(it) +
-      (isMine(it) ? '<div style="margin-top:10px;">' + editLinkHtml(it) + '</div>' : '') + '</div></details>';
+      (editLinkHtml(it) ? '<div style="margin-top:10px;">' + editLinkHtml(it) + '</div>' : '') + '</div></details>';
   }).join('') + '</div>';
 }
 function updateStatus() {
@@ -725,6 +813,12 @@ function checkForUpdates(manual, isLogin) {
   return post(API_URL, 'clientSummaryGet', [auth.name, auth.code, cached ? cached.version : ''])
     .then(function(res) {
       lastCheckFailed = false;
+      if (res.role) {
+        var changed = serverRole_ && serverRole_ !== res.role;
+        serverRole_ = res.role;
+        if (auth && !isLogin) sharedLoginSet_(auth.name, auth.code, res.role);
+        if (changed && data) applyAndRender();
+      }
       if (res.unchanged && cached) {
         var first = !data;
         data = cached; data.checkedAt = Date.now(); saveCache();
@@ -754,13 +848,9 @@ document.addEventListener('visibilitychange', function() {
 
 // ---------------- 登入／登出 ----------------
 function loadLoginOptions() {
-  post(LISTING_API_URL, 'getEditLoginOptions', []).then(function(res) {
-    var last = '';
-    try { last = localStorage.getItem(LAST_NAME_KEY) || ''; } catch (e) {}
-    var names = res.personList || [];
-    $('loginName').innerHTML = '<option value="">請選擇</option>' + names.map(function(n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
-    if (last && names.indexOf(last) !== -1) $('loginName').value = last;
-  }).catch(function(err) {
+  loadLoginNames_($('loginName'), function() {
+    return post(LISTING_API_URL, 'getEditLoginOptions', []).then(function(res) { return res.personList || []; });
+  }, function(err) {
     $('loginName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>';
     showLoginError(err.message || '連不上系統');
   });
@@ -774,8 +864,19 @@ function login(auto) {
   var slowTimer = setTimeout(function() { if (btn.disabled) btn.textContent = '讀取中，第一次比較久…'; }, 4000);
   auth = { name: name, code: code };
   loadFilters(); syncFilterInputs();
+  // 自動登入（這個分頁已經登入過）而且有上次的資料：先顯示，背景檢查（後端會再驗證）
+  var cachedNow = auto ? loadCache() : null;
+  if (cachedNow) {
+    data = cachedNow; buildItems();
+    $('whoName').textContent = name;
+    $('loginView').hidden = true; $('mainView').hidden = false;
+    applyAndRender(); updateStatus(); startPolling();
+    clearTimeout(slowTimer); btn.disabled = false; btn.textContent = '登入';
+    checkForUpdates(false).catch(function() {});
+    return;
+  }
   checkForUpdates(false, true).then(function() {
-    sharedLoginSet_(name, code);
+    sharedLoginSet_(name, code, serverRole_);
     $('loginCode').value = '';
     $('whoName').textContent = name;
     $('loginView').hidden = true; $('mainView').hidden = false;
@@ -788,6 +889,7 @@ function login(auto) {
 }
 function logout(reason) {
   sharedLoginClear_();
+  serverRole_ = ''; trackCache_ = {};
   auth = null; data = null; items = []; openKeys = {};
   stopPolling(); clearCache();
   $('mainView').hidden = true; $('loginView').hidden = false;
@@ -818,6 +920,8 @@ $('sortMobile').addEventListener('change', function() {
   applyAndRender();
 });
 $('results').addEventListener('click', function(e) {
+  var tb = e.target.closest('.track-btn');
+  if (tb) { loadTracks(tb.getAttribute('data-key')); return; }
   var b = e.target.closest('th button[data-sort]');
   if (b) {
     var k = b.getAttribute('data-sort');
@@ -839,6 +943,7 @@ var lastDesktop = DESKTOP_QUERY.matches;
 window.addEventListener('resize', function() { if (DESKTOP_QUERY.matches !== lastDesktop) { lastDesktop = DESKTOP_QUERY.matches; if (data) applyAndRender(); } });
 
 loadLoginOptions();
+idleWatch_(function() { return !!auth; }, function(msg) { logout(msg); });
 if (sharedLoginGet_()) login(sharedLoginGet_());
 </script>
 </body>
