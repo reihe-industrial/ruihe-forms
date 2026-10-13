@@ -30,6 +30,7 @@
   body { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     background: var(--paper); margin: 0; padding: 20px 16px 60px; color: var(--ink); line-height: 1.5; }
   .container { max-width: 640px; margin: 0 auto; }
+  @media (min-width: 1000px) { .container { max-width: 900px; } }
   h1 { font-family: "Noto Serif TC", "Noto Sans TC", serif; font-size: 23px; font-weight: 700;
     letter-spacing: 0.02em; margin: 4px 0 6px; color: var(--brand-dark); }
   .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
@@ -96,18 +97,20 @@
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="listing.html" data-key="listing">新增物件</a>
     <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <span aria-hidden="true" style="flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
     <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <a href="secretary.html" data-key="secretary" data-roles="秘書" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
-      : page === 'master-table.html' ? 'master'
+      : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');

@@ -38,6 +38,12 @@
       line-height: 1.5;
     }
     .container { max-width: 640px; margin: 0 auto; }
+    /* 螢幕寬的時候放寬版面：欄位排成三欄，兩邊不要留一大片空白 */
+    @media (min-width: 900px) { .container { max-width: 860px; } }
+    @media (min-width: 1200px) {
+      .container { max-width: 1180px; }
+      #typeFields, .card.two-col { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    }
 
     h1 {
       font-family: "Noto Serif TC", "Noto Sans TC", serif;
@@ -302,18 +308,20 @@
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="listing.html" data-key="listing">新增物件</a>
     <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <span aria-hidden="true" style="flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
     <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <a href="secretary.html" data-key="secretary" data-roles="秘書" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
-      : page === 'master-table.html' ? 'master'
+      : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
@@ -4611,13 +4619,18 @@ function parseDeedPages_(rawPages, districtData) {
     if (m) { countyHint = m[1]; return true; }
     return false;
   });
-  // 地政電子謄本的標題：「鹿港鎮上林段 0375-0000地號」；沒有縣市，縣市從管轄機關來
-  var titleLoc = null;
-  lines.slice(0, 8).some(function(l) {
+  // 地政電子謄本的標題：「鹿港鎮上林段 0375-0000地號」；沒有縣市，縣市從管轄機關來。
+  // 一個 PDF 裡可能有好幾筆（每筆一頁，各有自己的標題），每筆用「它前面最近的那個標題」。
+  var titles = [];
+  lines.forEach(function(l, i) {
     var m = l.trim().match(/^(.+?)\s*(\d{3,5})-(\d{3,4})\s*(地號|建號)$/);
-    if (m) { titleLoc = { text: m[1], main: m[2], sub: m[3] }; return true; }
-    return false;
+    if (m) titles.push({ i: i, text: m[1], main: m[2], sub: m[3] });
   });
+  function titleBefore_(lineIdx) {
+    var t = null;
+    titles.forEach(function(x) { if (x.i < lineIdx) t = x; });
+    return t || titles[0] || null;
+  }
 
   var headerIdx = [];
   lines.forEach(function(l, i) {
@@ -4644,7 +4657,8 @@ function parseDeedPages_(rawPages, districtData) {
       var r1 = deedResolveLocation_('', loc.countyTown, districtData, loc.seg);
       Object.assign(rec, { county: r1.county, town: r1.town, district: r1.district, locationOk: r1.resolved });
       rec.number = deedNumberText_(loc.main, loc.sub);
-    } else if (titleLoc) {
+    } else if (titleBefore_(h.i)) {
+      var titleLoc = titleBefore_(h.i);
       rec.source = '電子謄本';
       var r2 = deedResolveLocation_(countyHint, titleLoc.text, districtData, '');
       Object.assign(rec, { county: r2.county, town: r2.town, district: r2.district, locationOk: r2.resolved });

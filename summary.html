@@ -170,18 +170,20 @@
     <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="listing.html" data-key="listing">新增物件</a>
     <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <span aria-hidden="true" style="flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
     <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <a href="secretary.html" data-key="secretary" data-roles="秘書" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
-      : page === 'master-table.html' ? 'master'
+      : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
@@ -249,7 +251,7 @@
             </div>
             <div>
               <label for="fKeyword">關鍵字</label>
-              <input type="search" id="fKeyword" placeholder="案名、地段、業務" autocomplete="off">
+              <input type="search" id="fKeyword" placeholder="案名、地段" autocomplete="off">
             </div>
             <div class="span2">
               <span class="flabel">區域</span>
@@ -281,6 +283,10 @@
                 <span>～</span>
                 <input type="number" inputmode="decimal" step="any" min="0" id="fTotalMax" placeholder="最高" aria-label="總價最高（萬）">
               </div>
+            </div>
+            <div>
+              <label for="fAgent">業務</label>
+              <select id="fAgent"><option value="">全部業務</option></select>
             </div>
             <div class="filter-foot"><button type="button" class="btn ghost" id="clearBtn">清除篩選</button></div>
           </div>
@@ -474,6 +480,7 @@ function buildItems() {
       row: row, order: i,
       type: normType(cell(row, C.type)),
       types: splitTypes(cell(row, C.type)),
+      agents: String(cell(row, C.agent)).split(/[、,，\/\s]+/).map(function(x) { return x.trim(); }).filter(Boolean),
       rs: String(cell(row, C.rs)).trim(),
       county: place.county, town: place.town,
       land: firstNumber(cell(row, C.land)),
@@ -493,7 +500,7 @@ function buildItems() {
 
 // ---------------- 篩選 ----------------
 function emptyFilters() {
-  return { type: '', rs: '', county: '', town: '', keyword: '',
+  return { type: '', rs: '', county: '', town: '', keyword: '', agent: '',
     totalMin: '', totalMax: '', landMin: '', landMax: '', bldMin: '', bldMax: '' };
 }
 function countBy(list, key) {
@@ -541,6 +548,14 @@ function buildFilterOptions() {
   }).join('');
   sel.value = filters.county;
   buildTownOptions();
+  var agentCounts = {};
+  items.forEach(function(it) { it.agents.forEach(function(a) { agentCounts[a] = (agentCounts[a] || 0) + 1; }); });
+  var agents = sortedKeys(agentCounts);
+  if (filters.agent && agents.indexOf(filters.agent) === -1) filters.agent = '';
+  $('fAgent').innerHTML = '<option value="">全部業務</option>' + agents.map(function(a) {
+    return '<option value="' + esc(a) + '">' + esc(a) + '（' + agentCounts[a] + '）</option>';
+  }).join('');
+  $('fAgent').value = filters.agent;
 }
 function buildTownOptions() {
   var list = filters.county ? items.filter(function(it) { return it.county === filters.county; }) : [];
@@ -567,6 +582,7 @@ function activeFilterCount() {
   if (filters.rs) n++;
   if (filters.county) n++;
   if (filters.keyword.trim()) n++;
+  if (filters.agent) n++;
   if (filters.totalMin !== '' || filters.totalMax !== '') n++;
   if (filters.landMin !== '' || filters.landMax !== '') n++;
   if (filters.bldMin !== '' || filters.bldMax !== '') n++;
@@ -576,6 +592,7 @@ function filtered() {
   var words = filters.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return items.filter(function(it) {
     if (filters.type && it.types.indexOf(filters.type) === -1) return false;
+    if (filters.agent && it.agents.indexOf(filters.agent) === -1) return false;
     if (filters.rs && it.rs !== filters.rs) return false;
     if (filters.county && it.county !== filters.county) return false;
     if (filters.town && it.town !== filters.town) return false;
@@ -853,6 +870,7 @@ $('fCounty').addEventListener('change', function() {
 });
 $('fTown').addEventListener('change', function() { filters.town = this.value; applyAndRender(); });
 var keywordTimer = null;
+$('fAgent').addEventListener('change', function() { filters.agent = this.value; applyAndRender(); });
 $('fKeyword').addEventListener('input', function() {
   var v = this.value;
   clearTimeout(keywordTimer);
