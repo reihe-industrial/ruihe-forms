@@ -458,11 +458,11 @@ function render() {
         (on ? '<span class="arrow">' + (sortState.dir === 1 ? '▲' : '▼') + '</span>' : '') + '</button></th>';
     }).join('');
     var nameI = colIdx(t, '案名');
+    // 電腦版：表格已經有全部欄位，不做點開；太長的格子滑鼠移上去看全文
     var body = list.map(function(x) {
-      var k = rowKey(t, x.r, x.i), open = !!openKeys[k];
-      return '<tr class="main' + (open ? ' open' : '') + '" data-k="' + esc(k) + '">' + t.columns.map(function(c, i) {
+      return '<tr>' + t.columns.map(function(c, i) {
         return '<td' + (i === nameI ? ' class="name"' : '') + ' title="' + esc(x.r[i]) + '">' + esc(x.r[i]) + '</td>';
-      }).join('') + '</tr>' + (open ? '<tr class="detail"><td colspan="' + t.columns.length + '">' + detailHtml(t, x.r) + '</td></tr>' : '');
+      }).join('') + '</tr>';
     }).join('');
     $('results').innerHTML = '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
   } else {
@@ -493,7 +493,7 @@ function check(manual, isLogin) {
     .then(function(res) {
       lastCheckFailed = false; checkedAt = Date.now();
       role = res.role || role;
-      $('roleNote').textContent = role === '秘書' ? '秘書：顯示全部欄位（含委託人資料）' : '主管：不顯示委託人資料';
+      $('roleNote').textContent = role === '秘書' ? '秘書：顯示全部欄位（含委託人資料）' : '主管：不顯示委託人資料、取得原因、他項權利、上傳照片';
       if (res.unchanged && data) { if (manual) toast('已經是最新資料'); }
       else {
         var had = !!data;
@@ -574,8 +574,6 @@ $('results').addEventListener('click', function(e) {
     else sortState = { col: '', dir: 1 };
     render(); return;
   }
-  var tr = e.target.closest('tr.main');
-  if (tr) { var k = tr.getAttribute('data-k'); openKeys[k] = !openKeys[k]; render(); }
 });
 $('results').addEventListener('toggle', function(e) {
   var d = e.target; if (d.classList && d.classList.contains('item')) openKeys[d.getAttribute('data-k')] = d.open;

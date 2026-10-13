@@ -1276,7 +1276,21 @@ var currentType = '廠房';
 // 初始化：向後端要業務清單、地段資料。加上失敗處理，避免後端版本沒更新
 // 或呼叫出錯時，整頁安靜地空白、看不出原因。
 // ------------------------------------------------------------
-var initReady_ = runServer('getListingFormOptions')
+// 表單選項（業務名單、地段資料，約 300KB）：存在這台裝置上，下次打開直接用、不用等；
+// 同時在背景拿最新的存起來，下次打開就是新的（地段資料很少變，新同事最慢下次打開會出現）
+var OPTIONS_CACHE_KEY = 'ruihe_listing_options_v1';
+function fetchFreshOptions_() {
+  return runServer('getListingFormOptions').then(function(options) {
+    try { localStorage.setItem(OPTIONS_CACHE_KEY, JSON.stringify(options)); } catch (e) {}
+    return options;
+  });
+}
+var cachedOptions_ = null;
+try { cachedOptions_ = JSON.parse(localStorage.getItem(OPTIONS_CACHE_KEY) || 'null'); } catch (e) {}
+if (cachedOptions_ && !(cachedOptions_.districtData && Object.keys(cachedOptions_.districtData).length)) cachedOptions_ = null;
+var optionsSource_ = cachedOptions_ ? Promise.resolve(cachedOptions_) : fetchFreshOptions_();
+if (cachedOptions_) fetchFreshOptions_().catch(function() {});
+var initReady_ = optionsSource_
   .then(function(options) {
     personList = options.personList || [];
     districtData = options.districtData || {};
