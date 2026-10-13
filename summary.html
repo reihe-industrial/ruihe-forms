@@ -390,6 +390,8 @@ var C = { type: '類型', name: '案件名稱', rs: '租/售', unit: '單價', t
 var CARD_LABELS = [C.type, C.name, C.rs, C.unit, C.total, C.place, C.land, C.bld, C.agent];
 var NUMERIC_LABELS = [C.unit, C.total, C.land, C.bld, '面臨路寬'];
 var TYPE_ORDER = ['廠房', '土地', '房屋'];
+// 房屋的「類型」顯示建物類別（後端從總彙整表帶過來），這些都用房屋的顏色
+var HOUSE_KINDS = ['無電梯公寓', '華廈(10樓含以下)', '大樓(11樓以上)', '透天', '別墅', '一般套房', '商務套房', '學生套房', '樓中樓', '農舍'];
 
 var auth = null;      // { name, code }：只放在記憶體，重新整理要重登
 var data = null;      // { version, columns, rows, checkedAt }
@@ -457,7 +459,9 @@ function splitPlace(text) {
   var m2 = t.match(/^(.{2}[縣市])/);
   return { county: m2 ? m2[1] : '', town: '' };
 }
-function typeClass(t) { return t === '廠房' ? 't-factory' : t === '土地' ? 't-land' : t === '房屋' ? 't-house' : ''; }
+function typeClass(t) { return t === '廠房' ? 't-factory' : t === '土地' ? 't-land' : (t === '房屋' || HOUSE_KINDS.indexOf(t) !== -1 || /^其他/.test(t)) ? 't-house' : ''; }
+// 類型可能有好幾個（房屋的建物類別可以複選，例如「透天、別墅」）
+function splitTypes(v) { return String(v || '').split(/[、,，]/).map(function(x) { return normType(x); }).filter(Boolean); }
 
 function cell(row, label) { var i = colIndex[label]; return i === undefined ? '' : (row[i] || ''); }
 
@@ -469,6 +473,7 @@ function buildItems() {
     var it = {
       row: row, order: i,
       type: normType(cell(row, C.type)),
+      types: splitTypes(cell(row, C.type)),
       rs: String(cell(row, C.rs)).trim(),
       county: place.county, town: place.town,
       land: firstNumber(cell(row, C.land)),
@@ -519,7 +524,9 @@ function renderChips(boxId, values, current, key) {
   };
 }
 function buildFilterOptions() {
-  var types = sortedKeys(countBy(items, 'type'), TYPE_ORDER);
+  var typeCounts = {};
+  items.forEach(function(it) { it.types.forEach(function(t) { typeCounts[t] = (typeCounts[t] || 0) + 1; }); });
+  var types = sortedKeys(typeCounts, TYPE_ORDER.concat(HOUSE_KINDS));
   if (filters.type && types.indexOf(filters.type) === -1) filters.type = '';
   renderChips('typeChips', types, filters.type, 'type');
   var rs = sortedKeys(countBy(items, 'rs'), ['售', '租']);
@@ -568,7 +575,7 @@ function activeFilterCount() {
 function filtered() {
   var words = filters.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return items.filter(function(it) {
-    if (filters.type && it.type !== filters.type) return false;
+    if (filters.type && it.types.indexOf(filters.type) === -1) return false;
     if (filters.rs && it.rs !== filters.rs) return false;
     if (filters.county && it.county !== filters.county) return false;
     if (filters.town && it.town !== filters.town) return false;
@@ -630,8 +637,9 @@ function applyAndRender() {
   box.innerHTML = DESKTOP_QUERY.matches ? tableHtml(list) : cardsHtml(list);
 }
 function typeTagHtml(row) {
-  var t = normType(cell(row, C.type));
-  return t ? '<span class="tag ' + typeClass(t) + '">' + esc(t) + '</span>' : '';
+  return splitTypes(cell(row, C.type)).map(function(t) {
+    return '<span class="tag ' + typeClass(t) + '">' + esc(t) + '</span>';
+  }).join(' ');
 }
 function tableHtml(list) {
   var cols = data.columns;
