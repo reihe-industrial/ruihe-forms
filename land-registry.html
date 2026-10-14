@@ -95,16 +95,17 @@
 <div id="toastNotice"></div>
 <div class="container">
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="index.html" data-key="home" data-home="1">登入</a>
     <a href="listing.html" data-key="listing">新增物件</a>
     <a href="client-needs.html" data-key="needs">新增客需</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
-    <span aria-hidden="true" style="flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
-    <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
-    <a href="summary.html" data-key="summary">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary">客需簡表</a>
-    <a href="map.html" data-key="map">物件地圖</a>
-    <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="secretary.html" data-key="secretary" data-roles="秘書" style="display:none;">秘書專區</a>
+    <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
+    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
@@ -115,14 +116,19 @@
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
-    // 只有某些身分看得到的連結（data-roles）：依這個分頁登入的身分顯示
+    // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
     window.ruiheUpdateNav_ = function() {
-      var role = '';
-      try { var o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); role = (o && o.role) || ''; } catch (e) {}
-      var rl = document.querySelectorAll('#siteNav a[data-roles]');
-      for (var j = 0; j < rl.length; j++) {
-        rl[j].style.display = (rl[j].getAttribute('data-roles').split(',').indexOf(role) !== -1 || rl[j].getAttribute('data-key') === key) ? '' : 'none';
+      var o = null;
+      try { o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
+      var els = document.querySelectorAll('#siteNav [data-auth]');
+      for (var j = 0; j < els.length; j++) {
+        var roles = els[j].getAttribute('data-roles');
+        var okRole = !roles || roles.split(',').indexOf(role) !== -1;
+        els[j].style.display = (loggedIn && okRole) ? '' : 'none';
       }
+      var home = document.querySelector('#siteNav [data-home]');
+      if (home) home.textContent = loggedIn ? '首頁' : '登入';
     };
     // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
     if (page !== 'listing.html') {
