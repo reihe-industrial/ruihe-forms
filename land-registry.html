@@ -102,6 +102,7 @@
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="map.html" data-key="map">物件地圖</a>
     <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-roles="秘書" style="display:none;">秘書專區</a>
   </nav>
@@ -111,7 +112,7 @@
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
-      : page === 'client-summary.html' ? 'csummary'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
     // 只有某些身分看得到的連結（data-roles）：依這個分頁登入的身分顯示
@@ -123,6 +124,18 @@
         rl[j].style.display = (rl[j].getAttribute('data-roles').split(',').indexOf(role) !== -1 || rl[j].getAttribute('data-key') === key) ? '' : 'none';
       }
     };
+    // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
+    if (page !== 'listing.html') {
+      setTimeout(function() {
+        try {
+          if (localStorage.getItem('ruihe_listing_options_v1')) return;
+          fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'getListingFormOptions', args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(res) { if (res && res.ok && res.result && res.result.districtData && Object.keys(res.result.districtData).length) localStorage.setItem('ruihe_listing_options_v1', JSON.stringify(res.result)); })
+            .catch(function() {});
+        } catch (e) {}
+      }, 2500);
+    }
     window.ruiheUpdateNav_();
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
@@ -381,7 +394,30 @@ function createDistrictEntry() {
 document.getElementById('addEntryBtn').addEventListener('click', createDistrictEntry);
 
 // 頁面載入時，抓業務名單跟縣市地段資料
-runServer('getLandRegistryFormOptions').then(function(options) {
+var REGISTRY_OPTIONS_KEY = 'ruihe_registry_options_v1';
+function fetchRegistryOptions_() {
+  return runServer('getLandRegistryFormOptions').then(function(o) {
+    if (o && o.personList && o.districtData && Object.keys(o.districtData).length) { try { localStorage.setItem(REGISTRY_OPTIONS_KEY, JSON.stringify(o)); } catch (e) {} }
+    return o;
+  });
+}
+var cachedRegistryOptions_ = null;
+try { cachedRegistryOptions_ = JSON.parse(localStorage.getItem(REGISTRY_OPTIONS_KEY) || 'null'); } catch (e) {}
+if (cachedRegistryOptions_ && !(cachedRegistryOptions_.districtData && Object.keys(cachedRegistryOptions_.districtData).length)) cachedRegistryOptions_ = null;
+if (cachedRegistryOptions_) {
+  // 背景拿最新的；業務名單有變而且還沒選人，就靜靜地換成最新的
+  fetchRegistryOptions_().then(function(fresh) {
+    if (!fresh || !fresh.personList) return;
+    if (JSON.stringify(fresh.personList) === JSON.stringify(PERSON_LIST)) return;
+    var sel = document.getElementById('businessNameSelect');
+    if (!sel || sel.value) return;
+    PERSON_LIST = fresh.personList;
+    while (sel.options.length > 1) sel.remove(1);
+    PERSON_LIST.forEach(function(name) { var o = document.createElement('option'); o.value = name; o.textContent = name; sel.appendChild(o); });
+    var oo = document.createElement('option'); oo.value = '其他'; oo.textContent = '其他'; sel.appendChild(oo);
+  }).catch(function() {});
+}
+(cachedRegistryOptions_ ? Promise.resolve(cachedRegistryOptions_) : fetchRegistryOptions_()).then(function(options) {
   PERSON_LIST = options.personList || [];
   DISTRICT_DATA = options.districtData || {};
   TRANSCRIPT_TYPES = options.transcriptTypes || [];

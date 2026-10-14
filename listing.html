@@ -339,6 +339,7 @@
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="map.html" data-key="map">物件地圖</a>
     <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-roles="秘書" style="display:none;">秘書專區</a>
   </nav>
@@ -348,7 +349,7 @@
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
-      : page === 'client-summary.html' ? 'csummary'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
     // 只有某些身分看得到的連結（data-roles）：依這個分頁登入的身分顯示
@@ -360,6 +361,18 @@
         rl[j].style.display = (rl[j].getAttribute('data-roles').split(',').indexOf(role) !== -1 || rl[j].getAttribute('data-key') === key) ? '' : 'none';
       }
     };
+    // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
+    if (page !== 'listing.html') {
+      setTimeout(function() {
+        try {
+          if (localStorage.getItem('ruihe_listing_options_v1')) return;
+          fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'getListingFormOptions', args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(res) { if (res && res.ok && res.result && res.result.districtData && Object.keys(res.result.districtData).length) localStorage.setItem('ruihe_listing_options_v1', JSON.stringify(res.result)); })
+            .catch(function() {});
+        } catch (e) {}
+      }, 2500);
+    }
     window.ruiheUpdateNav_();
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
@@ -1309,6 +1322,146 @@ var districtData = {};
 var currentType = '廠房';
 
 // ------------------------------------------------------------
+// 送出編號：同一次填寫送出好幾次（網路慢、手機把連線暫停）用同一個編號，伺服器不會重複新增
+// ------------------------------------------------------------
+var currentSubmitId_ = null;
+var LAST_SUBMIT_KEY = 'ruihe_last_submit_v1';
+function makeSubmitId_() {
+  var id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID().replace(/-/g, '') : (Math.random().toString(36).slice(2) + Date.now().toString(36) + Math.random().toString(36).slice(2));
+  return id.length >= 8 ? id : id + 'abcdefgh';
+}
+// 重新整理頁面之後：如果上一次送出還沒看到結果，問一下伺服器，不要讓業務以為沒成功又重送
+function checkLastSubmit_() {
+  if (EDIT_MODE || currentSubmitId_) return; // 這一頁正在送出的不用查（自己會等結果）
+  var p = null;
+  try { p = JSON.parse(localStorage.getItem(LAST_SUBMIT_KEY) || 'null'); } catch (e) {}
+  if (!p || !p.id || p.id === currentSubmitId_) return;
+  if (Date.now() - p.t > 15 * 60 * 1000) { try { localStorage.removeItem(LAST_SUBMIT_KEY); } catch (e) {} return; }
+  var tries = 0;
+  (function check() {
+    runServer('submissionStatus', p.id).then(function(st) {
+      var box = document.getElementById('msgBox');
+      if (st && st.state === 'done') {
+        try { localStorage.removeItem(LAST_SUBMIT_KEY); } catch (e) {}
+        clearDraft_();
+        box.className = 'msg success';
+        box.textContent = '上一筆「' + (p.name || '') + '」已經送出成功，不用再送一次。';
+        box.style.display = 'block';
+        showToast('上一筆「' + (p.name || '') + '」已經送出成功', 'success');
+      } else if (st && st.state === 'running' && tries++ < 45) {
+        box.className = 'msg success';
+        box.textContent = '上一筆「' + (p.name || '') + '」還在處理中，請稍候，不要重複送出…';
+        box.style.display = 'block';
+        setTimeout(check, 4000);
+      } else {
+        try { localStorage.removeItem(LAST_SUBMIT_KEY); } catch (e) {}
+      }
+    }).catch(function() {});
+  })();
+}
+setTimeout(checkLastSubmit_, 800);
+
+// 送出新增物件（含逾時處理、防重複）：獨立成一個函式，方便測試
+function sendListingSubmission_(fieldValues, submitBtn, msgBox) {
+  // 送出流程：每次填寫用同一個「送出編號」。伺服器處理比較久、或手機把連線暫停時，網頁不會說送出失敗，
+  // 而是每幾秒用編號問伺服器處理完了沒，處理完自動顯示結果；伺服器看到同一個編號也不會重複新增。
+  if (!currentSubmitId_) currentSubmitId_ = makeSubmitId_();
+  var submitId = currentSubmitId_;
+  var finished = false, pollTimer = null, slowTimer = null, unknownCount = 0, requestFailedAt = 0;
+  var startedAt = Date.now();
+  try { localStorage.setItem(LAST_SUBMIT_KEY, JSON.stringify({ id: submitId, name: fieldValues['案名'] || '', t: startedAt })); } catch (e) {}
+
+  function stopTimers_() { clearTimeout(slowTimer); clearInterval(pollTimer); pollTimer = null; }
+  function onSuccess_(result) {
+    finished = true; stopTimers_();
+    currentSubmitId_ = null;
+    try { localStorage.removeItem(LAST_SUBMIT_KEY); } catch (e) {}
+    submitBtn.disabled = false;
+    submitBtn.textContent = '送出';
+    msgBox.className = 'msg success';
+    msgBox.textContent = result.message || '送出成功！';
+    msgBox.style.display = 'block';
+    showToast(result.message || '送出成功！', 'success');
+    document.getElementById('listingForm').reset();
+    brokerParse_();
+    onContractTypeChange_();
+    updateClientRequiredMarks_();
+    refreshRocPreviews_();
+    renderTypeFields(currentType);
+    rebuildDistrictEntries();
+    updateRatioRows();
+    resetUploads_();
+    clearDraft_();
+    window.scrollTo(0, 0);
+  }
+  function onFail_(message) {
+    finished = true; stopTimers_();
+    try { localStorage.removeItem(LAST_SUBMIT_KEY); } catch (e) {}
+    submitBtn.disabled = false;
+    submitBtn.textContent = '送出';
+    msgBox.className = 'msg error';
+    msgBox.textContent = message;
+    msgBox.style.display = 'block';
+    showToast(message, 'error');
+    window.scrollTo(0, 0);
+  }
+  function giveUp_() {
+    stopTimers_();
+    submitBtn.disabled = false;
+    submitBtn.textContent = '送出';
+    msgBox.className = 'msg error';
+    msgBox.textContent = '沒有收到這筆資料的處理結果。請先檢查網路，再按一次「送出」；如果伺服器其實已經收過這一筆，不會重複新增。';
+    msgBox.style.display = 'block';
+    showToast('沒有收到處理結果，請檢查網路後再按一次送出', 'error');
+    window.scrollTo(0, 0);
+  }
+  function handleResult_(result) {
+    if (finished) return;
+    if (result && result.success) { onSuccess_(result); return; }
+    if (result && result.pending) { startSlowMode_(); return; }
+    onFail_((result && result.message) || '送出失敗，請重試。');
+  }
+  function pollStatus_() {
+    if (finished) return;
+    if (Date.now() - startedAt > 8 * 60 * 1000) { giveUp_(); return; }
+    runServer('submissionStatus', submitId).then(function(st) {
+      if (finished || !st) return;
+      if (st.state === 'done' && st.result) { handleResult_(st.result); return; }
+      if (st.state === 'running') { unknownCount = 0; return; }
+      unknownCount++;
+      // 伺服器完全沒有這個編號的紀錄（沒收到、或已經過很久）：連續幾次都沒有才放棄
+      if (unknownCount >= 6 && Date.now() - startedAt > 60000) giveUp_();
+    }).catch(function() {});
+  }
+  function startSlowMode_() {
+    if (pollTimer || finished) return;
+    submitBtn.textContent = '處理中，請稍候…';
+    msgBox.className = 'msg success';
+    msgBox.textContent = '還在處理中（資料或照片比較多時，有時要 1～2 分鐘）。請不要關閉頁面或重複送出，處理完會自動顯示結果。';
+    msgBox.style.display = 'block';
+    pollTimer = setInterval(pollStatus_, 4000);
+  }
+  slowTimer = setTimeout(startSlowMode_, 30000);
+  // 手機切到背景再回來：馬上問一次，不用等下一輪
+  document.addEventListener('visibilitychange', function onVis_() {
+    if (finished) { document.removeEventListener('visibilitychange', onVis_); return; }
+    if (!document.hidden && pollTimer) pollStatus_();
+  });
+
+  // 第 4 個參數：表單完整狀態，之後「修改案件」頁用它原樣還原；第 5 個：送出編號
+  runServer('submitListingForm', currentType, fieldValues, [], collectDraft_(), submitId)
+    .then(handleResult_)
+    .catch(function() {
+      if (finished) return;
+      // 連線中斷或回應沒回來：不確定有沒有送出，改用編號問伺服器
+      requestFailedAt = Date.now();
+      startSlowMode_();
+      pollStatus_();
+    });
+}
+
+
+// ------------------------------------------------------------
 // 初始化：向後端要業務清單、地段資料。加上失敗處理，避免後端版本沒更新
 // 或呼叫出錯時，整頁安靜地空白、看不出原因。
 // ------------------------------------------------------------
@@ -1325,12 +1478,27 @@ var cachedOptions_ = null;
 try { cachedOptions_ = JSON.parse(localStorage.getItem(OPTIONS_CACHE_KEY) || 'null'); } catch (e) {}
 if (cachedOptions_ && !(cachedOptions_.districtData && Object.keys(cachedOptions_.districtData).length)) cachedOptions_ = null;
 var optionsSource_ = cachedOptions_ ? Promise.resolve(cachedOptions_) : fetchFreshOptions_();
-if (cachedOptions_) fetchFreshOptions_().catch(function() {});
+var personsRendered_ = false;
+// 沒有暫存（這台裝置第一次打開）：業務姓名先用很小的「只要名單」那一支先畫出來，地段資料晚一點才到也沒關係
+if (!cachedOptions_) {
+  runServer('getListingFormPersons').then(function(res) {
+    if (personsRendered_ || !res || !res.personList) return;
+    personList = res.personList; renderPersonCheckboxes(); personsRendered_ = true;
+  }).catch(function() {});
+}
+// 有暫存：先用暫存的畫面，背景拿到最新的之後，業務名單有變、而且還沒勾任何人，就靜靜地換成最新的
+if (cachedOptions_) {
+  fetchFreshOptions_().then(function(fresh) {
+    if (!fresh || !fresh.personList || EDIT_MODE) return;
+    if (JSON.stringify(fresh.personList) === JSON.stringify(personList)) return;
+    if (document.querySelector('.businessPersonCheckbox:checked')) return;
+    personList = fresh.personList; renderPersonCheckboxes();
+  }).catch(function() {});
+}
 var initReady_ = optionsSource_
   .then(function(options) {
-    personList = options.personList || [];
     districtData = options.districtData || {};
-    renderPersonCheckboxes();
+    if (!personsRendered_) { personList = options.personList || []; renderPersonCheckboxes(); personsRendered_ = true; }
     renderTypeFields(currentType);
     rebuildDistrictEntries();
     setupClientAddressSelectors();
@@ -1637,13 +1805,24 @@ function loadLeaflet_() {
     var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'lib/leaflet.css'; document.head.appendChild(css);
     var sc = document.createElement('script'); sc.src = 'lib/leaflet.js';
     sc.onload = function() {
-      if (window.L) { L.Icon.Default.imagePath = 'lib/images/'; resolve(); }
+      if (window.L) { resolve(); }
       else { leafletReady_ = null; reject(new Error('地圖元件載入失敗')); }
     };
     sc.onerror = function() { leafletReady_ = null; reject(new Error('地圖元件載入失敗，請重新整理頁面再試')); };
     document.head.appendChild(sc);
   });
   return leafletReady_;
+}
+// 標記圖示直接放在程式裡（不用另外上傳 lib/images 資料夾）
+var MAP_ICON_ = null;
+function mapIcon_() {
+  if (!MAP_ICON_) {
+    MAP_ICON_ = L.icon({
+      iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAApCAYAAADAk4LOAAAFgUlEQVR4Aa1XA5BjWRTN2oW17d3YaZtr2962HUzbDNpjszW24mRt28p47v7zq/bXZtrp/lWnXr337j3nPCe85NcypgSFdugCpW5YoDAMRaIMqRi6aKq5E3YqDQO3qAwjVWrD8Ncq/RBpykd8oZUb/kaJutow8r1aP9II0WmLKLIsJyv1w/kqw9Ch2MYdB++12Onxee/QMwvf4/Dk/Lfp/i4nxTXtOoQ4pW5Aj7wpici1A9erdAN2OH64x8OSP9j3Ft3b7aWkTg/Fm91siTra0f9on5sQr9INejH6CUUUpavjFNq1B+Oadhxmnfa8RfEmN8VNAsQhPqF55xHkMzz3jSmChWU6f7/XZKNH+9+hBLOHYozuKQPxyMPUKkrX/K0uWnfFaJGS1QPRtZsOPtr3NsW0uyh6NNCOkU3Yz+bXbT3I8G3xE5EXLXtCXbbqwCO9zPQYPRTZ5vIDXD7U+w7rFDEoUUf7ibHIR4y6bLVPXrz8JVZEql13trxwue/uDivd3fkWRbS6/IA2bID4uk0UpF1N8qLlbBlXs4Ee7HLTfV1j54APvODnSfOWBqtKVvjgLKzF5YdEk5ewRkGlK0i33Eofffc7HT56jD7/6U+qH3Cx7SBLNntH5YIPvODnyfIXZYRVDPqgHtLs5ABHD3YzLuespb7t79FY34DjMwrVrcTuwlT55YMPvOBnRrJ4VXTdNnYug5ucHLBjEpt30701A3Ts+HEa73u6dT3FNWwflY86eMHPk+Yu+i6pzUpRrW7SNDg5JHR4KapmM5Wv2E8Tfcb1HoqqHMHU+uWDD7zg54mz5/2BSnizi9T1Dg4QQXLToGNCkb6tb1NU+QAlGr1++eADrzhn/u8Q2YZhQVlZ5+CAOtqfbhmaUCS1ezNFVm2imDbPmPng5wmz+gwh+oHDce0eUtQ6OGDIyR0uUhUsoO3vfDmmgOezH0mZN59x7MBi++WDL1g/eEiU3avlidO671bkLfwbw5XV2P8Pzo0ydy4t2/0eu33xYSOMOD8hTf4CrBtGMSoXfPLchX+J0ruSePw3LZeK0juPJbYzrhkH0io7B3k164hiGvawhOKMLkrQLyVpZg8rHFW7E2uHOL888IBPlNZ1FPzstSJM694fWr6RwpvcJK60+0HCILTBzZLFNdtAzJaohze60T8qBzyh5ZuOg5e7uwQppofEmf2++DYvmySqGBuKaicF1blQjhuHdvCIMvp8whTTfZzI7RldpwtSzL+F1+wkdZ2TBOW2gIF88PBTzD/gpeREAMEbxnJcaJHNHrpzji0gQCS6hdkEeYt9DF/2qPcEC8RM28Hwmr3sdNyht00byAut2k3gufWNtgtOEOFGUwcXWNDbdNbpgBGxEvKkOQsxivJx33iow0Vw5S6SVTrpVq11ysA2Rp7gTfPfktc6zhtXBBC+adRLshf6sG2RfHPZ5EAc4sVZ83yCN00Fk/4kggu40ZTvIEm5g24qtU4KjBrx/BTTH8ifVASAG7gKrnWxJDcU7x8X6Ecczhm3o6YicvsLXWfh3Ch1W0k8x0nXF+0fFxgt4phz8QvypiwCCFKMqXCnqXExjq10beH+UUA7+nG6mdG/Pu0f3LgFcGrl2s0kNNjpmoJ9o4B29CMO8dMT4Q5ox8uitF6fqsrJOr8qnwNbRzv6hSnG5wP+64C7h9lp30hKNtKdWjtdkbuPA19nJ7Tz3zR/ibgARbhb4AlhavcBebmTHcFl2fvYEnW0ox9xMxKBS8btJ+KiEbq9zA4RthQXDhPa0T9TEe69gWupwc6uBUphquXgf+/FrIjweHQS4/pduMe5ERUMHUd9xv8ZR98CxkS4F2n3EUrUZ10EYNw7BWm9x1GiPssi3GgiGRDKWRYZfXlON+dfNbM+GgIwYdwAAAAASUVORK5CYII=', iconRetinaUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABSCAMAAAAhFXfZAAAC91BMVEVMaXEzeak2f7I4g7g3g7cua5gzeKg8hJo3grY4g7c3grU0gLI2frE0daAubJc2gbQwd6QzeKk2gLMtd5sxdKIua5g1frA2f7IydaM0e6w2fq41fK01eqo3grgubJgta5cxdKI1f7AydaQydaMxc6EubJgvbJkwcZ4ubZkwcJwubZgubJcydqUydKIxapgubJctbJcubZcubJcvbJYubJcvbZkubJctbJctbZcubJg2f7AubJcrbZcubJcubJcua5g3grY0fq8ubJcubJdEkdEwhsw6i88vhswuhcsuhMtBjMgthMsrg8srgss6is8qgcs8i9A9iMYtg8spgcoogMo7hcMngMonf8olfso4gr8kfck5iM8jfMk4iM8he8k1fro7itAgesk2hs8eecgzfLcofssdeMg0hc4cd8g2hcsxeLQbdsgZdcgxeLImfcszhM0vda4xgckzhM4xg84wf8Yxgs4udKsvfcQucqhUndROmdM1fK0wcZ8vb5w0eqpQm9MzeKhXoNVcpdYydKNWn9VZotVKltJFjsIwcJ1Rms9OlslLmtH///8+kc9epdYzd6dbo9VHkMM2f7FHmNBClM8ydqVcpNY9hro3gLM9hLczealQmcw3fa46f7A8gLMxc6I3eagyc6FIldJMl9JSnNRSntNNl9JPnNJFi75UnM9ZodVKksg8kM45jc09e6ZHltFBk883gbRBh7pDk9EwcaBzn784g7dKkcY2i81Om9M7j85Llc81is09g7Q4grY/j9A0eqxKmdFFltBEjcXf6fFImdBCiLxJl9FGlNFBi78yiMxVndEvbpo6js74+vx+psPP3+o/ks5HkcpGmNCjwdZCkNDM3ehYoNJEls+lxNkxh8xHks0+jdC1zd5Lg6r+/v/H2ufz9/o3jM3t8/edvdM/k89Th61OiLBSjbZklbaTt9BfptdjmL1AicBHj8hGk9FAgK1dkLNTjLRekrdClc/k7fM0icy0y9tgp9c4jc2NtM9Dlc8zicxeXZn3AAAAQ3RSTlMAHDdTb4yPA+LtnEQmC4L2EmHqB7XA0d0sr478x4/Yd5i1zOfyPkf1sLVq4Nh3FvjxopQ2/STNuFzUwFIwxKaejILpIBEV9wAABhVJREFUeF6s1NdyFEcY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', shadowUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAQAAAACach9AAACMUlEQVR4Ae3ShY7jQBAE0Aoz/f9/HTMzhg1zrdKUrJbdx+Kd2nD8VNudfsL/Th///dyQN2TH6f3y/BGpC379rV+S+qqetBOxImNQXL8JCAr2V4iMQXHGNJxeCfZXhSRBcQMfvkOWUdtfzlLgAENmZDcmo2TVmt8OSM2eXxBp3DjHSMFutqS7SbmemzBiR+xpKCNUIRkdkkYxhAkyGoBvyQFEJEefwSmmvBfJuJ6aKqKWnAkvGZOaZXTUgFqYULWNSHUckZuR1HIIimUExutRxwzOLROIG4vKmCKQt364mIlhSyzAf1m9lHZHJZrlAOMMztRRiKimp/rpdJDc9Awry5xTZCte7FHtuS8wJgeYGrex28xNTd086Dik7vUMscQOa8y4DoGtCCSkAKlNwpgNtphjrC6MIHUkR6YWxxs6Sc5xqn222mmCRFzIt8lEdKx+ikCtg91qS2WpwVfBelJCiQJwvzixfI9cxZQWgiSJelKnwBElKYtDOb2MFbhmUigbReQBV0Cg4+qMXSxXSyGUn4UbF8l+7qdSGnTC0XLCmahIgUHLhLOhpVCtw4CzYXvLQWQbJNmxoCsOKAxSgBJno75avolkRw8iIAFcsdc02e9iyCd8tHwmeSSoKTowIgvscSGZUOA7PuCN5b2BX9mQM7S0wYhMNU74zgsPBj3HU7wguAfnxxjFQGBE6pwN+GjME9zHY7zGp8wVxMShYX9NXvEWD3HbwJf4giO4CFIQxXScH1/TM+04kkBiAAAAAElFTkSuQmCC',
+      iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], tooltipAnchor: [16, -28], shadowSize: [41, 41]
+    });
+  }
+  return MAP_ICON_;
 }
 function mapGeocode_(q) {
   return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tw&accept-language=zh-TW&q=' + encodeURIComponent(q))
@@ -1746,7 +1925,7 @@ function mapSetCadastre_(on) {
 function mapSetMarker_(lat, lng) {
   var map = mapPick_.map;
   if (!mapPick_.marker) {
-    mapPick_.marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    mapPick_.marker = L.marker([lat, lng], { draggable: true, icon: mapIcon_() }).addTo(map);
     mapPick_.marker.on('dragend', function() { mapUpdateCoordText_(); });
   } else {
     mapPick_.marker.setLatLng([lat, lng]);
@@ -3636,64 +3815,7 @@ document.getElementById('listingForm').addEventListener('submit', async function
 
   submitBtn.textContent = '送出中…';
 
-  // 保險機制：手機瀏覽器在等回應時如果被切到背景、螢幕鎖定，連線有時候會
-  // 被系統暫停，導致伺服器其實處理完了、但回應傳不回網頁，畫面卡在
-  // 「送出中」不會消失。這裡設一個逾時，超過時間還沒收到回應就主動提示，
-  // 不會讓人一直卡在不確定有沒有成功的狀態。真的收到回應時會取消這個計時。
-  var responseTimedOut = false;
-  var timeoutHandle = setTimeout(function() {
-    responseTimedOut = true;
-    msgBox.className = 'msg error';
-    msgBox.textContent = '沒有在預期時間內收到伺服器回應（手機切到背景或螢幕鎖定時偶爾會這樣）。' +
-      '資料很可能已經送出成功，請重新整理這個頁面確認，不用擔心重複送出——真的沒送出的話，' +
-      '重新填一次就好。';
-    msgBox.style.display = 'block';
-    showToast('沒有在預期時間內收到回應，請重新整理頁面確認是否已送出成功', 'error');
-    window.scrollTo(0, 0);
-  }, 45000);
-
-  // 第 4 個參數：表單完整狀態，之後「修改案件」頁用它原樣還原
-  runServer('submitListingForm', currentType, fieldValues, [], collectDraft_())
-    .then(function(result) {
-      clearTimeout(timeoutHandle);
-      if (responseTimedOut) return; // 逾時訊息已經顯示過，避免再蓋一次造成混淆
-      submitBtn.disabled = false;
-      submitBtn.textContent = '送出';
-      if (result && result.success) {
-        msgBox.className = 'msg success';
-        msgBox.textContent = result.message || '送出成功！';
-        msgBox.style.display = 'block';
-        showToast(result.message || '送出成功！', 'success');
-        document.getElementById('listingForm').reset();
-        brokerParse_();
-        onContractTypeChange_();
-        updateClientRequiredMarks_();
-        refreshRocPreviews_();
-        renderTypeFields(currentType);
-        rebuildDistrictEntries();
-        updateRatioRows();
-        resetUploads_();
-        clearDraft_();
-      } else {
-        msgBox.className = 'msg error';
-        msgBox.textContent = (result && result.message) || '送出失敗，請重試。';
-        msgBox.style.display = 'block';
-        showToast((result && result.message) || '送出失敗，請重試。', 'error');
-      }
-      window.scrollTo(0, 0);
-    })
-    .catch(function(err) {
-      clearTimeout(timeoutHandle);
-      if (responseTimedOut) return;
-      submitBtn.disabled = false;
-      submitBtn.textContent = '送出';
-      msgBox.className = 'msg error';
-      msgBox.textContent = '送出時發生錯誤：' + err.message;
-      msgBox.style.display = 'block';
-      showToast('送出時發生錯誤：' + err.message, 'error');
-      window.scrollTo(0, 0);
-    })
-    ;
+  sendListingSubmission_(fieldValues, submitBtn, msgBox);
 });
 
 // ============================================================
@@ -4166,7 +4288,7 @@ function sharedRole_() {
 }
 function sharedLoginClear_() {
   try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
-  try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); } catch (e) {}
+  try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
   try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
 }
 // 姓名清單：先用上次存在這台裝置的清單（馬上可以選），同時到後端拿最新的換上

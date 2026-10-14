@@ -187,6 +187,7 @@
     <a href="listing.html?mode=edit" data-key="edit">修改物件／客需</a>
     <a href="summary.html" data-key="summary">物件簡表</a>
     <a href="client-summary.html" data-key="csummary">客需簡表</a>
+    <a href="map.html" data-key="map">物件地圖</a>
     <a href="master-table.html" data-key="master" data-roles="主管,秘書" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-roles="秘書" style="display:none;">秘書專區</a>
   </nav>
@@ -196,7 +197,7 @@
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
-      : page === 'client-summary.html' ? 'csummary'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
     // 只有某些身分看得到的連結（data-roles）：依這個分頁登入的身分顯示
@@ -208,6 +209,18 @@
         rl[j].style.display = (rl[j].getAttribute('data-roles').split(',').indexOf(role) !== -1 || rl[j].getAttribute('data-key') === key) ? '' : 'none';
       }
     };
+    // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
+    if (page !== 'listing.html') {
+      setTimeout(function() {
+        try {
+          if (localStorage.getItem('ruihe_listing_options_v1')) return;
+          fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'getListingFormOptions', args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(res) { if (res && res.ok && res.result && res.result.districtData && Object.keys(res.result.districtData).length) localStorage.setItem('ruihe_listing_options_v1', JSON.stringify(res.result)); })
+            .catch(function() {});
+        } catch (e) {}
+      }, 2500);
+    }
     window.ruiheUpdateNav_();
     var links = document.querySelectorAll('#siteNav a');
     for (var i = 0; i < links.length; i++) {
@@ -351,7 +364,7 @@ function sharedRole_() {
 }
 function sharedLoginClear_() {
   try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
-  try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); } catch (e) {}
+  try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
   try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
 }
 // 姓名清單：先用上次存在這台裝置的清單（馬上可以選），同時到後端拿最新的換上
