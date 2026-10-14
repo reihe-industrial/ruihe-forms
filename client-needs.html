@@ -238,8 +238,8 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
@@ -1438,7 +1438,7 @@ function sharedLoginClear_() {
     var o_ = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null');
     if (o_ && /^S_/.test(o_.code || '')) fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'sessionLogout', args: [o_.name, o_.code] }), keepalive: true }).catch(function() {});
   } catch (e) {}
-  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); sessionStorage.removeItem('ruihe_home_cache_v1'); } catch (e) {}
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_prefetch_at'].forEach(function(k) { sessionStorage.removeItem(k); }); sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
   if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
   try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}

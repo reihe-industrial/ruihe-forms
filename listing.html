@@ -341,8 +341,8 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
@@ -4304,7 +4304,7 @@ function sharedLoginClear_() {
     var o_ = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null');
     if (o_ && /^S_/.test(o_.code || '')) fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'sessionLogout', args: [o_.name, o_.code] }), keepalive: true }).catch(function() {});
   } catch (e) {}
-  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); sessionStorage.removeItem('ruihe_home_cache_v1'); } catch (e) {}
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_prefetch_at'].forEach(function(k) { sessionStorage.removeItem(k); }); sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
   if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
   try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
@@ -4500,7 +4500,7 @@ function editRenderNeeds_() {
     var nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = c.clientName || c.contact || '（未填客戶名稱）';
     var a = document.createElement('a'); a.className = 'edit-btn'; a.textContent = '修改／追蹤';
     a.href = 'client-needs.html?mode=edit&key=' + encodeURIComponent(c.key);
-    var m1 = document.createElement('div'); m1.className = 'meta'; m1.textContent = [editRole_ === '秘書' ? c.business : '', c.propertyTypes, c.demandType, c.region].filter(Boolean).join('｜') || '—';
+    var m1 = document.createElement('div'); m1.className = 'meta'; m1.textContent = [(editRole_ === '秘書' || editRole_ === '管理員') ? c.business : '', c.propertyTypes, c.demandType, c.region].filter(Boolean).join('｜') || '—';
     var m2 = document.createElement('div'); m2.className = 'meta';
     m2.textContent = '填表 ' + (c.fillDate || '—') + '｜' + (c.lastTrack ? ('最後追蹤 ' + c.lastTrack + '（' + c.trackCount + ' 筆）') : '還沒有追蹤紀錄');
     row.appendChild(nm); row.appendChild(a); row.appendChild(m1); row.appendChild(m2);
@@ -4520,7 +4520,7 @@ function editAgentNames_(text) { return String(text || '').split(/[、,，\/\s]+
 function editAgentMatch_(text) { return !editAgentFilter_ || editAgentNames_(text).indexOf(editAgentFilter_) !== -1; }
 function editRebuildAgentFilter_(needsTab) {
   var sel = document.getElementById('editAgentFilter');
-  var show = editRole_ === '秘書';
+  var show = (editRole_ === '秘書' || editRole_ === '管理員');
   sel.style.display = show ? '' : 'none';
   if (!show) { editAgentFilter_ = ''; return; }
   var counts = {};
@@ -4536,7 +4536,7 @@ function editRebuildAgentFilter_(needsTab) {
   sel.value = editAgentFilter_;
 }
 function editRenderList_() {
-  document.getElementById('editListTitle').textContent = !editAuth_ ? '我的物件和客需' : (editRole_ === '秘書' ? '全部的物件和客需（秘書）' : editAuth_.name + ' 負責的物件和客需');
+  document.getElementById('editListTitle').textContent = !editAuth_ ? '我的物件和客需' : ((editRole_ === '秘書' || editRole_ === '管理員') ? '全部的物件和客需（秘書）' : editAuth_.name + ' 負責的物件和客需');
   var needsTab = editTab_ === 'needs';
   editRebuildAgentFilter_(needsTab);
   document.getElementById('editCaseCount').textContent = '（' + editCases_.filter(function(c) { return editAgentMatch_(c.agents); }).length + '）';
@@ -4545,7 +4545,7 @@ function editRenderList_() {
   document.getElementById('editTabNeeds').setAttribute('aria-selected', String(needsTab));
   document.getElementById('editCaseList').style.display = needsTab ? 'none' : '';
   document.getElementById('editNeedsList').style.display = needsTab ? '' : 'none';
-  document.getElementById('editSearch').placeholder = needsTab ? ('輸入客戶名稱、聯絡人、區域' + (editRole_ === '秘書' ? '或業務' : '') + '搜尋') : ('輸入案名、契約編號' + (editRole_ === '秘書' ? '或業務' : '') + '搜尋');
+  document.getElementById('editSearch').placeholder = needsTab ? ('輸入客戶名稱、聯絡人、區域' + ((editRole_ === '秘書' || editRole_ === '管理員') ? '或業務' : '') + '搜尋') : ('輸入案名、契約編號' + ((editRole_ === '秘書' || editRole_ === '管理員') ? '或業務' : '') + '搜尋');
   if (needsTab) { editRenderNeeds_(); return; }
   var box = document.getElementById('editCaseList');
   var q = document.getElementById('editSearch').value.trim();
@@ -4573,7 +4573,7 @@ function editRenderList_() {
       btn.addEventListener('click', function() { editOpenCase_(c.key, btn); });
       row.appendChild(btn);
       var meta = document.createElement('div'); meta.className = 'case-meta';
-      meta.textContent = [editRole_ === '秘書' ? c.agents : '', c.legacy ? '舊案件' : '', c.status && c.status !== '銷售中' ? c.status : '', c.contractNo, c.expiry ? ('到期 ' + c.expiry) : '', c.createdAt ? ('填寫 ' + c.createdAt) : ''].filter(Boolean).join('｜');
+      meta.textContent = [(editRole_ === '秘書' || editRole_ === '管理員') ? c.agents : '', c.legacy ? '舊案件' : '', c.status && c.status !== '銷售中' ? c.status : '', c.contractNo, c.expiry ? ('到期 ' + c.expiry) : '', c.createdAt ? ('填寫 ' + c.createdAt) : ''].filter(Boolean).join('｜');
       row.appendChild(meta);
     } else {
       row.appendChild(document.createElement('span'));

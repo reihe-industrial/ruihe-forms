@@ -188,8 +188,8 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
@@ -350,7 +350,7 @@ function sharedLoginClear_() {
     var o_ = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null');
     if (o_ && /^S_/.test(o_.code || '')) fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'sessionLogout', args: [o_.name, o_.code] }), keepalive: true }).catch(function() {});
   } catch (e) {}
-  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); sessionStorage.removeItem('ruihe_home_cache_v1'); } catch (e) {}
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_prefetch_at'].forEach(function(k) { sessionStorage.removeItem(k); }); sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
   if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
   try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
@@ -519,6 +519,11 @@ function updateStatus() {
   el.className = lastCheckFailed ? 'status warn' : 'status';
 }
 
+// 物件總表暫存在這個分頁（sessionStorage）：換頁回來馬上顯示，背景再檢查；關掉分頁、登出就清掉
+var MASTER_CACHE_KEY = 'ruihe_master_cache_v1';
+function loadMasterCache_(name) { try { var c = JSON.parse(sessionStorage.getItem(MASTER_CACHE_KEY) || 'null'); return c && c.name === name && c.version && c.tabs ? c : null; } catch (e) { return null; } }
+function saveMasterCache_() { try { sessionStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({ name: auth.name, role: role, version: data.version, tabs: data.tabs })); } catch (e) {} }
+function setRoleNote_() { $('roleNote').textContent = (role === '秘書' || role === '管理員') ? role + '：顯示全部欄位（含委託人資料）' : '主管：不顯示委託人資料、取得原因、他項權利、上傳照片'; }
 function check(manual, isLogin) {
   if (!auth || busy) return Promise.resolve();
   busy = true; $('refreshBtn').disabled = true; updateStatus();
@@ -526,11 +531,12 @@ function check(manual, isLogin) {
     .then(function(res) {
       lastCheckFailed = false; checkedAt = Date.now();
       role = res.role || role;
-      $('roleNote').textContent = role === '秘書' ? '秘書：顯示全部欄位（含委託人資料）' : '主管：不顯示委託人資料、取得原因、他項權利、上傳照片';
+      setRoleNote_();
       if (res.unchanged && data) { if (manual) toast('已經是最新資料'); }
       else {
         var had = !!data;
         data = { version: res.version, tabs: res.tabs || [] };
+        saveMasterCache_();
         renderFilters(); render();
         if (had) toast('已更新到最新資料');
       }
@@ -555,6 +561,16 @@ function login(auto) {
   var btn = $('loginBtn');
   btn.disabled = true; btn.textContent = '讀取中…'; $('loginMsg').className = 'msg';
   auth = { name: name, code: code };
+  var mc = auto ? loadMasterCache_(name) : null;
+  if (mc) {
+    role = mc.role || ''; data = { version: mc.version, tabs: mc.tabs }; checkedAt = Date.now();
+    setRoleNote_(); renderFilters();
+    $('whoName').textContent = name; $('loginView').hidden = true; $('mainView').hidden = false;
+    render(); updateStatus(); startPolling();
+    btn.disabled = false; btn.textContent = '登入';
+    check(false).catch(function() {});
+    return;
+  }
   check(false, true).then(function(res) {
     sharedLoginSet_(name, code, res && res.role);
     $('loginCode').value = '';

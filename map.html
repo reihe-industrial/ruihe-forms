@@ -199,8 +199,8 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
@@ -305,6 +305,7 @@
         <div class="count" id="countText" aria-live="polite"></div>
         <span class="legend" id="legend"></span>
         <span style="flex:1 1 auto;"></span>
+        <label style="display:inline-flex;align-items:center;gap:5px;margin:0;font-size:13.5px;font-weight:600;"><input type="checkbox" id="sectCb" style="width:auto;"> 段籍圖</label>
         <select id="baseSel" aria-label="底圖"></select>
       </div>
       <div class="map-note" id="mapNote"></div>
@@ -373,7 +374,7 @@ function sharedLoginClear_() {
     var o_ = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null');
     if (o_ && /^S_/.test(o_.code || '')) fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'sessionLogout', args: [o_.name, o_.code] }), keepalive: true }).catch(function() {});
   } catch (e) {}
-  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); sessionStorage.removeItem('ruihe_home_cache_v1'); } catch (e) {}
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_prefetch_at'].forEach(function(k) { sessionStorage.removeItem(k); }); sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
   if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
   try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
@@ -412,6 +413,21 @@ var MAP_BASES_ = [
   { id: 'osm', name: 'OpenStreetMap', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '© OpenStreetMap' }
 ];
 var MAP_BLANK_TILE_ = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+// 段籍圖（各地段的範圍和段名，國土測繪中心公開圖層）：依序試，前面的讀不到就換下一個
+var MAP_SECT_LAYER_IDS_ = ['LANDSECT2', 'LANDSECT'];
+var sectLayer = null, sectIdx = 0;
+function setSect(on) {
+  if (sectLayer) { map.removeLayer(sectLayer); sectLayer = null; }
+  if (!on) return;
+  var id = MAP_SECT_LAYER_IDS_[sectIdx];
+  if (!id) { $('mapNote').textContent = '段籍圖讀不到，請稍後再試。'; $('mapNote').className = 'map-note warn'; $('sectCb').checked = false; return; }
+  var loaded = 0, errs = 0;
+  var layer = L.tileLayer(MAP_NLSC_ + id + '/default/GoogleMapsCompatible/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.9, errorTileUrl: MAP_BLANK_TILE_ });
+  layer.on('tileload', function() { loaded++; });
+  layer.on('tileerror', function() { errs++; if (!loaded && errs >= 8 && map.getZoom() >= 14 && sectLayer === layer) { sectIdx++; setSect(true); } });
+  layer.addTo(map);
+  sectLayer = layer;
+}
 
 var auth = null, data = null, items = [], colIndex = {};
 var filters = { type: '', rs: '', agent: '', keyword: '' };
@@ -541,6 +557,7 @@ function initMap() {
   markerLayer = L.layerGroup().addTo(map);
   $('baseSel').innerHTML = MAP_BASES_.map(function(b) { return '<option value="' + b.id + '">' + esc(b.name) + '</option>'; }).join('');
   $('baseSel').addEventListener('change', function() { setBase(this.value); });
+  $('sectCb').addEventListener('change', function() { sectIdx = 0; setSect(this.checked); });
   setBase('emap');
 }
 function popupHtml(it) {
@@ -656,6 +673,15 @@ function login(auto) {
   var btn = $('loginBtn');
   btn.disabled = true; btn.textContent = '讀取中…'; $('loginMsg').className = 'msg';
   auth = { name: name, code: code };
+  var cachedNow = auto ? loadCache() : null;
+  if (cachedNow) {   // 這個分頁已經登入過、有上次的資料（或首頁預先載入的）：先顯示，背景檢查
+    data = cachedNow; buildItems();
+    $('whoName').textContent = name; $('loginView').hidden = true; $('mainView').hidden = false;
+    firstFit = true; render(true); updateStatus(); startPolling();
+    btn.disabled = false; btn.textContent = '登入';
+    checkForUpdates(false).catch(function() {});
+    return;
+  }
   checkForUpdates(false, true).then(function(res) {
     sharedLoginSet_(name, code, res && res.role);
     $('loginCode').value = '';

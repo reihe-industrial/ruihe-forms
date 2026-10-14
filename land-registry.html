@@ -30,6 +30,10 @@
   body { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
     background: var(--paper); margin: 0; padding: 20px 16px 60px; color: var(--ink); line-height: 1.5; }
   .container { max-width: 640px; margin: 0 auto; }
+  .biz-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .biz-group label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #dfe2d7; border-radius: 999px; padding: 7px 13px; background: #fff; cursor: pointer; font-size: 14px; margin: 0; user-select: none; }
+  .biz-group label:has(input:checked) { background: #e6f0e9; border-color: #2e6b4a; color: #1e4a32; font-weight: 700; }
+  .biz-group input { width: auto; margin: 0; }
   @media (min-width: 1000px) { .container { max-width: 900px; } }
   h1 { font-family: "Noto Serif TC", "Noto Sans TC", serif; font-size: 23px; font-weight: 700;
     letter-spacing: 0.02em; margin: 4px 0 6px; color: var(--brand-dark); }
@@ -104,8 +108,8 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書" style="display:none;">物件總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
   <script>
   (function() {
@@ -154,11 +158,9 @@
   <div class="subtitle">可以一次申請好幾個不同的段，每一段各自勾選需要的謄本種類、各自填備註</div>
 
   <div class="card">
-    <label class="field-label">業務名稱<span class="required-star">*</span></label>
-    <select id="businessNameSelect">
-      <option value="">請選擇</option>
-    </select>
-    <input type="text" id="businessNameOtherInput" placeholder="請輸入姓名" style="display:none; margin-top:8px;">
+    <label class="field-label">負責業務（可複選）<span class="required-star">*</span></label>
+    <div id="businessNameGroup" class="biz-group" role="group" aria-label="負責業務"><span style="color:#888;font-size:13px;">載入中…</span></div>
+    <input type="text" id="businessNameOtherInput" placeholder="請輸入姓名（好幾位用頓號分開）" style="display:none; margin-top:8px;">
   </div>
 
   <div id="districtEntries"></div>
@@ -415,34 +417,42 @@ if (cachedRegistryOptions_) {
   fetchRegistryOptions_().then(function(fresh) {
     if (!fresh || !fresh.personList) return;
     if (JSON.stringify(fresh.personList) === JSON.stringify(PERSON_LIST)) return;
-    var sel = document.getElementById('businessNameSelect');
-    if (!sel || sel.value) return;
+    if (document.querySelector('.bizCheckbox:checked')) return;
     PERSON_LIST = fresh.personList;
-    while (sel.options.length > 1) sel.remove(1);
-    PERSON_LIST.forEach(function(name) { var o = document.createElement('option'); o.value = name; o.textContent = name; sel.appendChild(o); });
-    var oo = document.createElement('option'); oo.value = '其他'; oo.textContent = '其他'; sel.appendChild(oo);
+    if (document.getElementById('businessNameGroup').querySelector('.bizCheckbox')) renderBizGroup_();
   }).catch(function() {});
+}
+// 負責業務：勾選（可以好幾位，跟新增物件一樣），送出時用「、」接起來
+function renderBizGroup_() {
+  var box = document.getElementById('businessNameGroup');
+  box.innerHTML = '';
+  PERSON_LIST.concat(['其他']).forEach(function(name) {
+    var lb = document.createElement('label');
+    var cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'bizCheckbox'; cb.value = name;
+    lb.appendChild(cb); lb.appendChild(document.createTextNode(name));
+    box.appendChild(lb);
+    if (name === '其他') cb.addEventListener('change', function() {
+      var other = document.getElementById('businessNameOtherInput');
+      other.style.display = cb.checked ? 'block' : 'none';
+      if (!cb.checked) other.value = '';
+    });
+  });
+}
+function selectedBiz_() {
+  var names = [];
+  document.querySelectorAll('.bizCheckbox:checked').forEach(function(cb) {
+    if (cb.value === '其他') {
+      String(document.getElementById('businessNameOtherInput').value || '').split(/[、,，\/\s]+/).forEach(function(x) { x = x.trim(); if (x && names.indexOf(x) === -1) names.push(x); });
+    } else if (names.indexOf(cb.value) === -1) names.push(cb.value);
+  });
+  return names.join('、');
 }
 (cachedRegistryOptions_ ? Promise.resolve(cachedRegistryOptions_) : fetchRegistryOptions_()).then(function(options) {
   PERSON_LIST = options.personList || [];
   DISTRICT_DATA = options.districtData || {};
   TRANSCRIPT_TYPES = options.transcriptTypes || [];
 
-  var select = document.getElementById('businessNameSelect');
-  PERSON_LIST.forEach(function(name) {
-    var o = document.createElement('option');
-    o.value = name; o.textContent = name;
-    select.appendChild(o);
-  });
-  var otherOpt = document.createElement('option');
-  otherOpt.value = '其他'; otherOpt.textContent = '其他';
-  select.appendChild(otherOpt);
-
-  var otherInput = document.getElementById('businessNameOtherInput');
-  select.addEventListener('change', function() {
-    otherInput.style.display = (select.value === '其他') ? 'block' : 'none';
-    if (select.value !== '其他') otherInput.value = '';
-  });
+  renderBizGroup_();
 
   createDistrictEntry(); // 預設先給一筆
 }).catch(function(err) {
@@ -455,17 +465,14 @@ document.getElementById('submitBtn').addEventListener('click', function() {
   var msgBox = document.getElementById('msgBox');
   msgBox.style.display = 'none';
 
-  var businessName = document.getElementById('businessNameSelect').value;
-  if (businessName === '其他') {
-    businessName = document.getElementById('businessNameOtherInput').value.trim();
-  }
+  var businessName = selectedBiz_();
   clearMissingMarks_();
   if (!businessName) {
     msgBox.className = 'msg error';
-    msgBox.textContent = '請選擇業務名稱。';
-    markEl_(document.getElementById('businessNameSelect').closest('.card'), '請選擇業務名稱');
+    msgBox.textContent = '請勾選負責業務。';
+    markEl_(document.getElementById('businessNameGroup').closest('.card'), '請勾選負責業務');
     scrollToFirstMissing_();
-    showToast('請選擇業務名稱', 'error', true);
+    showToast('請勾選負責業務', 'error', true);
     return;
   }
 
@@ -509,7 +516,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
       msgBox.className = 'msg success';
       msgBox.textContent = result.message || '送出成功！';
       showToast(result.message || '申請送出成功！', 'success');
-      document.getElementById('businessNameSelect').value = '';
+      document.querySelectorAll('.bizCheckbox').forEach(function(cb) { cb.checked = false; });
       document.getElementById('businessNameOtherInput').value = '';
       document.getElementById('businessNameOtherInput').style.display = 'none';
       document.getElementById('districtEntries').innerHTML = '';
@@ -532,7 +539,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
 
 // 填到一半要離開這一頁（例如點上面的選單）時先提醒；送出成功後表單會清空，就不會再提醒
 function registryHasContent_() {
-  if (document.getElementById('businessNameSelect').value) return true;
+  if (document.querySelector('.bizCheckbox:checked')) return true;
   var els = document.querySelectorAll('#districtEntries input, #districtEntries select, #districtEntries textarea');
   for (var i = 0; i < els.length; i++) {
     var el = els[i];

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>首頁｜瑞禾不動產</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -199,6 +200,15 @@
     .entry:hover { border-color: var(--brand); box-shadow: 0 2px 10px rgba(30,74,50,.08); }
     .entry b { display: block; font-size: 15.5px; color: var(--brand-dark); margin-bottom: 3px; }
     .entry span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .g-box { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 2px 0 14px; min-height: 44px; }
+    .g-note { font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.5; }
+    .g-note.warn { color: #8a5a00; }
+    .or-line { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; margin: 4px 0 14px; }
+    .or-line::before, .or-line::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--line); }
+    .method-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+    .method-card .lbl { font-weight: 700; color: var(--brand-dark); }
+    .method-card .st { font-size: 14px; }
+    .method-card .grow { flex: 1 1 auto; }
     .notice { background: #fff8e1; border: 1px solid #e0c341; border-radius: 10px; padding: 11px 14px; margin: 0 0 14px; font-size: 13.5px; color: #5a4a00; }
   </style>
 </head>
@@ -210,6 +220,8 @@
 
     <div class="card narrow" id="loginView">
       <h2>登入</h2>
+      <div class="g-box"><div id="googleBtn"></div><div class="g-note" id="googleNote"></div></div>
+      <div class="or-line">或用通關碼登入</div>
       <div class="field">
         <label class="required" for="loginName">姓名</label>
         <select id="loginName"><option value="">載入中…</option></select>
@@ -237,6 +249,8 @@
         <button type="button" class="btn ghost" id="logoutBtn">登出</button>
       </div>
 
+      <div class="sec-title"><h2>功能</h2></div>
+      <div class="entries" id="entries"></div>
       <div class="sec-title"><h2>待辦提醒</h2><span class="note" id="remNote"></span></div>
       <details class="rem" id="remDue" open>
         <summary>客需：今天要聯絡<span class="badge" id="cntDue">…</span></summary>
@@ -251,13 +265,21 @@
         <div class="rem-body" id="bodyContract"><div class="rem-empty">讀取中…</div></div>
       </details>
 
-      <div class="sec-title"><h2>功能</h2></div>
-      <div class="entries" id="entries"></div>
+      <div class="sec-title"><h2>登入方式</h2></div>
+      <div class="method-card" id="methodCard">
+        <span class="lbl">Google 帳號</span>
+        <span class="st" id="gStatus">讀取中…</span>
+        <span class="grow"></span>
+        <div id="gBindBtn"></div>
+        <button type="button" class="btn ghost" id="gUnbindBtn" style="display:none;">解除綁定</button>
+      </div>
     </div>
   </div>
 
 <script>
+var GOOGLE_CLIENT_ID = '145144542151-spm8h66cenm8pdshn3rrf4p3964emp55.apps.googleusercontent.com';
 var OBJ_API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';      // 物件後端（登入、合約提醒）
+var REG_API = 'https://script.google.com/macros/s/AKfycbxBxEn3c_mfLtT_gH-O2MgT6byDTNdJCWEf0IxFtYVp1oqYJxmFbGXuXzcX3SEam93E/exec';   // 調謄本後端（秘書專區預先載入）
 var CLIENT_API = 'https://script.google.com/macros/s/AKfycbz6EXnxZb40rln8q9xTaD_TiABT5leWT-R20P5DAQmgLwhiyLvVsI8mqC4Df4wT01zP/exec';   // 客需後端（客需提醒）
 // ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
@@ -313,7 +335,7 @@ function sharedLoginClear_() {
     var o_ = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null');
     if (o_ && /^S_/.test(o_.code || '')) fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'sessionLogout', args: [o_.name, o_.code] }), keepalive: true }).catch(function() {});
   } catch (e) {}
-  try { sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); sessionStorage.removeItem('ruihe_home_cache_v1'); } catch (e) {}
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_prefetch_at'].forEach(function(k) { sessionStorage.removeItem(k); }); sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
   if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
   try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
@@ -347,8 +369,8 @@ var ENTRIES = [
   { href: 'summary.html', title: '物件簡表', desc: '全公司銷售中的物件，可以篩選、排序' },
   { href: 'client-summary.html', title: '客需簡表', desc: '全公司的客戶需求（不含客戶聯絡資料）' },
   { href: 'map.html', title: '物件地圖', desc: '銷售中的物件放在地圖上，點標記看簡介' },
-  { href: 'master-table.html', title: '物件總表', desc: '總彙整表的所有欄位', roles: ['主管', '秘書'] },
-  { href: 'secretary.html', title: '秘書專區', desc: '申調謄本清單、人員管理', roles: ['秘書'] }
+  { href: 'master-table.html', title: '物件總表', desc: '總彙整表的所有欄位', roles: ['主管', '秘書', '管理員'] },
+  { href: 'secretary.html', title: '秘書專區', desc: '申調謄本清單、人員管理', roles: ['秘書', '管理員'] }
 ];
 var auth = null, role = '', scope = 'mine';
 var state = { client: null, contract: null, clientErr: '', contractErr: '' };
@@ -385,7 +407,7 @@ function nextUrl() {
 // ---------------- 功能入口 ----------------
 function renderEntries() {
   $('entries').innerHTML = ENTRIES.filter(function(e) { return !e.roles || e.roles.indexOf(role) !== -1; }).map(function(e) {
-    return '<a class="entry" href="' + esc(e.href) + '"><b>' + esc(e.title) + '</b><span>' + esc(role === '秘書' && e.secDesc ? e.secDesc : e.desc) + '</span></a>';
+    return '<a class="entry" href="' + esc(e.href) + '"><b>' + esc(e.title) + '</b><span>' + esc((role === '秘書' || role === '管理員') && e.secDesc ? e.secDesc : e.desc) + '</span></a>';
   }).join('');
 }
 
@@ -456,7 +478,7 @@ function loadReminders(manual) {
 function onRole(r) {
   if (r === role) return;
   role = r; $('whoRole').textContent = role;
-  $('scopeSeg').style.display = (role === '主管' || role === '秘書') ? '' : 'none';
+  $('scopeSeg').style.display = (role === '主管' || role === '秘書' || role === '管理員') ? '' : 'none';
   if (auth) sharedLoginSet_(auth.name, auth.code, role);
   renderEntries();
 }
@@ -475,6 +497,8 @@ function enterPortal(name, code, r) {
   state = { client: null, contract: null, clientErr: '', contractErr: '' };
   if (cached && cached.name === name && cached.scope === 'mine') { state.client = cached.client; state.contract = cached.contract; renderReminders(); }
   loadReminders(false);
+  loadGoogleStatus();
+  setTimeout(prefetchPages, 1500);   // 待辦先讀，再預先載入各頁資料
 }
 function logoutToLogin(msg) {
   sharedLoginClear_();
@@ -482,25 +506,146 @@ function logoutToLogin(msg) {
   $('portal').hidden = true; $('loginView').hidden = false;
   $('subtitle').textContent = '登入後可以使用物件、客需的各項功能';
   showLoginMsg(msg || '', true);
+  try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch (e) {}
+  renderGoogleLogin();
 }
 function login(auto) {
   var name = auto ? auto.name : $('loginName').value, code = auto ? auto.code : $('loginCode').value.replace(/\s+/g, '');
   if (!name || !code) { showLoginMsg('請選擇姓名並輸入通關碼。', true); return; }
   var btn = $('loginBtn'); btn.disabled = true; btn.textContent = '登入中…'; showLoginMsg('');
   post(OBJ_API, 'summaryVerifyLogin', [name, code]).then(function(res) {
-    var stored = res.token || code;   // 用通關碼登入會拿到登入憑證，之後網頁只暫存憑證；用憑證驗證（換頁）沿用原本的
-    sharedLoginSet_(res.name, stored, res.role);
-    $('loginCode').value = '';
-    var next = nextUrl();
-    var msg = ''; try { msg = sessionStorage.getItem('ruihe_login_msg') || ''; sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {}
-    if (next && !msg) { location.replace(next); return; }   // 從功能頁被帶回來登入：登入後回原頁面
-    enterPortal(res.name, stored, res.role);
-    if (msg) { var n = $('portalNotice'); n.textContent = msg; n.style.display = 'block'; }
+    afterLogin(res, res.token || code);   // 用通關碼登入會拿到登入憑證，之後網頁只暫存憑證；用憑證驗證（換頁）沿用原本的
   }).catch(function(err) {
     if (auto && isAuthError(err)) { sharedLoginClear_(); }
+    if (auto) renderGoogleLogin();
     showLoginMsg(err.message || '連不上系統', true);
   }).then(function() { btn.disabled = false; btn.textContent = '登入'; });
 }
+
+function afterLogin(res, stored) {
+  sharedLoginSet_(res.name, stored, res.role);
+  $('loginCode').value = '';
+  var next = nextUrl();
+  var msg = ''; try { msg = sessionStorage.getItem('ruihe_login_msg') || ''; sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {}
+  if (next && !msg) { location.replace(next); return; }   // 從功能頁被帶回來登入：登入後回原頁面
+  enterPortal(res.name, stored, res.role);
+  if (msg) { var n = $('portalNotice'); n.textContent = msg; n.style.display = 'block'; }
+}
+
+// ---------------- 預先載入各功能頁的資料 ----------------
+// 登入首頁後，在背景把物件簡表／物件地圖、客需簡表（主管以上再加物件總表，秘書、管理員再加秘書專區）的資料先抓好，
+// 存在各頁面原本就會用的暫存位置，點進去就直接顯示。已經是最新的（版本一樣）後端只回「沒變」，不會重抓整份。
+// 3 分鐘內預先載入過就不再做。
+function readJson(store, key) { try { return JSON.parse(store.getItem(key) || 'null'); } catch (e) { return null; } }
+function prefetchPages() {
+  if (!auth) return;
+  var last = parseInt(sessionStorage.getItem('ruihe_prefetch_at') || '0', 10);
+  if (Date.now() - last < 3 * 60 * 1000) return;
+  try { sessionStorage.setItem('ruihe_prefetch_at', String(Date.now())); } catch (e) {}
+  var who = auth.name, code = auth.code, r = role;
+  // 物件簡表＋物件地圖：同一份資料，地圖多了座標
+  var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), mc = readJson(localStorage, 'ruihe_map_cache_v1');
+  var known = (sc && mc && sc.version === mc.version && mc.coords) ? sc.version : '';
+  post(OBJ_API, 'summaryGetListings', [who, code, known]).then(function(res) {
+    if (res.unchanged || !auth) return;
+    var now = Date.now();
+    try {
+      localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], checkedAt: now }));
+      localStorage.setItem('ruihe_map_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], coords: res.coords || [], checkedAt: now }));
+    } catch (e) {}
+  }).catch(function() {});
+  // 客需簡表
+  var cc = readJson(localStorage, 'ruihe_client_summary_cache_v1');
+  post(CLIENT_API, 'clientSummaryGet', [who, code, cc && cc.version ? cc.version : '']).then(function(res) {
+    if (res.unchanged || !auth) return;
+    try { localStorage.setItem('ruihe_client_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], checkedAt: Date.now() })); } catch (e) {}
+  }).catch(function() {});
+  // 物件總表（只存在這個分頁）
+  if (r === '主管' || r === '秘書' || r === '管理員') {
+    var tc = readJson(sessionStorage, 'ruihe_master_cache_v1');
+    post(OBJ_API, 'masterTableGet', [who, code, tc && tc.name === who ? tc.version : '']).then(function(res) {
+      if (res.unchanged || !auth) return;
+      try { sessionStorage.setItem('ruihe_master_cache_v1', JSON.stringify({ name: who, role: res.role || r, version: res.version, tabs: res.tabs || [] })); } catch (e) {}
+    }).catch(function() {});
+  }
+  // 秘書專區（只存在這個分頁）
+  if (r === '秘書' || r === '管理員') {
+    Promise.all([post(OBJ_API, 'adminListPeople', [who, code]), post(REG_API, 'regListRequests', [who, code])]).then(function(all) {
+      if (!auth) return;
+      try { sessionStorage.setItem('ruihe_secretary_cache_v1', JSON.stringify({ name: who, people: all[0], reg: all[1] })); } catch (e) {}
+    }).catch(function() {});
+  }
+}
+
+// ---------------- Google 登入、綁定 ----------------
+// 登入畫面和首頁的「登入方式」不會同時出現，所以每次畫按鈕前重新設定這次按下去要做什麼
+var googleReady = null;
+function whenGoogle() {
+  if (googleReady) return googleReady;
+  googleReady = new Promise(function(resolve, reject) {
+    var t0 = Date.now();
+    (function wait() {
+      if (window.google && google.accounts && google.accounts.id) { resolve(google.accounts.id); return; }
+      if (Date.now() - t0 > 10000) { googleReady = null; reject(new Error('Google 登入元件載入失敗')); return; }
+      setTimeout(wait, 200);
+    })();
+  });
+  return googleReady;
+}
+function inAppBrowser() { return /Line\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent || ''); }
+function renderGoogleLogin() {
+  var note = $('googleNote');
+  if (inAppBrowser()) { note.className = 'g-note warn'; note.textContent = '在 LINE 等 App 裡打開時，Google 登入可能沒辦法用，請改用 Chrome 或 Safari 開啟，或用下面的通關碼登入。'; }
+  whenGoogle().then(function(gid) {
+    gid.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin, auto_select: false, cancel_on_tap_outside: true });
+    $('googleBtn').innerHTML = '';
+    gid.renderButton($('googleBtn'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', width: 280, locale: 'zh_TW' });
+  }).catch(function() { if (!inAppBrowser()) { note.className = 'g-note'; note.textContent = 'Google 登入暫時無法使用，請用通關碼登入。'; } });
+}
+function onGoogleLogin(resp) {
+  if (!resp || !resp.credential) return;
+  showLoginMsg('Google 登入中…', false);
+  post(OBJ_API, 'googleLogin', [resp.credential]).then(function(res) {
+    showLoginMsg('');
+    afterLogin(res, res.token);
+  }).catch(function(err) { showLoginMsg(err.message || '連不上系統', true); });
+}
+function loadGoogleStatus() {
+  if (!auth) return;
+  $('gStatus').textContent = '讀取中…'; $('gUnbindBtn').style.display = 'none'; $('gBindBtn').innerHTML = '';
+  post(OBJ_API, 'googleStatus', [auth.name, auth.code]).then(function(st) {
+    if (st.bound) {
+      $('gStatus').textContent = '已綁定 ' + (st.email || '') + '（之後可以直接按「用 Google 登入」）';
+      $('gUnbindBtn').style.display = '';
+    } else {
+      $('gStatus').textContent = '還沒綁定';
+      whenGoogle().then(function(gid) {
+        gid.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleBind, auto_select: false, cancel_on_tap_outside: true });
+        $('gBindBtn').innerHTML = '';
+        gid.renderButton($('gBindBtn'), { theme: 'filled_blue', size: 'medium', text: 'continue_with', shape: 'pill', locale: 'zh_TW' });
+      }).catch(function() { $('gStatus').textContent = '還沒綁定（Google 登入元件載入失敗，請重新整理再試；在 LINE 裡請改用 Chrome 或 Safari）'; });
+    }
+  }).catch(function(err) {
+    if (isAuthError(err)) { logoutToLogin(err.message); return; }
+    $('gStatus').textContent = '讀取失敗：' + (err.message || '連不上系統');
+  });
+}
+function onGoogleBind(resp) {
+  if (!resp || !resp.credential || !auth) return;
+  $('gStatus').textContent = '綁定中…';
+  post(OBJ_API, 'googleBind', [auth.name, auth.code, resp.credential]).then(function(st) {
+    toast('已綁定 Google 帳號 ' + (st.email || ''));
+    loadGoogleStatus();
+  }).catch(function(err) {
+    if (isAuthError(err)) { logoutToLogin(err.message); return; }
+    toast(err.message || '綁定失敗', true); loadGoogleStatus();
+  });
+}
+$('gUnbindBtn').addEventListener('click', function() {
+  if (!auth || !confirm('確定要解除 Google 帳號綁定嗎？之後要用通關碼登入，或再綁定一次。')) return;
+  post(OBJ_API, 'googleUnbind', [auth.name, auth.code]).then(function() { toast('已解除綁定'); loadGoogleStatus(); })
+    .catch(function(err) { toast(err.message || '解除失敗', true); });
+});
 
 // ---------------- 事件 ----------------
 $('loginBtn').addEventListener('click', function() { login(); });
@@ -525,6 +670,7 @@ $('scopeSeg').addEventListener('click', function(e) {
   }, function(err) { $('loginName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>'; showLoginMsg(err.message || '連不上系統', true); });
   idleWatch_(function() { return !!auth; }, function(m) { logoutToLogin(m); });
   var saved = sharedLoginGet_();
+  if (!saved) renderGoogleLogin();
   if (saved) { login(saved); }
   else if (msg) { showLoginMsg(msg, true); try { sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {} }
 })();
