@@ -614,17 +614,9 @@ function loadGoogleStatus() {
   if (!auth) return;
   $('gStatus').textContent = '讀取中…'; $('gUnbindBtn').style.display = 'none'; $('gBindBtn').innerHTML = '';
   post(OBJ_API, 'googleStatus', [auth.name, auth.code]).then(function(st) {
-    if (st.bound) {
-      $('gStatus').textContent = '已綁定 ' + (st.email || '') + '（之後可以直接按「用 Google 登入」）';
-      $('gUnbindBtn').style.display = '';
-    } else {
-      $('gStatus').textContent = '還沒綁定';
-      whenGoogle().then(function(gid) {
-        gid.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleBind, auto_select: false, cancel_on_tap_outside: true });
-        $('gBindBtn').innerHTML = '';
-        gid.renderButton($('gBindBtn'), { theme: 'filled_blue', size: 'medium', text: 'continue_with', shape: 'pill', locale: 'zh_TW' });
-      }).catch(function() { $('gStatus').textContent = '還沒綁定（Google 登入元件載入失敗，請重新整理再試；在 LINE 裡請改用 Chrome 或 Safari）'; });
-    }
+    // Google 帳號由管理員在人員管理設定；這裡只顯示狀態
+    if (st.bound) $('gStatus').textContent = (st.email || '') + '（由管理員設定）' + (st.linked ? '，可以直接按「使用 Google 帳戶登入」' : '，第一次按「使用 Google 帳戶登入」後就完成連結');
+    else $('gStatus').textContent = '還沒設定。要用 Google 登入，請洽管理員設定你的 Gmail。';
   }).catch(function(err) {
     if (isAuthError(err)) { logoutToLogin(err.message); return; }
     $('gStatus').textContent = '讀取失敗：' + (err.message || '連不上系統');
