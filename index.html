@@ -203,6 +203,7 @@
     .g-box { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 2px 0 14px; min-height: 44px; }
     .g-note { font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.5; }
     .g-note.warn { color: #8a5a00; }
+    .back-link { border: none; background: none; padding: 0; margin: 0 0 12px; font-family: inherit; font-size: 14px; color: var(--brand); cursor: pointer; }
     .or-line { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; margin: 4px 0 14px; }
     .or-line::before, .or-line::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--line); }
     .method-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
@@ -220,18 +221,24 @@
 
     <div class="card narrow" id="loginView">
       <h2>登入</h2>
-      <div class="g-box"><div id="googleBtn"></div><div class="g-note" id="googleNote"></div></div>
-      <div class="or-line">或用通關碼登入</div>
-      <div class="field">
-        <label class="required" for="loginName">姓名</label>
-        <select id="loginName"><option value="">載入中…</option></select>
+      <div id="chooseBox">
+        <div class="g-box"><div id="googleBtn"></div><div class="g-note" id="googleNote"></div></div>
+        <div class="or-line">或</div>
+        <button type="button" class="btn" id="showCodeBtn" style="width:100%;">使用通關碼登入</button>
       </div>
-      <div class="field">
-        <label class="required" for="loginCode">通關碼</label>
-        <div class="hint">英文和數字，不分大小寫</div>
-        <input type="password" id="loginCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20">
+      <div id="codeBox" hidden>
+        <button type="button" class="back-link" id="backBtn">← 其他登入方式</button>
+        <div class="field">
+          <label class="required" for="loginName">姓名</label>
+          <select id="loginName"><option value="">載入中…</option></select>
+        </div>
+        <div class="field">
+          <label class="required" for="loginCode">通關碼</label>
+          <div class="hint">英文和數字，不分大小寫</div>
+          <input type="password" id="loginCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20">
+        </div>
+        <button type="button" class="btn" id="loginBtn" style="width:100%;">登入</button>
       </div>
-      <button type="button" class="btn" id="loginBtn" style="width:100%;">登入</button>
       <div class="msg" id="loginMsg"></div>
       <div class="login-note">在共用電腦上用完，請按「登出」。30 分鐘沒有動作會自動登出。</div>
     </div>
@@ -507,6 +514,7 @@ function logoutToLogin(msg) {
   $('subtitle').textContent = '登入後可以使用物件、客需的各項功能';
   showLoginMsg(msg || '', true);
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch (e) {}
+  showLoginChoice(false);
   renderGoogleLogin();
 }
 function login(auto) {
@@ -638,6 +646,13 @@ $('gUnbindBtn').addEventListener('click', function() {
   post(OBJ_API, 'googleUnbind', [auth.name, auth.code]).then(function() { toast('已解除綁定'); loadGoogleStatus(); })
     .catch(function(err) { toast(err.message || '解除失敗', true); });
 });
+
+function showLoginChoice(code) {
+  $('chooseBox').hidden = !!code; $('codeBox').hidden = !code;
+  if (code) setTimeout(function() { try { $('loginName').focus(); } catch (e) {} }, 0);
+}
+$('showCodeBtn').addEventListener('click', function() { showLoginChoice(true); });
+$('backBtn').addEventListener('click', function() { showLoginChoice(false); });
 
 // ---------------- 事件 ----------------
 $('loginBtn').addEventListener('click', function() { login(); });

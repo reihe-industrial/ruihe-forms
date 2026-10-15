@@ -173,6 +173,10 @@
       .item[open] .item-more { animation: open .15s ease-out; }
       @keyframes open { from { opacity: 0; } to { opacity: 1; } }
     }
+      tr.dup td { background: #FDECEA !important; }
+    .dup-tag { display: inline-block; background: #B3261E; color: #fff; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 1px 7px; margin-right: 6px; vertical-align: 1px; }
+    .item.dup { border-color: #F2B8B5; background: #FFF6F5; }
+    .dup-count { color: #8C1D18 !important; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -284,6 +288,7 @@
               <label for="fKeyword">關鍵字</label>
               <input type="search" id="fKeyword" placeholder="案名、地段、契約編號…" autocomplete="off">
             </div>
+            <div><label style="display:inline-flex;align-items:center;gap:6px;margin-top:22px;font-weight:700;"><input type="checkbox" id="fDup" style="width:auto;"> 只看可能重複的</label></div>
             <div class="filter-foot"><button type="button" class="btn ghost" id="clearBtn">清除篩選</button></div>
           </div>
         </div>
@@ -387,7 +392,7 @@ var CARD_LABELS = ['案名', '契約編號', '總價', '單價', '詳細地址',
 // 資料只放在這個頁面的記憶體（有委託人資料，不存進瀏覽器）
 var auth = null, data = null, role = '';
 var tab = '廠房', sortState = { col: '', dir: 1 }, openKeys = {};
-var filters = { status: '', agent: '', keyword: '' };
+var filters = { status: '', agent: '', keyword: '', dupOnly: false };
 var pollTimer = null, busy = false, lastCheckFailed = false, checkedAt = 0;
 
 function $(id) { return document.getElementById(id); }
@@ -441,12 +446,15 @@ function renderFilters() {
   $('fAgent').innerHTML = '<option value="">全部業務</option>' + list.map(function(n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
   $('fAgent').value = filters.agent;
 }
+// 重複標記（後端算好：同一個契約編號、地段地號或地址出現在兩件以上）
+function dupOf(t, i) { return (t.dup && t.dup[i]) || ''; }
 function filtered() {
   var t = current();
   var words = filters.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return t.rows.map(function(r, i) { return { r: r, i: i }; }).filter(function(x) {
     if (filters.status && statusOf(t, x.r) !== filters.status) return false;
     if (filters.agent && agentsOf(t, x.r).indexOf(filters.agent) === -1) return false;
+    if (filters.dupOnly && !dupOf(t, x.i)) return false;
     if (words.length) {
       var hay = x.r.join(' ').toLowerCase();
       for (var k = 0; k < words.length; k++) if (hay.indexOf(words[k]) === -1) return false;
@@ -479,9 +487,10 @@ function render() {
   if (!data) return;
   var t = current();
   var list = sorted(filtered());
-  var n = (filters.status ? 1 : 0) + (filters.agent ? 1 : 0) + (filters.keyword.trim() ? 1 : 0);
+  var n = (filters.status ? 1 : 0) + (filters.agent ? 1 : 0) + (filters.keyword.trim() ? 1 : 0) + (filters.dupOnly ? 1 : 0);
   $('filterToggleText').textContent = n ? '篩選（已套用 ' + n + ' 項）' : '篩選';
-  $('countText').innerHTML = '共 ' + list.length + ' 件' + (list.length !== t.rows.length ? '<small>' + tab + '全部 ' + t.rows.length + ' 件</small>' : '');
+  var dupN = t.rows.filter(function(r, i) { return dupOf(t, i); }).length;
+  $('countText').innerHTML = '共 ' + list.length + ' 件' + (list.length !== t.rows.length ? '<small>' + tab + '全部 ' + t.rows.length + ' 件</small>' : '') + (dupN ? '<small class="dup-count">有 ' + dupN + ' 件可能重複（紅色）</small>' : '');
   if (!t.rows.length) { $('results').innerHTML = '<div class="empty">沒有' + tab + '的資料。</div>'; return; }
   if (!list.length) { $('results').innerHTML = '<div class="empty">沒有符合條件的物件。</div>'; return; }
   if (DESKTOP_QUERY.matches) {
@@ -493,8 +502,10 @@ function render() {
     var nameI = colIdx(t, '案名');
     // 電腦版：表格已經有全部欄位，不做點開；太長的格子滑鼠移上去看全文
     var body = list.map(function(x) {
-      return '<tr>' + t.columns.map(function(c, i) {
-        return '<td' + (i === nameI ? ' class="name"' : '') + ' title="' + esc(x.r[i]) + '">' + esc(x.r[i]) + '</td>';
+      var d = dupOf(t, x.i);
+      return '<tr' + (d ? ' class="dup" title="可能重複：' + esc(d) + '相同"' : '') + '>' + t.columns.map(function(c, i) {
+        var tag = (d && i === nameI) ? '<span class="dup-tag">重複</span>' : '';
+        return '<td' + (i === nameI ? ' class="name"' : '') + (d ? '' : ' title="' + esc(x.r[i]) + '"') + '>' + tag + esc(x.r[i]) + '</td>';
       }).join('') + '</tr>';
     }).join('');
     $('results').innerHTML = '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
@@ -504,8 +515,10 @@ function render() {
       var lines = CARD_LABELS.filter(function(l) { return l !== '案名' && l !== '案件狀態' && val(t, x.r, l); }).map(function(l) {
         return '<div class="item-meta"><span style="color:var(--muted);">' + esc(l) + '：</span>' + esc(val(t, x.r, l)) + '</div>';
       }).join('');
-      return '<details class="item" data-k="' + esc(k) + '"' + (openKeys[k] ? ' open' : '') + '><summary>' +
-        '<div class="item-top"><span class="item-name">' + esc(val(t, x.r, '案名') || '（沒有案名）') + '</span><span class="tag ' + (st === '銷售中' ? 'rs' : '') + '">' + esc(st) + '</span></div>' +
+      var d = dupOf(t, x.i);
+      return '<details class="item' + (d ? ' dup' : '') + '" data-k="' + esc(k) + '"' + (openKeys[k] ? ' open' : '') + '><summary>' +
+        '<div class="item-top"><span class="item-name">' + (d ? '<span class="dup-tag">重複</span>' : '') + esc(val(t, x.r, '案名') || '（沒有案名）') + '</span><span class="tag ' + (st === '銷售中' ? 'rs' : '') + '">' + esc(st) + '</span></div>' +
+        (d ? '<div class="item-meta" style="color:#8C1D18;font-weight:700;">可能重複：' + esc(d) + '相同</div>' : '') +
         lines + '<div class="item-more-hint"><span class="open-t">看全部欄位</span><span class="close-t">收起</span></div>' +
         '</summary><div class="item-more" style="display:block;">' + detailHtml(t, x.r) + '</div></details>';
     }).join('') + '</div>';
@@ -608,10 +621,11 @@ $('statusChips').addEventListener('click', function(e) {
   var b = e.target.closest('button'); if (!b) return;
   filters.status = b.getAttribute('data-v'); renderFilters(); render();
 });
+$('fDup').addEventListener('change', function() { filters.dupOnly = this.checked; render(); });
 $('fAgent').addEventListener('change', function() { filters.agent = this.value; render(); });
 var kwTimer = null;
 $('fKeyword').addEventListener('input', function() { var v = this.value; clearTimeout(kwTimer); kwTimer = setTimeout(function() { filters.keyword = v; render(); }, 200); });
-$('clearBtn').addEventListener('click', function() { filters = { status: '', agent: '', keyword: '' }; $('fKeyword').value = ''; renderFilters(); render(); });
+$('clearBtn').addEventListener('click', function() { filters = { status: '', agent: '', keyword: '', dupOnly: false }; if ($('fDup')) $('fDup').checked = false; $('fKeyword').value = ''; renderFilters(); render(); });
 $('filterToggle').addEventListener('click', function() {
   var card = $('filterCard'), open = !card.classList.contains('open');
   card.classList.toggle('open', open); this.setAttribute('aria-expanded', String(open));
