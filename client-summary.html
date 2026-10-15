@@ -570,7 +570,7 @@ function buildItems() {
       agents: splitList(cell(row, '負責業務')),
       regions: splitRegions(cell(row, '目標區域')),
       urgency: URGENCY_ORDER.indexOf(String(cell(row, '客戶急迫程度')).trim()),
-      search: data.columns.filter(function(c) { return c !== '_key'; }).map(function(c) { return cell(row, c); }).join(' ').toLowerCase(),
+      search: data.columns.filter(function(c) { return c.charAt(0) !== '_'; }).map(function(c) { return cell(row, c); }).join(' ').toLowerCase(),
     };
     return it;
   });
@@ -780,7 +780,7 @@ function editLinkHtml(it) {
   return isMine(it) || isSecretary() ? '<a class="edit-link" href="client-needs.html?mode=edit&key=' + encodeURIComponent(it.key) + '">修改／追蹤</a>' : '';
 }
 function detailHtml(it) {
-  var rest = data.columns.filter(function(c) { return c !== '_key' && SHOWN.indexOf(c) === -1 && String(cell(it.row, c)).trim() !== ''; });
+  var rest = data.columns.filter(function(c) { return c.charAt(0) !== '_' && SHOWN.indexOf(c) === -1 && String(cell(it.row, c)).trim() !== ''; });
   var body = !rest.length ? '<div class="hint">沒有其他資料</div>' : '<div class="detail-grid">' + rest.map(function(c) {
     return '<div><span>' + esc(c) + '</span><span>' + esc(cell(it.row, c)) + '</span></div>';
   }).join('') + '</div>';

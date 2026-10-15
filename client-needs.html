@@ -241,7 +241,8 @@
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
-  <script>
+  <script src="lib/match.js"></script>
+<script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
@@ -335,6 +336,11 @@
         </div>
         <div class="msg" id="trackMsg"></div>
         <div id="trackList"></div>
+      </div>
+      <div class="card edit-card" id="matchCard">
+        <h2>配對物件</h2>
+        <div style="color:#5D6B62;font-size:13.5px;margin-bottom:6px;">依物件類型、買／租、區域、坪數、預算比對銷售中的物件；改了需求要存檔後才會用新的內容比對</div>
+        <div id="matchList"><div style="color:#5D6B62;">讀取中…</div></div>
       </div>
     </div>
   </div>
@@ -1752,6 +1758,7 @@ function openClient_(key) {
     document.getElementById('editCaseTitle').textContent = editCase_.title;
     document.getElementById('trackDate').value = todayIso_();
     renderTracks_(res.records);
+    loadMatches_(res.key);
   }).catch(function(err) {
     if (isEditAuthError_(err)) { handleEditError_(err); return; }
     showEditView_('list');
@@ -1793,6 +1800,20 @@ function saveEdit_(data) {
 }
 
 // ---------- 追蹤紀錄 ----------
+// 配對物件：用客需簡表裡這一筆（存檔後的內容）跟物件簡表比對
+function loadMatches_(key) {
+  var box = document.getElementById('matchList');
+  if (!window.RuiheMatch || !editAuth_) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div style="color:#5D6B62;">讀取中…</div>';
+  Promise.all([RuiheMatch.loadClients(editAuth_), RuiheMatch.loadListings(editAuth_)]).then(function(all) {
+    var c = all[0].filter(function(x) { return x.key === key; })[0];
+    if (!c) { box.innerHTML = '<div style="color:#5D6B62;">客需簡表還沒有這一筆（剛新增的請稍後再看）。</div>'; return; }
+    if (c.closed) { box.innerHTML = '<div style="color:#5D6B62;">這筆客需已經結案，不配對。</div>'; return; }
+    var list = RuiheMatch.matchesForClient(c, all[1]);
+    box.innerHTML = list.length ? '<div style="font-weight:700;margin:4px 0;">符合 ' + list.length + ' 件' + (list.length > 30 ? '（顯示前 30 件）' : '') + '</div>' +
+      list.slice(0, 30).map(RuiheMatch.listingItemHtml).join('') : '<div style="color:#5D6B62;">目前沒有符合的物件。</div>';
+  }).catch(function(err) { box.innerHTML = '<div style="color:#B3261E;">讀取失敗：' + RuiheMatch.esc(err.message || '連不上系統') + '</div>'; });
+}
 function renderTracks_(records) {
   var box = document.getElementById('trackList');
   if (!records || !records.length) { box.innerHTML = '<div class="track-empty">還沒有追蹤紀錄。</div>'; return; }

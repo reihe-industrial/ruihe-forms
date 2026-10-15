@@ -271,12 +271,16 @@
         <summary>物件：合約 30 天內到期<span class="badge" id="cntContract">…</span></summary>
         <div class="rem-body" id="bodyContract"><div class="rem-empty">讀取中…</div></div>
       </details>
+      <details class="rem" id="remMatch" open hidden>
+        <summary>新物件符合你的客需（最近 7 天）<span class="badge" id="cntMatch">…</span></summary>
+        <div class="rem-body" id="bodyMatch"></div>
+      </details>
       <details class="rem" id="remReq" open hidden>
         <summary>人員異動申請（待審核）<span class="badge" id="cntReq">…</span></summary>
         <div class="rem-body" id="bodyReq"></div>
       </details>
       <details class="rem" id="remDup" open hidden>
-        <summary>物件：可能重複或相似<span class="badge" id="cntDup">…</span></summary>
+        <summary>物件：相同、需要確認或相似<span class="badge" id="cntDup">…</span></summary>
         <div class="rem-body" id="bodyDup"><div class="rem-empty">讀取中…</div></div>
       </details>
 
@@ -291,6 +295,7 @@
     </div>
   </div>
 
+<script src="lib/match.js"></script>
 <script>
 var GOOGLE_CLIENT_ID = '145144542151-spm8h66cenm8pdshn3rrf4p3964emp55.apps.googleusercontent.com';
 var OBJ_API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';      // 物件後端（登入、合約提醒）
@@ -517,6 +522,7 @@ function enterPortal(name, code, r) {
   loadReminders(false);
   loadGoogleStatus();
   renderDupReminder();
+  renderMatchReminder();
   setTimeout(prefetchPages, 1500);   // 待辦先讀，再預先載入各頁資料
 }
 function logoutToLogin(msg) {
@@ -553,6 +559,33 @@ function afterLogin(res, stored) {
 }
 
 // ---------------- 秘書、管理員：可能重複或相似的物件（用預先載入的物件總表資料算） ----------------
+// 最近 7 天新登錄的物件，符合自己負責的客需（用首頁預先載入的物件簡表、客需簡表算）
+function renderMatchReminder() {
+  var box = $('remMatch');
+  if (!auth || !window.RuiheMatch) { box.hidden = true; return; }
+  var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), cc = readJson(localStorage, 'ruihe_client_summary_cache_v1');
+  if (!sc || !sc.dates || !cc) { box.hidden = true; return; }
+  var since = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  var mine = cc.rows.map(function(r) { return RuiheMatch.parseClient(cc.columns, r); }).filter(function(c) { return !c.closed && c.agents.indexOf(auth.name) !== -1; });
+  var items = [];
+  sc.rows.forEach(function(r, i) {
+    var d = sc.dates[i];
+    if (!d || d < since) return;
+    var L = RuiheMatch.parseListing(sc.columns, r, d, i);
+    RuiheMatch.matchesForListing(L, mine).forEach(function(x) { items.push({ L: L, c: x.client, m: x.m }); });
+  });
+  items.sort(function(a, b) { return b.m.score - a.m.score || String(b.L.date).localeCompare(String(a.L.date)); });
+  box.hidden = !items.length;
+  if (!items.length) return;
+  setBadge('cntMatch', items.length, 'warn');
+  $('bodyMatch').innerHTML = items.slice(0, 8).map(function(x) {
+    return '<div class="rem-row"><div class="nm">' + esc(x.L.name || '（未填案名）') + '</div>' +
+      '<div class="meta">' + esc([x.L.typesText, x.L.rs, x.L.placeText, x.L.priceText, x.L.date + ' 登錄'].filter(Boolean).join('｜')) + '</div>' +
+      '<div class="when">符合你的客需：' + esc(x.c.types.join('、') + '・' + x.c.demand.join('、') + (x.c.regionText ? '（' + x.c.regionText + '）' : '')) +
+      (x.m.warn ? '　<b>' + esc(x.m.warn) + '</b>' : '') + '</div>' +
+      '<div class="go"><a class="link-btn" href="client-needs.html?mode=edit&key=' + encodeURIComponent(x.c.key) + '">看這筆客需</a></div></div>';
+  }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 筆，請到客需的「配對物件」看。</div>' : '');
+}
 function renderReqReminder() {
   var box = $('remReq');
   var c = auth ? readJson(sessionStorage, 'ruihe_secretary_cache_v1') : null;
@@ -581,12 +614,14 @@ function renderDupReminder() {
     var ni = (t.columns || []).indexOf('案名');
     (t.dup || []).forEach(function(d, i) { if (d) items.push({ name: ni === -1 ? '' : t.rows[i][ni], type: t.type, why: d }); });
   });
+  var order = { '相同': 0, '需要確認': 1, '相似': 2 };
+  items.sort(function(a, b) { return order[a.why.split('｜')[0]] - order[b.why.split('｜')[0]]; });
   setBadge('cntDup', items.length, items.length ? 'hot' : '');
-  if (!items.length) { $('bodyDup').innerHTML = '<div class="rem-empty">目前沒有重複或相似的物件。</div>'; return; }
+  if (!items.length) { $('bodyDup').innerHTML = '<div class="rem-empty">目前沒有相同、需要確認或相似的物件。</div>'; return; }
   $('bodyDup').innerHTML = items.slice(0, 8).map(function(it) {
     return '<div class="rem-row"><div class="nm">' + esc(it.name || '（未填案名）') + '</div><div class="meta">' + esc(it.type) + '</div>' +
-      '<div class="when"><b>' + esc(it.why) + '</b></div><div class="go"><a class="link-btn" href="master-table.html?dup=1">看物件總表</a></div></div>';
-  }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 件，請到物件總表勾「只看重複或相似的」。</div>' : '');
+      '<div class="when"><b>' + esc(it.why.split('｜')[0]) + '</b>　' + esc(it.why.split('｜').slice(1).join('｜')) + '</div><div class="go"><a class="link-btn" href="master-table.html?dup=1">看物件總表</a></div></div>';
+  }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 件，請到物件總表勾「只看相同、需要確認或相似的」。</div>' : '');
 }
 
 // ---------------- 預先載入各功能頁的資料 ----------------
@@ -602,21 +637,21 @@ function prefetchPages() {
   var who = auth.name, code = auth.code, r = role;
   // 物件簡表＋物件地圖：同一份資料，地圖多了座標
   var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), mc = readJson(localStorage, 'ruihe_map_cache_v1');
-  var known = (sc && mc && sc.version === mc.version && mc.coords) ? sc.version : '';
+  var known = (sc && mc && sc.version === mc.version && mc.coords && sc.dates) ? sc.version : '';
   post(OBJ_API, 'summaryGetListings', [who, code, known]).then(function(res) {
     if (res.unchanged || !auth) return;
     var now = Date.now();
     try {
-      localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], checkedAt: now }));
+      localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], checkedAt: now }));
       localStorage.setItem('ruihe_map_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], coords: res.coords || [], checkedAt: now }));
     } catch (e) {}
-  }).catch(function() {});
+  }).then(function() { renderMatchReminder(); }, function() {});
   // 客需簡表
   var cc = readJson(localStorage, 'ruihe_client_summary_cache_v1');
   post(CLIENT_API, 'clientSummaryGet', [who, code, cc && cc.version ? cc.version : '']).then(function(res) {
     if (res.unchanged || !auth) return;
     try { localStorage.setItem('ruihe_client_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], checkedAt: Date.now() })); } catch (e) {}
-  }).catch(function() {});
+  }).then(function() { renderMatchReminder(); }, function() {});
   // 物件總表（只存在這個分頁）
   if (r === '主管' || r === '秘書' || r === '管理員') {
     var tc = readJson(sessionStorage, 'ruihe_master_cache_v1');

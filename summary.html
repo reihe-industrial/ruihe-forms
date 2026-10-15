@@ -163,6 +163,8 @@
       .item[open] .item-more { animation: open .15s ease-out; }
       @keyframes open { from { opacity: 0; } to { opacity: 1; } }
     }
+      .match-btn { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--brand); background: #fff; color: var(--brand); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .match-btn:hover { background: var(--brand-soft); }
   </style>
 </head>
 <body>
@@ -336,6 +338,7 @@
     </div>
   </div>
 
+<script src="lib/match.js"></script>
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 
@@ -714,7 +717,7 @@ function tableHtml(list) {
     var arrow = sortState.label === c ? '<span class="arrow">' + (sortState.dir === 1 ? '▲' : '▼') + '</span>' : '';
     var aria = sortState.label === c ? (sortState.dir === 1 ? 'ascending' : 'descending') : 'none';
     return '<th aria-sort="' + aria + '"><button type="button" data-col="' + esc(c) + '">' + esc(c) + arrow + '</button></th>';
-  }).join('');
+  }).join('') + '<th>配對</th>';
   var body = list.map(function(it) {
     return '<tr>' + cols.map(function(c, i) {
       var v = it.row[i] || '';
@@ -723,7 +726,7 @@ function tableHtml(list) {
       if (c === C.contract) return '<td>' + contractTagHtml(v) + '</td>';
       if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(v) + '</td>';
       return '<td>' + esc(v) + '</td>';
-    }).join('') + '</tr>';
+    }).join('') + '<td><button type="button" class="match-btn" data-match="' + it.order + '">配對客需</button></td></tr>';
   }).join('');
   return '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
 }
@@ -748,7 +751,7 @@ function cardsHtml(list) {
       (area.length ? '<div class="item-meta">' + area.join('｜') + '</div>' : '') +
       (cell(r, C.agent) ? '<div class="item-meta muted">業務：' + esc(cell(r, C.agent)) + '</div>' : '') +
       '<div class="item-more-hint"><span class="open-t">看其他欄位</span><span class="close-t">收起</span></div>' +
-      '</summary><dl class="item-more">' + (more || '<dt></dt><dd>沒有其他資料</dd>') + '</dl></details>';
+      '</summary><div style="padding:0 0 10px;"><button type="button" class="match-btn" data-match="' + it.order + '">配對客需</button></div><dl class="item-more">' + (more || '<dt></dt><dd>沒有其他資料</dd>') + '</dl></details>';
   }).join('') + '</div>';
 }
 function updateStatus() {
@@ -800,7 +803,7 @@ function checkForUpdates(manual) {
         if (manual) toast('已經是最新資料');
       } else {
         var hadData = !!data;
-        data = { version: res.version, columns: res.columns || [], rows: res.rows || [], checkedAt: Date.now() };
+        data = { version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], checkedAt: Date.now() };
         saveCache();
         buildItems();
         applyAndRender();
@@ -902,6 +905,21 @@ function logoutLocal_(reason) {
   if (reason) showLoginError(reason); else $('loginMsg').className = 'msg';
   $('loginCode').focus();
 }
+
+// ---------------- 客需配對：這件物件符合哪些客需（客需簡表的資料，不含客戶資料） ----------------
+document.addEventListener('click', function(e) {
+  var b = e.target.closest('.match-btn');
+  if (!b || !data || !window.RuiheMatch) return;
+  var i = parseInt(b.getAttribute('data-match'), 10);
+  var L = RuiheMatch.parseListing(data.columns, data.rows[i], (data.dates || [])[i], i);
+  var dlg = RuiheMatch.showModal('「' + (L.name || '物件') + '」配對客需', '<div style="color:#5D6B62;">讀取客需中…</div>');
+  RuiheMatch.loadClients(auth).then(function(clients) {
+    var list = RuiheMatch.matchesForListing(L, clients);
+    dlg.body.innerHTML = '<div style="color:#5D6B62;font-size:13px;margin-bottom:4px;">比對物件類型、買／租、區域（同縣市）、坪數、預算；結案的客需不列。有興趣請找負責業務。</div>' +
+      (list.length ? '<div style="font-weight:700;margin:6px 0;">符合 ' + list.length + ' 筆</div>' + list.slice(0, 50).map(function(x) { return RuiheMatch.clientItemHtml(x, ''); }).join('')
+        : '<div style="padding:14px 0;color:#5D6B62;">目前沒有符合的客需。</div>');
+  }).catch(function(err) { dlg.body.innerHTML = '<div style="color:#B3261E;">讀取失敗：' + RuiheMatch.esc(err.message || '連不上系統') + '</div>'; });
+});
 
 // ---------------- 事件 ----------------
 $('loginBtn').addEventListener('click', function() { login(); });
