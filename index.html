@@ -301,6 +301,32 @@ var GOOGLE_CLIENT_ID = '145144542151-spm8h66cenm8pdshn3rrf4p3964emp55.apps.googl
 var OBJ_API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';      // 物件後端（登入、合約提醒）
 var REG_API = 'https://script.google.com/macros/s/AKfycbxBxEn3c_mfLtT_gH-O2MgT6byDTNdJCWEf0IxFtYVp1oqYJxmFbGXuXzcX3SEam93E/exec';   // 調謄本後端（秘書專區預先載入）
 var CLIENT_API = 'https://script.google.com/macros/s/AKfycbz6EXnxZb40rln8q9xTaD_TiABT5leWT-R20P5DAQmgLwhiyLvVsI8mqC4Df4wT01zP/exec';   // 客需後端（客需提醒）
+// ---------- 讀資料等太久自動重試（115/10/15）----------
+// 只針對「讀資料」的請求（不會改到資料的），超過 20 秒沒回應就放棄這次、自動再試一次；
+// 兩次都沒回應就回「連線比較慢，請按重新整理」。送出、儲存這類會改資料的請求不重試（避免重複）。
+(function() {
+  if (window.__ruiheFetchWrapped || !window.fetch) return;
+  window.__ruiheFetchWrapped = true;
+  var orig = window.fetch.bind(window);
+  var READS = ['summaryGetListings', 'clientSummaryGet', 'masterTableGet', 'adminListPeople', 'regListRequests', 'editListCases', 'clientEditList',
+    'editLoadCase', 'clientEditLoad', 'clientReminders', 'contractReminders', 'googleStatus', 'getEditLoginOptions', 'getListingFormOptions',
+    'getListingFormPersons', 'myVisibleNames', 'adminLoginLog', 'clientTracksView', 'submissionStatus', 'getLandRegistryFormOptions'];
+  function once(url, opts) {
+    if (!window.AbortController) return orig(url, opts);
+    var ctrl = new AbortController(), timer = setTimeout(function() { ctrl.abort(); }, 20000);
+    var o = {}; for (var k in opts) o[k] = opts[k]; o.signal = ctrl.signal;
+    return orig(url, o).then(function(r) { clearTimeout(timer); return r; }, function(e) { clearTimeout(timer); throw e; });
+  }
+  window.fetch = function(url, opts) {
+    var fn = '';
+    try { if (opts && opts.method === 'POST' && typeof opts.body === 'string' && /script\.google\.com/.test(String(url))) fn = (JSON.parse(opts.body) || {}).fn || ''; } catch (e) {}
+    var isTokenVerify = fn === 'summaryVerifyLogin' && /"S_[A-Z0-9]+"/.test(opts.body);   // 換頁時用登入憑證驗證＝只讀
+    if (READS.indexOf(fn) === -1 && !isTokenVerify) return orig(url, opts);
+    return once(url, opts).catch(function() {
+      return new Promise(function(res) { setTimeout(res, 600); }).then(function() { return once(url, opts); });
+    }).catch(function() { throw new Error('連線比較慢，請按「重新整理」或重新打開這一頁再試一次。'); });
+  };
+})();
 // ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
@@ -383,12 +409,13 @@ function loadLoginNames_(sel, fetchNames, onError) {
 }
 
 var HOME_CACHE_KEY = 'ruihe_home_cache_v1';
-var ALLOWED_NEXT = ['listing.html', 'client-needs.html', 'summary.html', 'client-summary.html', 'map.html', 'master-table.html', 'secretary.html'];
+var ALLOWED_NEXT = ['listing.html', 'client-needs.html', 'summary.html', 'client-summary.html', 'map.html', 'matching.html', 'master-table.html', 'secretary.html'];
 var ENTRIES = [
   { href: 'listing.html?mode=edit', title: '修改物件／客需', desc: '修改自己負責的物件和客需，記錄客需追蹤', secDesc: '修改全部人的物件和客需，記錄客需追蹤' },
   { href: 'summary.html', title: '物件簡表', desc: '全公司銷售中的物件，可以篩選、排序' },
   { href: 'client-summary.html', title: '客需簡表', desc: '全公司的客戶需求（不含客戶聯絡資料）' },
   { href: 'map.html', title: '物件地圖', desc: '銷售中的物件放在地圖上，點標記看簡介' },
+  { href: 'matching.html', title: '客需配對', desc: '每一筆客需符合哪些銷售中的物件' },
   { href: 'master-table.html', title: '物件總表', desc: '總彙整表的所有欄位', roles: ['主管', '秘書', '管理員'] },
   { href: 'secretary.html', title: '秘書專區', desc: '申調謄本清單、人員管理', roles: ['秘書', '管理員'] }
 ];
@@ -637,13 +664,13 @@ function prefetchPages() {
   var who = auth.name, code = auth.code, r = role;
   // 物件簡表＋物件地圖：同一份資料，地圖多了座標
   var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), mc = readJson(localStorage, 'ruihe_map_cache_v1');
-  var known = (sc && mc && sc.version === mc.version && mc.coords && sc.dates) ? sc.version : '';
+  var known = (sc && mc && sc.version === mc.version && mc.coords && mc.keys && sc.dates) ? sc.version : '';
   post(OBJ_API, 'summaryGetListings', [who, code, known]).then(function(res) {
     if (res.unchanged || !auth) return;
     var now = Date.now();
     try {
       localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], checkedAt: now }));
-      localStorage.setItem('ruihe_map_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], coords: res.coords || [], checkedAt: now }));
+      localStorage.setItem('ruihe_map_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], coords: res.coords || [], keys: res.keys || [], checkedAt: now }));
     } catch (e) {}
   }).then(function() { renderMatchReminder(); }, function() {});
   // 客需簡表

@@ -180,6 +180,7 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="matching.html" data-key="matching" data-auth="1" style="display:none;">客需配對</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
@@ -189,7 +190,7 @@
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
-      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
     // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
@@ -342,6 +343,32 @@
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 
+// ---------- 讀資料等太久自動重試（115/10/15）----------
+// 只針對「讀資料」的請求（不會改到資料的），超過 20 秒沒回應就放棄這次、自動再試一次；
+// 兩次都沒回應就回「連線比較慢，請按重新整理」。送出、儲存這類會改資料的請求不重試（避免重複）。
+(function() {
+  if (window.__ruiheFetchWrapped || !window.fetch) return;
+  window.__ruiheFetchWrapped = true;
+  var orig = window.fetch.bind(window);
+  var READS = ['summaryGetListings', 'clientSummaryGet', 'masterTableGet', 'adminListPeople', 'regListRequests', 'editListCases', 'clientEditList',
+    'editLoadCase', 'clientEditLoad', 'clientReminders', 'contractReminders', 'googleStatus', 'getEditLoginOptions', 'getListingFormOptions',
+    'getListingFormPersons', 'myVisibleNames', 'adminLoginLog', 'clientTracksView', 'submissionStatus', 'getLandRegistryFormOptions'];
+  function once(url, opts) {
+    if (!window.AbortController) return orig(url, opts);
+    var ctrl = new AbortController(), timer = setTimeout(function() { ctrl.abort(); }, 20000);
+    var o = {}; for (var k in opts) o[k] = opts[k]; o.signal = ctrl.signal;
+    return orig(url, o).then(function(r) { clearTimeout(timer); return r; }, function(e) { clearTimeout(timer); throw e; });
+  }
+  window.fetch = function(url, opts) {
+    var fn = '';
+    try { if (opts && opts.method === 'POST' && typeof opts.body === 'string' && /script\.google\.com/.test(String(url))) fn = (JSON.parse(opts.body) || {}).fn || ''; } catch (e) {}
+    var isTokenVerify = fn === 'summaryVerifyLogin' && /"S_[A-Z0-9]+"/.test(opts.body);   // 換頁時用登入憑證驗證＝只讀
+    if (READS.indexOf(fn) === -1 && !isTokenVerify) return orig(url, opts);
+    return once(url, opts).catch(function() {
+      return new Promise(function(res) { setTimeout(res, 600); }).then(function() { return once(url, opts); });
+    }).catch(function() { throw new Error('連線比較慢，請按「重新整理」或重新打開這一頁再試一次。'); });
+  };
+})();
 // ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';

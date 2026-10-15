@@ -238,6 +238,7 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="matching.html" data-key="matching" data-auth="1" style="display:none;">客需配對</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
@@ -248,7 +249,7 @@
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
     var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
-      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
       : (edit ? 'edit' : 'listing');
     // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
@@ -452,17 +453,17 @@
         <input type="text" id="factoryLandZoning" placeholder="例：乙種工業區、丁種建築用地">
       </div>
       <div class="field">
-        <label class="required">廠房淨高需求（公尺）</label>
+        <label>廠房淨高需求（公尺）</label>
         <div class="hint">例：最低6米</div>
         <input type="text" id="factoryHeight">
       </div>
       <div class="field">
-        <label class="required">電力需求</label>
+        <label>電力需求</label>
         <div class="hint">例：需300KW以上</div>
         <input type="text" id="factoryPower">
       </div>
       <div class="field">
-        <label class="required">用水需求</label>
+        <label>用水需求</label>
         <input type="text" id="factoryWater">
       </div>
       <div class="field">
@@ -488,7 +489,7 @@
         </select>
       </div>
       <div class="field">
-        <label class="required">廠房其他需求</label>
+        <label>廠房其他需求</label>
         <div class="hint">如：需要臨12米路、需要鄰近台積電、要鄰近高速公路...等</div>
         <textarea id="factoryOther"></textarea>
       </div>
@@ -565,9 +566,12 @@
   <!-- 三、目標區域 -->
   <div class="card">
     <h2>三、目標區域</h2>
-    <div class="hint">先選縣市，再勾選想要的鄉鎮市區（可複選）；不勾鄉鎮市區代表整個縣市都可以。要選別的縣市請按「新增一筆區域」</div>
-    <div id="regionEntries"></div>
-    <button type="button" class="add-row-btn" id="addRegionBtn">＋ 新增一筆區域</button>
+    <div class="field" id="regionField">
+      <label class="required">目標區域</label>
+      <div class="hint">先選縣市，再勾選想要的鄉鎮市區（可複選）；不勾鄉鎮市區代表整個縣市都可以。要選別的縣市請按「新增一筆區域」</div>
+      <div id="regionEntries"></div>
+      <button type="button" class="add-row-btn" id="addRegionBtn">＋ 新增一筆區域</button>
+    </div>
   </div>
 
   <!-- 四、其他資訊 -->
@@ -1169,12 +1173,8 @@ document.getElementById('submitBtn').addEventListener('click', function() {
   if (!document.getElementById('fillDate').value) missing.push('填表日期');
   if (propertyTypes.length === 0) missing.push('物件類型（至少勾選一項）');
   if (!demandType) missing.push('需求類型');
-  if (propertyTypes.indexOf('廠房') !== -1) {
-    if (!document.getElementById('factoryHeight').value.trim()) missing.push('廠房淨高需求');
-    if (!document.getElementById('factoryPower').value.trim()) missing.push('電力需求');
-    if (!document.getElementById('factoryWater').value.trim()) missing.push('用水需求');
-    if (!document.getElementById('factoryOther').value.trim()) missing.push('廠房其他需求');
-  }
+  var hasRegion = Array.prototype.some.call(document.querySelectorAll('.region-entry .countySelect'), function(sel) { return !!sel.value; });
+  if (!hasRegion) missing.push('目標區域（至少選一個縣市）');
 
   if (missing.length > 0) {
     msgBox.className = 'msg error';
@@ -1390,6 +1390,32 @@ setInterval(function() {
 // 登入用修改案件的姓名＋通關碼；通關碼只留在這個頁面的記憶體，重新整理要重登。
 // 只送出真的改過的欄位（後端比對開啟時的表單內容）；負責業務不能改。
 // ============================================================
+// ---------- 讀資料等太久自動重試（115/10/15）----------
+// 只針對「讀資料」的請求（不會改到資料的），超過 20 秒沒回應就放棄這次、自動再試一次；
+// 兩次都沒回應就回「連線比較慢，請按重新整理」。送出、儲存這類會改資料的請求不重試（避免重複）。
+(function() {
+  if (window.__ruiheFetchWrapped || !window.fetch) return;
+  window.__ruiheFetchWrapped = true;
+  var orig = window.fetch.bind(window);
+  var READS = ['summaryGetListings', 'clientSummaryGet', 'masterTableGet', 'adminListPeople', 'regListRequests', 'editListCases', 'clientEditList',
+    'editLoadCase', 'clientEditLoad', 'clientReminders', 'contractReminders', 'googleStatus', 'getEditLoginOptions', 'getListingFormOptions',
+    'getListingFormPersons', 'myVisibleNames', 'adminLoginLog', 'clientTracksView', 'submissionStatus', 'getLandRegistryFormOptions'];
+  function once(url, opts) {
+    if (!window.AbortController) return orig(url, opts);
+    var ctrl = new AbortController(), timer = setTimeout(function() { ctrl.abort(); }, 20000);
+    var o = {}; for (var k in opts) o[k] = opts[k]; o.signal = ctrl.signal;
+    return orig(url, o).then(function(r) { clearTimeout(timer); return r; }, function(e) { clearTimeout(timer); throw e; });
+  }
+  window.fetch = function(url, opts) {
+    var fn = '';
+    try { if (opts && opts.method === 'POST' && typeof opts.body === 'string' && /script\.google\.com/.test(String(url))) fn = (JSON.parse(opts.body) || {}).fn || ''; } catch (e) {}
+    var isTokenVerify = fn === 'summaryVerifyLogin' && /"S_[A-Z0-9]+"/.test(opts.body);   // 換頁時用登入憑證驗證＝只讀
+    if (READS.indexOf(fn) === -1 && !isTokenVerify) return orig(url, opts);
+    return once(url, opts).catch(function() {
+      return new Promise(function(res) { setTimeout(res, 600); }).then(function() { return once(url, opts); });
+    }).catch(function() { throw new Error('連線比較慢，請按「重新整理」或重新打開這一頁再試一次。'); });
+  };
+})();
 // ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
