@@ -326,9 +326,6 @@
       color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
     .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
     .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
-  .dup-warn { background: #FDECEA; border: 1px solid #F2B8B5; color: #8C1D18; border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; font-size: 14px; line-height: 1.7; }
-  .dup-warn b { display: block; font-size: 15px; margin-bottom: 2px; }
-  .dup-warn .dup-note { color: #6b3a36; font-size: 13px; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -622,7 +619,6 @@
         <div class="hint" id="docChecklistNote"></div>
       </div>
 
-      <div class="dup-warn" id="dupWarn" style="display:none;" role="alert"></div>
       <button type="submit" class="submit" id="submitBtn">送出</button>
     </form>
   </div>
@@ -1371,38 +1367,6 @@ function checkLastSubmit_() {
 }
 setTimeout(checkLastSubmit_, 800);
 
-// ------------------------------------------------------------
-// 重複案件提醒（新增物件）：契約編號、地段地號、地址跟物件總表比對，有相同的在送出按鈕上方用紅框提醒（不擋送出）
-// ------------------------------------------------------------
-var dupLastSig_ = '', dupTimer_ = null, dupShown_ = 0;
-function dupEsc_(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-function dupFields_() {
-  var v = {}; try { v = collectFormValues_([]); } catch (e) {}
-  return { '契約編號': v['契約編號'] || '', '案件坐落': v['案件坐落'] || '', '地段+地號': v['地段+地號'] || '', '地段+建號': v['地段+建號'] || '', '詳細地址': v['詳細地址'] || '' };
-}
-function showDup_(list) {
-  var box = document.getElementById('dupWarn');
-  if (!list || !list.length) { box.style.display = 'none'; box.innerHTML = ''; dupShown_ = 0; return; }
-  box.innerHTML = '<b>可能是重複的案件</b>' + list.map(function(m) {
-    return '<div>「' + dupEsc_(m.name) + '」' + dupEsc_(m.type) + '｜' + dupEsc_(m.agents || '（未填業務）') + '｜' + dupEsc_(m.date) + ' 新增（相同的是：' + dupEsc_((m.reasons || []).join('、')) + '）</div>';
-  }).join('') + '<div class="dup-note">如果是同一件，請改用「修改物件」更新；不是同一件可以照常送出。</div>';
-  box.style.display = 'block';
-  if (list.length > dupShown_) showToast('可能是重複的案件，請看送出按鈕上方的提醒', 'error');
-  dupShown_ = list.length;
-}
-function runDupCheck_() {
-  if (EDIT_MODE) return;
-  var f = dupFields_();
-  var sig = JSON.stringify(f);
-  if (sig === dupLastSig_) return;
-  dupLastSig_ = sig;
-  if (!f['契約編號'] && !f['地段+地號'] && !f['地段+建號'] && !f['詳細地址']) { showDup_([]); return; }
-  runServer('checkListingDuplicates', f).then(function(res) { if (sig === dupLastSig_) showDup_(res.matches || []); }).catch(function() {});
-}
-function scheduleDupCheck_() { if (EDIT_MODE) return; clearTimeout(dupTimer_); dupTimer_ = setTimeout(runDupCheck_, 1200); }
-document.getElementById('listingForm').addEventListener('change', scheduleDupCheck_);
-document.getElementById('listingForm').addEventListener('input', scheduleDupCheck_);
-
 // 送出新增物件（含逾時處理、防重複）：獨立成一個函式，方便測試
 function sendListingSubmission_(fieldValues, submitBtn, msgBox) {
   // 送出流程：每次填寫用同一個「送出編號」。伺服器處理比較久、或手機把連線暫停時，網頁不會說送出失敗，
@@ -1434,7 +1398,6 @@ function sendListingSubmission_(fieldValues, submitBtn, msgBox) {
     updateRatioRows();
     resetUploads_();
     clearDraft_();
-    dupLastSig_ = ''; showDup_([]);
     window.scrollTo(0, 0);
   }
   function onFail_(message) {

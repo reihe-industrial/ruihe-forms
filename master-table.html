@@ -177,6 +177,9 @@
     .dup-tag { display: inline-block; background: #B3261E; color: #fff; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 1px 7px; margin-right: 6px; vertical-align: 1px; }
     .item.dup { border-color: #F2B8B5; background: #FFF6F5; }
     .dup-count { color: #8C1D18 !important; font-weight: 700; }
+    tr.dup.sim td { background: #FFF1E6 !important; }
+    .dup-tag.sim { background: #B45309; }
+    .item.dup.sim { border-color: #F5C9A4; background: #FFF8F2; }
   </style>
 </head>
 <body>
@@ -288,7 +291,7 @@
               <label for="fKeyword">關鍵字</label>
               <input type="search" id="fKeyword" placeholder="案名、地段、契約編號…" autocomplete="off">
             </div>
-            <div><label style="display:inline-flex;align-items:center;gap:6px;margin-top:22px;font-weight:700;"><input type="checkbox" id="fDup" style="width:auto;"> 只看可能重複的</label></div>
+            <div id="fDupWrap" hidden><label style="display:inline-flex;align-items:center;gap:6px;margin-top:22px;font-weight:700;"><input type="checkbox" id="fDup" style="width:auto;"> 只看重複或相似的</label></div>
             <div class="filter-foot"><button type="button" class="btn ghost" id="clearBtn">清除篩選</button></div>
           </div>
         </div>
@@ -446,8 +449,9 @@ function renderFilters() {
   $('fAgent').innerHTML = '<option value="">全部業務</option>' + list.map(function(n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
   $('fAgent').value = filters.agent;
 }
-// 重複標記（後端算好：同一個契約編號、地段地號或地址出現在兩件以上）
+// 重複／相似標記（後端算好，只有秘書、管理員那一份有）：地號、建號、地址
 function dupOf(t, i) { return (t.dup && t.dup[i]) || ''; }
+function dupTag(d) { return /重複/.test(d) ? '<span class="dup-tag">重複</span>' : '<span class="dup-tag sim">相似</span>'; }
 function filtered() {
   var t = current();
   var words = filters.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -489,8 +493,9 @@ function render() {
   var list = sorted(filtered());
   var n = (filters.status ? 1 : 0) + (filters.agent ? 1 : 0) + (filters.keyword.trim() ? 1 : 0) + (filters.dupOnly ? 1 : 0);
   $('filterToggleText').textContent = n ? '篩選（已套用 ' + n + ' 項）' : '篩選';
-  var dupN = t.rows.filter(function(r, i) { return dupOf(t, i); }).length;
-  $('countText').innerHTML = '共 ' + list.length + ' 件' + (list.length !== t.rows.length ? '<small>' + tab + '全部 ' + t.rows.length + ' 件</small>' : '') + (dupN ? '<small class="dup-count">有 ' + dupN + ' 件可能重複（紅色）</small>' : '');
+  var dupN = t.rows.filter(function(r, i) { return /重複/.test(dupOf(t, i)); }).length;
+  var simN = t.rows.filter(function(r, i) { var d = dupOf(t, i); return d && !/重複/.test(d); }).length;
+  $('countText').innerHTML = '共 ' + list.length + ' 件' + (list.length !== t.rows.length ? '<small>' + tab + '全部 ' + t.rows.length + ' 件</small>' : '') + (dupN || simN ? '<small class="dup-count">' + [dupN ? dupN + ' 件重複' : '', simN ? simN + ' 件相似' : ''].filter(Boolean).join('、') + '（紅色）</small>' : '');
   if (!t.rows.length) { $('results').innerHTML = '<div class="empty">沒有' + tab + '的資料。</div>'; return; }
   if (!list.length) { $('results').innerHTML = '<div class="empty">沒有符合條件的物件。</div>'; return; }
   if (DESKTOP_QUERY.matches) {
@@ -503,8 +508,8 @@ function render() {
     // 電腦版：表格已經有全部欄位，不做點開；太長的格子滑鼠移上去看全文
     var body = list.map(function(x) {
       var d = dupOf(t, x.i);
-      return '<tr' + (d ? ' class="dup" title="可能重複：' + esc(d) + '相同"' : '') + '>' + t.columns.map(function(c, i) {
-        var tag = (d && i === nameI) ? '<span class="dup-tag">重複</span>' : '';
+      return '<tr' + (d ? ' class="dup' + (/重複/.test(d) ? '' : ' sim') + '" title="' + esc(d) + '"' : '') + '>' + t.columns.map(function(c, i) {
+        var tag = (d && i === nameI) ? dupTag(d) : '';
         return '<td' + (i === nameI ? ' class="name"' : '') + (d ? '' : ' title="' + esc(x.r[i]) + '"') + '>' + tag + esc(x.r[i]) + '</td>';
       }).join('') + '</tr>';
     }).join('');
@@ -516,9 +521,9 @@ function render() {
         return '<div class="item-meta"><span style="color:var(--muted);">' + esc(l) + '：</span>' + esc(val(t, x.r, l)) + '</div>';
       }).join('');
       var d = dupOf(t, x.i);
-      return '<details class="item' + (d ? ' dup' : '') + '" data-k="' + esc(k) + '"' + (openKeys[k] ? ' open' : '') + '><summary>' +
-        '<div class="item-top"><span class="item-name">' + (d ? '<span class="dup-tag">重複</span>' : '') + esc(val(t, x.r, '案名') || '（沒有案名）') + '</span><span class="tag ' + (st === '銷售中' ? 'rs' : '') + '">' + esc(st) + '</span></div>' +
-        (d ? '<div class="item-meta" style="color:#8C1D18;font-weight:700;">可能重複：' + esc(d) + '相同</div>' : '') +
+      return '<details class="item' + (d ? ' dup' + (/重複/.test(d) ? '' : ' sim') : '') + '" data-k="' + esc(k) + '"' + (openKeys[k] ? ' open' : '') + '><summary>' +
+        '<div class="item-top"><span class="item-name">' + (d ? dupTag(d) : '') + esc(val(t, x.r, '案名') || '（沒有案名）') + '</span><span class="tag ' + (st === '銷售中' ? 'rs' : '') + '">' + esc(st) + '</span></div>' +
+        (d ? '<div class="item-meta" style="color:#8C1D18;font-weight:700;">' + esc(d) + '</div>' : '') +
         lines + '<div class="item-more-hint"><span class="open-t">看全部欄位</span><span class="close-t">收起</span></div>' +
         '</summary><div class="item-more" style="display:block;">' + detailHtml(t, x.r) + '</div></details>';
     }).join('') + '</div>';
@@ -536,7 +541,11 @@ function updateStatus() {
 var MASTER_CACHE_KEY = 'ruihe_master_cache_v1';
 function loadMasterCache_(name) { try { var c = JSON.parse(sessionStorage.getItem(MASTER_CACHE_KEY) || 'null'); return c && c.name === name && c.version && c.tabs ? c : null; } catch (e) { return null; } }
 function saveMasterCache_() { try { sessionStorage.setItem(MASTER_CACHE_KEY, JSON.stringify({ name: auth.name, role: role, version: data.version, tabs: data.tabs })); } catch (e) {} }
-function setRoleNote_() { $('roleNote').textContent = (role === '秘書' || role === '管理員') ? role + '：顯示全部欄位（含委託人資料）' : '主管：不顯示委託人資料、取得原因、他項權利、上傳照片'; }
+function setRoleNote_() {
+  var canDup = role === '秘書' || role === '管理員';
+  if ($('fDupWrap')) $('fDupWrap').hidden = !canDup;
+  if (!canDup) filters.dupOnly = false;
+  else if (/[?&]dup=1/.test(location.search) && !setRoleNote_.didUrl) { setRoleNote_.didUrl = true; filters.dupOnly = true; $('fDup').checked = true; } $('roleNote').textContent = (role === '秘書' || role === '管理員') ? role + '：顯示全部欄位（含委託人資料）' : '主管：不顯示委託人資料、取得原因、他項權利、上傳照片'; }
 function check(manual, isLogin) {
   if (!auth || busy) return Promise.resolve();
   busy = true; $('refreshBtn').disabled = true; updateStatus();

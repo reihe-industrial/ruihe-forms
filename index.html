@@ -271,6 +271,10 @@
         <summary>物件：合約 30 天內到期<span class="badge" id="cntContract">…</span></summary>
         <div class="rem-body" id="bodyContract"><div class="rem-empty">讀取中…</div></div>
       </details>
+      <details class="rem" id="remDup" open hidden>
+        <summary>物件：可能重複或相似<span class="badge" id="cntDup">…</span></summary>
+        <div class="rem-body" id="bodyDup"><div class="rem-empty">讀取中…</div></div>
+      </details>
 
       <div class="sec-title"><h2>登入方式</h2></div>
       <div class="method-card" id="methodCard">
@@ -485,6 +489,7 @@ function loadReminders(manual) {
 function onRole(r) {
   if (r === role) return;
   role = r; $('whoRole').textContent = role;
+  renderDupReminder();
   $('scopeSeg').style.display = (role === '主管' || role === '秘書' || role === '管理員') ? '' : 'none';
   if (auth) sharedLoginSet_(auth.name, auth.code, role);
   renderEntries();
@@ -505,6 +510,7 @@ function enterPortal(name, code, r) {
   if (cached && cached.name === name && cached.scope === 'mine') { state.client = cached.client; state.contract = cached.contract; renderReminders(); }
   loadReminders(false);
   loadGoogleStatus();
+  renderDupReminder();
   setTimeout(prefetchPages, 1500);   // 待辦先讀，再預先載入各頁資料
 }
 function logoutToLogin(msg) {
@@ -538,6 +544,27 @@ function afterLogin(res, stored) {
   if (next && !msg) { location.replace(next); return; }   // 從功能頁被帶回來登入：登入後回原頁面
   enterPortal(res.name, stored, res.role);
   if (msg) { var n = $('portalNotice'); n.textContent = msg; n.style.display = 'block'; }
+}
+
+// ---------------- 秘書、管理員：可能重複或相似的物件（用預先載入的物件總表資料算） ----------------
+function renderDupReminder() {
+  var box = $('remDup');
+  var can = role === '秘書' || role === '管理員';
+  box.hidden = !can;
+  if (!can || !auth) return;
+  var c = readJson(sessionStorage, 'ruihe_master_cache_v1');
+  if (!c || c.name !== auth.name || !c.tabs) { $('bodyDup').innerHTML = '<div class="rem-empty">讀取中…</div>'; $('cntDup').textContent = '…'; $('cntDup').className = 'badge'; return; }
+  var items = [];
+  c.tabs.forEach(function(t) {
+    var ni = (t.columns || []).indexOf('案名');
+    (t.dup || []).forEach(function(d, i) { if (d) items.push({ name: ni === -1 ? '' : t.rows[i][ni], type: t.type, why: d }); });
+  });
+  setBadge('cntDup', items.length, items.length ? 'hot' : '');
+  if (!items.length) { $('bodyDup').innerHTML = '<div class="rem-empty">目前沒有重複或相似的物件。</div>'; return; }
+  $('bodyDup').innerHTML = items.slice(0, 8).map(function(it) {
+    return '<div class="rem-row"><div class="nm">' + esc(it.name || '（未填案名）') + '</div><div class="meta">' + esc(it.type) + '</div>' +
+      '<div class="when"><b>' + esc(it.why) + '</b></div><div class="go"><a class="link-btn" href="master-table.html?dup=1">看物件總表</a></div></div>';
+  }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 件，請到物件總表勾「只看重複或相似的」。</div>' : '');
 }
 
 // ---------------- 預先載入各功能頁的資料 ----------------
@@ -574,7 +601,8 @@ function prefetchPages() {
     post(OBJ_API, 'masterTableGet', [who, code, tc && tc.name === who ? tc.version : '']).then(function(res) {
       if (res.unchanged || !auth) return;
       try { sessionStorage.setItem('ruihe_master_cache_v1', JSON.stringify({ name: who, role: res.role || r, version: res.version, tabs: res.tabs || [] })); } catch (e) {}
-    }).catch(function() {});
+      renderDupReminder();
+    }).then(function() { renderDupReminder(); }, function() {});
   }
   // 秘書專區（只存在這個分頁）
   if (r === '秘書' || r === '管理員') {
