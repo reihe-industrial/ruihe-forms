@@ -180,6 +180,13 @@
     tr.dup.sim td { background: #FFF1E6 !important; }
     .dup-tag.sim { background: #B45309; }
     .item.dup.sim { border-color: #F5C9A4; background: #FFF8F2; }
+      [hidden] { display: none !important; }
+    .resultbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    td.editable { cursor: text; }
+    td.editable:hover { outline: 2px solid #A9CDB6; outline-offset: -2px; }
+    td.edited { background: #FFF2CC !important; font-weight: 700; }
+    td.locked-col { color: #8a8f88; }
+    td .cell-input { width: 100%; min-width: 7em; box-sizing: border-box; padding: 4px 6px; font: inherit; border: 2px solid var(--brand); border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -297,7 +304,14 @@
         </div>
       </div>
 
-      <div class="resultbar"><div class="count" id="countText" aria-live="polite"></div></div>
+      <div class="resultbar"><div class="count" id="countText" aria-live="polite"></div>
+        <span style="flex:1 1 auto;"></span>
+        <span id="editBar" hidden style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span id="editHint" style="font-size:13px;color:var(--muted);"></span>
+          <button type="button" class="btn ghost" id="editToggle">修改資料</button>
+          <button type="button" class="btn ghost" id="editCancel" hidden>取消變更</button>
+          <button type="button" class="btn" id="editSave" hidden disabled>儲存變更</button>
+        </span></div>
       <div id="results"><div class="loading">讀取中…</div></div>
     </div>
   </div>
@@ -486,6 +500,25 @@ function detailHtml(t, row) {
     return v ? '<div><span>' + esc(c) + '</span><span>' + esc(v) + '</span></div>' : '';
   }).join('') + '</div>';
 }
+// ------------------------------------------------------------
+// 直接修改格子（秘書、管理員，電腦版）：按「修改資料」→ 點格子改 → 改過的格子變黃 → 「儲存變更」一次存。
+// 案名、業務、類型、照片等鎖住的欄位不能改（後端回傳 t.locked）；有人先改了同一格會提醒，不會蓋掉。
+// ------------------------------------------------------------
+var editMode = false, edits = {}, editingCell = null;
+function canEditTable() { return (role === '秘書' || role === '管理員') && DESKTOP_QUERY.matches && data && current() && (current().keys || []).length > 0; }
+function editKey(t, i, label) { return t.type + '|' + t.keys[i] + '|' + label; }
+function editCount() { return Object.keys(edits).length; }
+function updateEditBar() {
+  var can = canEditTable();
+  $('editBar').hidden = !can;
+  if (!can) return;
+  var n = editCount();
+  $('editToggle').textContent = editMode ? '結束修改' : '修改資料';
+  $('editHint').textContent = editMode ? '點格子修改；灰色的欄位不能在這裡改' : '';
+  $('editSave').hidden = !editMode && !n; $('editCancel').hidden = !n;
+  $('editSave').disabled = !n;
+  $('editSave').textContent = n ? '儲存變更（' + n + '）' : '儲存變更';
+}
 function render() {
   renderTabs();
   if (!data) return;
@@ -510,10 +543,17 @@ function render() {
       var d = dupOf(t, x.i);
       return '<tr' + (d ? ' class="dup' + (/重複/.test(d) ? '' : ' sim') + '" title="' + esc(d) + '"' : '') + '>' + t.columns.map(function(c, i) {
         var tag = (d && i === nameI) ? dupTag(d) : '';
-        return '<td' + (i === nameI ? ' class="name"' : '') + (d ? '' : ' title="' + esc(x.r[i]) + '"') + '>' + tag + esc(x.r[i]) + '</td>';
+        var cls = i === nameI ? ['name'] : [], attrs = '', val = x.r[i];
+        if (editMode && canEditTable()) {
+          if ((t.locked || []).indexOf(c) === -1) { cls.push('editable'); attrs = ' data-ed="' + x.i + '|' + i + '"'; } else cls.push('locked-col');
+        }
+        var ek = (t.keys && t.keys[x.i]) ? editKey(t, x.i, c) : '';
+        if (ek && edits[ek]) { cls.push('edited'); val = edits[ek].value; }
+        return '<td' + (cls.length ? ' class="' + cls.join(' ') + '"' : '') + attrs + (d ? '' : ' title="' + esc(val) + '"') + '>' + tag + esc(val) + '</td>';
       }).join('') + '</tr>';
     }).join('');
     $('results').innerHTML = '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    updateEditBar();
   } else {
     $('results').innerHTML = '<div class="cards">' + list.map(function(x) {
       var k = rowKey(t, x.r, x.i), st = statusOf(t, x.r);
@@ -555,6 +595,7 @@ function check(manual, isLogin) {
       role = res.role || role;
       setRoleNote_();
       if (res.unchanged && data) { if (manual) toast('已經是最新資料'); }
+      else if (data && editCount() && !manual) { /* 有還沒儲存的修改：先不換成新資料 */ }
       else {
         var had = !!data;
         data = { version: res.version, tabs: res.tabs || [] };
@@ -631,6 +672,46 @@ $('statusChips').addEventListener('click', function(e) {
   filters.status = b.getAttribute('data-v'); renderFilters(); render();
 });
 $('fDup').addEventListener('change', function() { filters.dupOnly = this.checked; render(); });
+$('editToggle').addEventListener('click', function() { editMode = !editMode; render(); });
+$('editCancel').addEventListener('click', function() {
+  if (!confirm('要放棄還沒儲存的 ' + editCount() + ' 格變更嗎？')) return;
+  edits = {}; render();
+});
+$('editSave').addEventListener('click', function() {
+  var list = Object.keys(edits).map(function(k) { return edits[k]; });
+  if (!list.length) return;
+  var btn = $('editSave'); btn.disabled = true; btn.textContent = '儲存中…';
+  runServer('masterTableUpdate', auth.name, auth.code, list.map(function(x) { return { type: x.type, key: x.key, label: x.label, old: x.old, value: x.value }; }))
+    .then(function(res) {
+      var bad = {};
+      (res.conflicts || []).concat(res.skipped || []).forEach(function(c) { bad[c.type + '|' + c.key + '|' + c.label] = c; });
+      // 存好的直接改畫面上的資料
+      list.forEach(function(x) {
+        var k = x.type + '|' + x.key + '|' + x.label;
+        if (bad[k]) return;
+        data.tabs.forEach(function(t) {
+          if (t.type !== x.type) return;
+          var ri = (t.keys || []).indexOf(x.key), ci = t.columns.indexOf(x.label);
+          if (ri !== -1 && ci !== -1) t.rows[ri][ci] = x.value;
+        });
+        delete edits[k];
+      });
+      saveMasterCache_();
+      render();
+      var msg = '已儲存 ' + (res.saved || 0) + ' 格';
+      if ((res.conflicts || []).length) {
+        alert('有 ' + res.conflicts.length + ' 格沒有存：在你打開之後有人先改了。\n' + res.conflicts.map(function(c) {
+          var e2 = edits[c.type + '|' + c.key + '|' + c.label] || {};
+          return '・' + (e2.name || '') + '「' + c.label + '」現在是：' + (c.now || '（空白）');
+        }).join('\n') + '\n\n這幾格還保留你改的值（黃色），請按「重新整理」看最新資料後再決定要不要改。');
+      }
+      if ((res.skipped || []).length) msg += '，' + res.skipped.length + ' 格不能在這裡改';
+      toast(msg);
+    })
+    .catch(function(err) { if (isAuthError(err)) { logout(err.message); return; } toast('儲存失敗：' + (err.message || '連不上系統'), true); })
+    .then(function() { updateEditBar(); });
+});
+window.addEventListener('beforeunload', function(e) { if (editCount()) { e.preventDefault(); e.returnValue = ''; } });
 $('fAgent').addEventListener('change', function() { filters.agent = this.value; render(); });
 var kwTimer = null;
 $('fKeyword').addEventListener('input', function() { var v = this.value; clearTimeout(kwTimer); kwTimer = setTimeout(function() { filters.keyword = v; render(); }, 200); });
@@ -640,6 +721,28 @@ $('filterToggle').addEventListener('click', function() {
   card.classList.toggle('open', open); this.setAttribute('aria-expanded', String(open));
 });
 $('results').addEventListener('click', function(e) {
+  var td = e.target.closest('td[data-ed]');
+  if (td && editMode && !td.querySelector('input')) {
+    var parts = td.getAttribute('data-ed').split('|'), t = current(), ri = parseInt(parts[0], 10), ci = parseInt(parts[1], 10);
+    var label = t.columns[ci], k = editKey(t, ri, label), orig = t.rows[ri][ci];
+    var input = document.createElement('input');
+    input.className = 'cell-input'; input.value = edits[k] ? edits[k].value : orig;
+    input.setAttribute('aria-label', label);
+    td.textContent = ''; td.appendChild(input); input.focus(); input.select();
+    var done = false;
+    var commit = function(save) {
+      if (done) return; done = true;
+      if (save) {
+        var v = input.value;
+        if (v === orig) delete edits[k];
+        else edits[k] = { type: t.type, key: t.keys[ri], label: label, old: orig, value: v, name: val(t, t.rows[ri], '案名') };
+      }
+      render();
+    };
+    input.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') commit(true); if (ev.key === 'Escape') commit(false); });
+    input.addEventListener('blur', function() { commit(true); });
+    return;
+  }
   var b = e.target.closest('th button[data-col]');
   if (b) {
     var c = b.getAttribute('data-col');
