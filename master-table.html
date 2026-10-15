@@ -545,7 +545,7 @@ function setRoleNote_() {
   var canDup = role === '秘書' || role === '管理員';
   if ($('fDupWrap')) $('fDupWrap').hidden = !canDup;
   if (!canDup) filters.dupOnly = false;
-  else if (/[?&]dup=1/.test(location.search) && !setRoleNote_.didUrl) { setRoleNote_.didUrl = true; filters.dupOnly = true; $('fDup').checked = true; } $('roleNote').textContent = (role === '秘書' || role === '管理員') ? role + '：顯示全部欄位（含委託人資料）' : '主管：不顯示委託人資料、取得原因、他項權利、上傳照片'; }
+  else if (/[?&]dup=1/.test(location.search) && !setRoleNote_.didUrl) { setRoleNote_.didUrl = true; filters.dupOnly = true; $('fDup').checked = true; } $('roleNote').textContent = (role === '秘書' || role === '管理員') ? role + '：顯示全部欄位（含委託人資料）' : '主管：只顯示同組的人負責的案件，不顯示委託人資料、取得原因、他項權利、上傳照片（還沒設定組別的話只顯示你自己的）'; }
 function check(manual, isLogin) {
   if (!auth || busy) return Promise.resolve();
   busy = true; $('refreshBtn').disabled = true; updateStatus();

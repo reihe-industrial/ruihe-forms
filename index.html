@@ -271,6 +271,10 @@
         <summary>物件：合約 30 天內到期<span class="badge" id="cntContract">…</span></summary>
         <div class="rem-body" id="bodyContract"><div class="rem-empty">讀取中…</div></div>
       </details>
+      <details class="rem" id="remReq" open hidden>
+        <summary>人員異動申請（待審核）<span class="badge" id="cntReq">…</span></summary>
+        <div class="rem-body" id="bodyReq"></div>
+      </details>
       <details class="rem" id="remDup" open hidden>
         <summary>物件：可能重複或相似<span class="badge" id="cntDup">…</span></summary>
         <div class="rem-body" id="bodyDup"><div class="rem-empty">讀取中…</div></div>
@@ -434,10 +438,11 @@ function renderClient() {
   if (!c) return;
   var all = c.scope === 'all';
   function row(it, whenHtml) {
-    return '<div class="rem-row"><div class="nm">' + esc(it.clientName) + '</div>' +
+    var canEdit = it.editable !== false;   // 主管看同組的客需：不顯示客戶資料、不能改
+    return '<div class="rem-row"><div class="nm">' + (it.clientName ? esc(it.clientName) : '<span style="color:var(--muted);font-weight:400;">（' + esc(it.business || '同組') + ' 的客需）</span>') + '</div>' +
       '<div class="meta">' + esc([all ? it.business : '', it.types, it.demand].filter(Boolean).join('｜')) + '</div>' +
       '<div class="when">' + whenHtml + '</div>' +
-      '<div class="go"><a class="link-btn" href="' + esc(clientLink(it)) + '">修改／追蹤</a></div></div>';
+      '<div class="go">' + (canEdit ? '<a class="link-btn" href="' + esc(clientLink(it)) + '">修改／追蹤</a>' : '') + '</div></div>';
   }
   $('bodyDue').innerHTML = c.due.length ? c.due.map(function(it) {
     return row(it, '下次聯絡 ' + esc(it.nextText) + '　' + (it.days > 0 ? '<b>已逾期 ' + it.days + ' 天</b>' : '<b>今天</b>'));
@@ -462,7 +467,7 @@ function renderContract() {
 }
 function renderReminders() {
   renderClient(); renderContract();
-  $('remNote').textContent = scope === 'all' ? '全公司' : '只有你負責的';
+  $('remNote').textContent = scope === 'all' ? (role === '主管' ? '你那一組' : '全公司') : '只有你負責的';
 }
 function saveHomeCache() { try { sessionStorage.setItem(HOME_CACHE_KEY, JSON.stringify({ name: auth.name, scope: scope, client: state.client, contract: state.contract })); } catch (e) {} }
 function loadReminders(manual) {
@@ -491,6 +496,7 @@ function onRole(r) {
   role = r; $('whoRole').textContent = role;
   renderDupReminder();
   $('scopeSeg').style.display = (role === '主管' || role === '秘書' || role === '管理員') ? '' : 'none';
+  $('scopeSeg').querySelector('[data-scope="all"]').textContent = role === '主管' ? '全組' : '全公司';
   if (auth) sharedLoginSet_(auth.name, auth.code, role);
   renderEntries();
 }
@@ -527,7 +533,7 @@ function login(auto) {
   var name = auto ? auto.name : $('loginName').value, code = auto ? auto.code : $('loginCode').value.replace(/\s+/g, '');
   if (!name || !code) { showLoginMsg('請選擇姓名並輸入通關碼。', true); return; }
   var btn = $('loginBtn'); btn.disabled = true; btn.textContent = '登入中…'; showLoginMsg('');
-  post(OBJ_API, 'summaryVerifyLogin', [name, code]).then(function(res) {
+  post(OBJ_API, 'summaryVerifyLogin', auto ? [name, code] : [name, code, clientInfo()]).then(function(res) {
     afterLogin(res, res.token || code);   // 用通關碼登入會拿到登入憑證，之後網頁只暫存憑證；用憑證驗證（換頁）沿用原本的
   }).catch(function(err) {
     if (auto && isAuthError(err)) { sharedLoginClear_(); }
@@ -547,7 +553,23 @@ function afterLogin(res, stored) {
 }
 
 // ---------------- 秘書、管理員：可能重複或相似的物件（用預先載入的物件總表資料算） ----------------
+function renderReqReminder() {
+  var box = $('remReq');
+  var c = auth ? readJson(sessionStorage, 'ruihe_secretary_cache_v1') : null;
+  var reqs = (role === '管理員' && c && c.name === auth.name && c.people && c.people.requests) ? c.people.requests.filter(function(r) { return r.status === '待審核'; }) : [];
+  box.hidden = !reqs.length;
+  if (!reqs.length) return;
+  setBadge('cntReq', reqs.length, 'hot');
+  $('bodyReq').innerHTML = reqs.slice(0, 8).map(function(r) {
+    var ch = [];
+    if (r.fromRole !== r.toRole) ch.push('身分 ' + r.fromRole + ' → ' + r.toRole);
+    if (r.fromGroups !== r.toGroups) ch.push('組別 ' + (r.fromGroups || '（無）') + ' → ' + (r.toGroups || '（無）'));
+    return '<div class="rem-row"><div class="nm">' + esc(r.target) + '</div><div class="meta">' + esc(r.by) + ' 申請｜' + esc(r.at) + '</div>' +
+      '<div class="when"><b>' + esc(ch.join('；')) + '</b></div><div class="go"><a class="link-btn" href="secretary.html?tab=people">審核</a></div></div>';
+  }).join('');
+}
 function renderDupReminder() {
+  renderReqReminder();
   var box = $('remDup');
   var can = role === '秘書' || role === '管理員';
   box.hidden = !can;
@@ -609,9 +631,27 @@ function prefetchPages() {
     Promise.all([post(OBJ_API, 'adminListPeople', [who, code]), post(REG_API, 'regListRequests', [who, code])]).then(function(all) {
       if (!auth) return;
       try { sessionStorage.setItem('ruihe_secretary_cache_v1', JSON.stringify({ name: who, people: all[0], reg: all[1] })); } catch (e) {}
+      renderReqReminder();
     }).catch(function() {});
   }
 }
+
+// ---------------- 登入紀錄用：裝置、IP（IP 是網頁自己向外部服務問來的，只能參考） ----------------
+function deviceText() {
+  var ua = navigator.userAgent || '';
+  var os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '其他';
+  var br = /Line\//.test(ua) ? 'LINE 內建瀏覽器' : /FBAN|FBAV/.test(ua) ? 'Facebook 內建瀏覽器' : /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung 瀏覽器' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : '其他瀏覽器';
+  return os + '・' + br;
+}
+var clientIp = '';
+(function lookupIp() {
+  try {
+    var done = false;
+    setTimeout(function() { done = true; }, 3000);
+    fetch('https://api.ipify.org?format=json').then(function(r) { return r.json(); }).then(function(j) { if (!done && j && j.ip) clientIp = String(j.ip); }).catch(function() {});
+  } catch (e) {}
+})();
+function clientInfo() { return { device: deviceText(), ip: clientIp }; }
 
 // ---------------- Google 登入、綁定 ----------------
 // 登入畫面和首頁的「登入方式」不會同時出現，所以每次畫按鈕前重新設定這次按下去要做什麼
@@ -641,7 +681,7 @@ function renderGoogleLogin() {
 function onGoogleLogin(resp) {
   if (!resp || !resp.credential) return;
   showLoginMsg('Google 登入中…', false);
-  post(OBJ_API, 'googleLogin', [resp.credential]).then(function(res) {
+  post(OBJ_API, 'googleLogin', [resp.credential, clientInfo()]).then(function(res) {
     showLoginMsg('');
     afterLogin(res, res.token);
   }).catch(function(err) { showLoginMsg(err.message || '連不上系統', true); });
@@ -693,7 +733,7 @@ $('scopeSeg').addEventListener('click', function(e) {
   [].forEach.call(document.querySelectorAll('#scopeSeg button'), function(x) { x.setAttribute('aria-pressed', String(x === b)); });
   state.client = null; state.contract = null; state.clientErr = ''; state.contractErr = '';
   ['Due', 'Stale', 'Contract'].forEach(function(k) { $('body' + k).innerHTML = '<div class="rem-empty">讀取中…</div>'; $('cnt' + k).textContent = '…'; $('cnt' + k).className = 'badge'; });
-  $('remNote').textContent = scope === 'all' ? '全公司' : '只有你負責的';
+  $('remNote').textContent = scope === 'all' ? (role === '主管' ? '你那一組' : '全公司') : '只有你負責的';
   loadReminders(false);
 });
 

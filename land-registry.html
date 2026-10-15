@@ -362,6 +362,27 @@ function createDistrictEntry() {
   typeBlock.appendChild(typeGroup);
   wrap.appendChild(typeBlock);
 
+  // 地址（有填建號時必填）
+  var addrBlock = document.createElement('div');
+  addrBlock.className = 'field-block';
+  var addrLabel = document.createElement('label');
+  addrLabel.className = 'field-label';
+  addrLabel.innerHTML = '地址<span class="required-star addrStar" style="display:none;">*</span>';
+  var addrHint = document.createElement('div');
+  addrHint.className = 'hint';
+  addrHint.style.marginBottom = '6px';
+  addrHint.textContent = '有填建號的話必填，例如 台中市大雅區工業二路15號';
+  var addrInput = document.createElement('input');
+  addrInput.type = 'text';
+  addrInput.className = 'addressInput';
+  addrBlock.appendChild(addrLabel);
+  addrBlock.appendChild(addrHint);
+  addrBlock.appendChild(addrInput);
+  wrap.appendChild(addrBlock);
+  buildingInput.addEventListener('input', function() {
+    addrLabel.querySelector('.addrStar').style.display = buildingInput.value.trim() ? '' : 'none';
+  });
+
   // 備註
   var noteBlock = document.createElement('div');
   noteBlock.className = 'field-block';
@@ -371,7 +392,7 @@ function createDistrictEntry() {
   var noteHint = document.createElement('div');
   noteHint.className = 'hint';
   noteHint.style.marginBottom = '6px';
-  noteHint.textContent = '可以填寫地址...等其他需求事項給秘書';
+  noteHint.textContent = '有其他需求事項可以寫在這邊給秘書';
   var noteInput = document.createElement('textarea');
   noteInput.className = 'noteInput';
   noteBlock.appendChild(noteLabel);
@@ -485,16 +506,18 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     var lot = entryEl.querySelector('.lotInput').value.trim();
     var building = entryEl.querySelector('.buildingInput').value.trim();
     var note = entryEl.querySelector('.noteInput').value.trim();
+    var address = entryEl.querySelector('.addressInput').value.trim();
     var checkedTypes = Array.prototype.slice.call(entryEl.querySelectorAll('.transcriptTypeCheckbox:checked'))
       .map(function(cb) { return cb.value; });
 
     var entryProblems = [];
     if (!county || !town || !district) { missingParts.push('第 ' + (idx + 1) + ' 筆：縣市/鄉鎮市區/段名'); entryProblems.push('縣市／鄉鎮市區／段名還沒選完'); }
     if (checkedTypes.length === 0) { missingParts.push('第 ' + (idx + 1) + ' 筆：謄本種類（至少勾選一項）'); entryProblems.push('謄本種類至少要勾選一項'); }
+    if (building && !address) { missingParts.push('第 ' + (idx + 1) + ' 筆：地址（有填建號的話必填）'); entryProblems.push('有填建號，地址要填'); }
     if (entryProblems.length) markEl_(entryEl, entryProblems.join('；'));
 
     entries.push({ county: county, town: town, district: district, lot: lot, building: building,
-      transcriptTypes: checkedTypes, note: note });
+      transcriptTypes: checkedTypes, note: note, address: address });
   });
 
   if (missingParts.length > 0) {

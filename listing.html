@@ -1694,10 +1694,11 @@ function splitPrimarySecondaryByRatio() {
 
   var maxRatio = Math.max.apply(null, entries.map(function(e) { return parseFloat(e.ratio) || -Infinity; }));
 
+  // 主要業務只有一位：比例最高的那位；比例一樣（例如 50、50）時取排在最前面的，其他都是次要業務
   var primaryNames = [], primaryRatios = [], secondaryNames = [], secondaryRatios = [];
   entries.forEach(function(e) {
     var num = parseFloat(e.ratio);
-    if (!isNaN(num) && num === maxRatio) {
+    if (!primaryNames.length && !isNaN(num) && num === maxRatio) {
       primaryNames.push(e.name);
       primaryRatios.push(e.ratio);
     } else {
@@ -4536,7 +4537,7 @@ function editRebuildAgentFilter_(needsTab) {
   sel.value = editAgentFilter_;
 }
 function editRenderList_() {
-  document.getElementById('editListTitle').textContent = !editAuth_ ? '我的物件和客需' : ((editRole_ === '秘書' || editRole_ === '管理員') ? '全部的物件和客需（秘書）' : editAuth_.name + ' 負責的物件和客需');
+  document.getElementById('editListTitle').textContent = !editAuth_ ? '我的物件和客需' : ((editRole_ === '秘書' || editRole_ === '管理員') ? '全部的物件和客需（' + editRole_ + '）' : editAuth_.name + ' 負責的物件和客需');
   var needsTab = editTab_ === 'needs';
   editRebuildAgentFilter_(needsTab);
   document.getElementById('editCaseCount').textContent = '（' + editCases_.filter(function(c) { return editAgentMatch_(c.agents); }).length + '）';
