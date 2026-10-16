@@ -217,8 +217,23 @@
     .ann .ann-tag { display: inline-block; background: #B3261E; color: #fff; font-size: 12px; border-radius: 6px; padding: 1px 7px; margin-right: 6px; vertical-align: 2px; }
     .ann .ann-body { white-space: pre-wrap; font-size: 14.5px; line-height: 1.7; }
     .ann .ann-meta { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+      /* 待辦數字卡片：點了下面才展開那一類（115/10/16） */
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 0 0 14px; }
+    .tile { text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 10px; cursor: pointer; font: inherit; color: var(--ink); }
+    .tile .n { font-size: 30px; font-weight: 800; line-height: 1.1; color: var(--muted); }
+    .tile .t { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+    .tile.hot .n { color: #B3261E; } .tile.warn .n { color: #B45309; } .tile.ok .n { color: var(--brand); }
+    .tile[aria-selected="true"] { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+    .tile:hover { border-color: #A9CDB6; }
+    #remWrap details.rem > summary { display: none; }
+    #remWrap details.rem:not([open]) { display: none; }
+      .login-banner { display: block; width: 100%; max-width: 1180px; height: auto; border-radius: 14px; margin: 0 0 16px; box-shadow: 0 2px 10px rgba(31,42,36,0.08); }
+    .login-banner[hidden] { display: none; }
+    #loginView.card.narrow { margin-left: auto; margin-right: auto; }
   </style>
-  <link rel="stylesheet" href="lib/ui.css?v=20261016a">
+  <link rel="stylesheet" href="lib/ui.css?v=20261016b">
+  <link rel="icon" type="image/png" href="lib/img/favicon.png">
+  <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
 </head>
 <body>
   <div id="toast" role="status" aria-live="polite"></div>
@@ -233,7 +248,6 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="matching.html" data-key="matching" data-auth="1" style="display:none;">客需配對</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
@@ -282,6 +296,7 @@
     <h1>瑞禾不動產　業務系統</h1>
     <div class="subtitle" id="subtitle">登入後可以使用物件、客需的各項功能</div>
 
+    <img class="login-banner" id="loginBanner" src="lib/img/banner.jpg" alt="瑞禾不動產經紀股份有限公司：瑞禾開發｜精準投資，從選對土地開始">
     <div class="card narrow" id="loginView">
       <h2>登入</h2>
       <div id="chooseBox">
@@ -320,33 +335,34 @@
       </div>
 
       <div id="annBox" hidden></div>
-      <div class="sec-title"><h2>功能</h2></div>
-      <div class="entries" id="entries"></div>
       <div class="sec-title"><h2>待辦提醒</h2><span class="note" id="remNote"></span></div>
-      <details class="rem" id="remDue" open>
+      <div class="tiles" id="remTiles" role="tablist" aria-label="待辦"></div>
+      <div id="remWrap">
+      <details class="rem" id="remDue">
         <summary>客需：今天要聯絡<span class="badge" id="cntDue">…</span></summary>
         <div class="rem-body" id="bodyDue"><div class="rem-empty">讀取中…</div></div>
       </details>
-      <details class="rem" id="remStale" open>
+      <details class="rem" id="remStale">
         <summary>客需：超過 30 天沒追蹤<span class="badge" id="cntStale">…</span></summary>
         <div class="rem-body" id="bodyStale"><div class="rem-empty">讀取中…</div></div>
       </details>
-      <details class="rem" id="remContract" open>
+      <details class="rem" id="remContract">
         <summary>物件：合約 30 天內到期<span class="badge" id="cntContract">…</span></summary>
         <div class="rem-body" id="bodyContract"><div class="rem-empty">讀取中…</div></div>
       </details>
-      <details class="rem" id="remMatch" open hidden>
+      <details class="rem" id="remMatch" hidden>
         <summary>新物件符合你的客需（最近 <span id="matchDays">7</span> 天）<span class="badge" id="cntMatch">…</span></summary>
         <div class="rem-body" id="bodyMatch"></div>
       </details>
-      <details class="rem" id="remReq" open hidden>
+      <details class="rem" id="remReq" hidden>
         <summary>人員異動申請（待審核）<span class="badge" id="cntReq">…</span></summary>
         <div class="rem-body" id="bodyReq"></div>
       </details>
-      <details class="rem" id="remDup" open hidden>
+      <details class="rem" id="remDup" hidden>
         <summary>物件：相同、需要確認或相似<span class="badge" id="cntDup">…</span></summary>
         <div class="rem-body" id="bodyDup"><div class="rem-empty">讀取中…</div></div>
       </details>
+      </div>
 
       <div class="sec-title"><h2>登入方式</h2></div>
       <div class="method-card" id="methodCard">
@@ -359,7 +375,7 @@
     </div>
   </div>
 
-<script src="lib/match.js?v=20261016f"></script>
+<script src="lib/match.js?v=20261016h"></script>
 <script>
 var GOOGLE_CLIENT_ID = '145144542151-spm8h66cenm8pdshn3rrf4p3964emp55.apps.googleusercontent.com';
 var OBJ_API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';      // 物件後端（登入、合約提醒）
@@ -522,12 +538,36 @@ function nextUrl() {
 
 // ---------------- 功能入口 ----------------
 function renderEntries() {
+  if (!$('entries')) return; // 首頁的「功能」區拿掉了（上面的選單列就有）
   $('entries').innerHTML = ENTRIES.filter(function(e) { return !e.roles || e.roles.indexOf(role) !== -1; }).map(function(e) {
     return '<a class="entry" href="' + esc(e.href) + '"><b>' + esc(e.title) + '</b><span>' + esc((role === '秘書' || role === '管理員') && e.secDesc ? e.secDesc : e.desc) + '</span></a>';
   }).join('');
 }
 
 // ---------------- 待辦提醒 ----------------
+// 待辦數字卡片：從下面每一類（details.rem）讀標題和數字畫成卡片；點卡片只展開那一類
+var tileOpen = '';
+function renderTiles() {
+  var box = $('remTiles'); if (!box) return;
+  var list = [].filter.call(document.querySelectorAll('#remWrap details.rem'), function(d) { return !d.hidden; });
+  if (tileOpen && !list.some(function(d) { return d.id === tileOpen; })) tileOpen = '';
+  box.innerHTML = list.map(function(d) {
+    var sum = d.querySelector('summary'), badge = sum.querySelector('.badge');
+    var title = sum.cloneNode(true); var bb = title.querySelector('.badge'); if (bb) bb.remove();
+    var n = badge ? badge.textContent : '…', cls = badge && /hot/.test(badge.className) ? 'hot' : (badge && /warn/.test(badge.className) ? 'warn' : (n === '0' ? '' : 'ok'));
+    return '<button type="button" class="tile ' + cls + '" role="tab" data-rem="' + d.id + '" aria-selected="' + (tileOpen === d.id) + '"><div class="n">' + esc(n) + '</div><div class="t">' + esc(title.textContent.trim()) + '</div></button>';
+  }).join('');
+  list.forEach(function(d) { d.open = d.id === tileOpen; });
+}
+document.addEventListener('click', function(e) {
+  var t = e.target.closest('.tile[data-rem]'); if (!t) return;
+  tileOpen = tileOpen === t.getAttribute('data-rem') ? '' : t.getAttribute('data-rem');
+  renderTiles();
+  if (tileOpen) $(tileOpen).scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+var tileTimer = null;
+new MutationObserver(function() { clearTimeout(tileTimer); tileTimer = setTimeout(renderTiles, 50); })
+  .observe(document.getElementById('remWrap'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'class'] });
 function setBadge(id, n, kind) { var b = $(id); b.textContent = n; b.className = 'badge' + (n > 0 && kind ? ' ' + kind : ''); }
 function clientLink(it) { return 'client-needs.html?mode=edit&key=' + encodeURIComponent(it.key); }
 function renderClient() {
@@ -626,8 +666,8 @@ loadSettings();
 function enterPortal(name, code, r) {
   auth = { name: name, code: code };
   role = ''; scope = 'mine';
-  $('loginView').hidden = true; $('portal').hidden = false;
-  $('subtitle').textContent = '待辦提醒和各項功能';
+  $('loginView').hidden = true; $('portal').hidden = false; $('loginBanner').hidden = true;
+  $('subtitle').textContent = '今天要處理的事情';
   $('whoName').textContent = name;
   onRole(r || '業務');
   [].forEach.call(document.querySelectorAll('#scopeSeg button'), function(b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-scope') === 'mine')); });
@@ -646,7 +686,7 @@ function logoutToLogin(msg) {
   setTimeout(function() { if (window.ruiheUpdateNav_) window.ruiheUpdateNav_(); }, 0);
   sharedLoginClear_();
   auth = null; role = ''; state = { client: null, contract: null, clientErr: '', contractErr: '' };
-  $('portal').hidden = true; $('loginView').hidden = false;
+  $('portal').hidden = true; $('loginView').hidden = false; $('loginBanner').hidden = false;
   $('subtitle').textContent = '登入後可以使用物件、客需的各項功能';
   showLoginMsg(msg || '', true);
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch (e) {}

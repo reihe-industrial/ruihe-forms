@@ -34,7 +34,8 @@
   .biz-group label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #dfe2d7; border-radius: 999px; padding: 7px 13px; background: #fff; cursor: pointer; font-size: 14px; margin: 0; user-select: none; }
   .biz-group label:has(input:checked) { background: #e6f0e9; border-color: #2e6b4a; color: #1e4a32; font-weight: 700; }
   .biz-group input { width: auto; margin: 0; }
-  @media (min-width: 1000px) { .container { max-width: 900px; } }
+  @media (min-width: 900px) { .container { max-width: 860px; } }
+  @media (min-width: 1240px) { .container { max-width: 1180px; } } /* 跟新增物件、新增客需一樣寬 */
   h1 { font-family: "Noto Serif TC", "Noto Sans TC", serif; font-size: 23px; font-weight: 700;
     letter-spacing: 0.02em; margin: 4px 0 6px; color: var(--brand-dark); }
   .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
@@ -94,7 +95,9 @@
     .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
     .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
 </style>
-  <link rel="stylesheet" href="lib/ui.css?v=20261016a">
+  <link rel="stylesheet" href="lib/ui.css?v=20261016b">
+  <link rel="icon" type="image/png" href="lib/img/favicon.png">
+  <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
 </head>
 <body>
 <div id="toastNotice"></div>
@@ -109,7 +112,6 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="matching.html" data-key="matching" data-auth="1" style="display:none;">客需配對</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>

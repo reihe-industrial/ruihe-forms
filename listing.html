@@ -271,6 +271,7 @@
     .edit-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
     .edit-tabs button { flex: 1; border: 1px solid var(--line); background: #fbfaf6; color: var(--ink); border-radius: 999px; padding: 8px 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
     .edit-tabs button[aria-selected="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
     .needs-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
     .needs-row:last-child { border-bottom: none; }
     .needs-row .nm { font-weight: 700; font-size: 15px; word-break: break-all; }
@@ -326,8 +327,43 @@
       color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
     .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
     .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+    /* ===== 第五批改版第 2 次（115/10/16）：左側目錄、欄位寬度、底部送出列、手機收合 ===== */
+    .lf-layout { display: block; }
+    .lf-toc { display: none; }
+    @media (min-width: 1200px) {
+      .lf-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; align-items: start; }
+      .lf-toc { display: block; position: sticky; top: 76px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; }
+      .lf-toc a { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; color: #4D5B52; text-decoration: none; font-size: 14px; }
+      .lf-toc a:hover { background: var(--brand-soft); color: var(--brand); }
+      .lf-toc a.on { background: var(--brand-soft); color: var(--brand); font-weight: 700; }
+      .lf-toc .num { flex: 0 0 22px; height: 22px; border-radius: 50%; border: 1.5px solid #CFD5CF; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #8a8f88; }
+      .lf-toc a.done .num { background: var(--brand); border-color: var(--brand); color: #fff; }
+      .lf-toc .miss { margin-left: auto; font-size: 12px; font-weight: 700; color: #B3261E; }
+    }
+    .card.two-col > .field:has(textarea), .card.two-col > .field:has(.checkbox-group), .card.two-col > .field:has(input[type="file"]),
+    .card.two-col > .field:has(.district-entry), .card.two-col > .field:has(#businessRatioRows), .card.two-col > .field.full { grid-column: 1 / -1; }
+    .lf-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; background: rgba(255,255,255,0.97); border-top: 1px solid var(--line); box-shadow: 0 -2px 10px rgba(31,42,36,0.06); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+    .lf-bar[hidden] { display: none; }
+    .lf-bar-in { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .lf-bar .st { font-size: 14.5px; font-weight: 700; color: #B3261E; }
+    .lf-bar .st.ok { color: var(--brand); }
+    .lf-bar .jump { border: none; background: none; color: var(--brand); text-decoration: underline; font: inherit; font-size: 14px; cursor: pointer; padding: 4px; }
+    .lf-bar .jump[hidden] { display: none; }
+    .lf-bar .go { margin-left: auto; height: 46px; padding: 0 28px; border: none; border-radius: 10px; background: var(--brand); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .lf-bar .go:disabled { opacity: 0.6; cursor: default; }
+    body.has-lf-bar { padding-bottom: 84px; }
+    body.has-lf-bar #submitBtn { display: none; }
+    @media (max-width: 700px) {
+      #listingForm .card > h2 { cursor: pointer; }
+      #listingForm .card > h2::after { content: "收起"; margin-left: auto; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+      #listingForm .card.lf-collapsed > h2::after { content: "展開"; }
+      #listingForm .card.lf-collapsed > :not(h2) { display: none !important; }
+      .lf-bar .go { height: 44px; padding: 0 20px; }
+    }
 </style>
-  <link rel="stylesheet" href="lib/ui.css?v=20261016a">
+  <link rel="stylesheet" href="lib/ui.css?v=20261016b">
+  <link rel="icon" type="image/png" href="lib/img/favicon.png">
+  <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
 </head>
 <body>
   <div id="toastNotice"></div>
@@ -342,11 +378,11 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="matching.html" data-key="matching" data-auth="1" style="display:none;">客需配對</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
-  <script>
+  <script src="lib/match.js?v=20261016h"></script>
+<script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
@@ -3619,27 +3655,10 @@ function collectFormValues_(implausibleDateLabels_) {
   return fieldValues;
 }
 
-document.getElementById('listingForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-
-  var submitBtn = document.getElementById('submitBtn');
-  var msgBox = document.getElementById('msgBox');
-  msgBox.style.display = 'none';
-
-  // 蒐集業務名單，依比例高低自動分成主要/次要業務
-  // （比例最高的算主要業務，並列最高的全部算主要；其他人算次要業務）
+// 算出目前還有哪些必填沒填（送出時、底部送出列的「還有 N 項必填」都用這個，兩邊一定一致；115/10/16 從送出程式抽出來，內容沒改）
+function listingCheck_() {
   var allBusinessNames = getCheckedPersonNames();
   var split = splitPrimarySecondaryByRatio();
-
-  if (allBusinessNames.length === 0 && !EDIT_MODE) {
-    msgBox.className = 'msg error';
-    msgBox.textContent = '請至少勾選一位業務名單。';
-    msgBox.style.display = 'block';
-    markMissingFields_(['業務名單（請至少勾選一位）']);
-    showToast('請至少勾選一位業務名單', 'error', true);
-    return;
-  }
-
   var fieldValues = {};
   var implausibleDateLabels_ = [];
   fieldValues['主要業務名稱'] = split.primaryNames.join('、');
@@ -3758,6 +3777,35 @@ document.getElementById('listingForm').addEventListener('submit', async function
   }
   missingLabels = missingLabels.filter(function(l, idx) { return missingLabels.indexOf(l) === idx; });
   if (brokerMsg_) missingLabels = missingLabels.filter(function(l) { return l !== '中人比例'; }); // 已經有比較清楚的中人提示
+
+  return { fieldValues: fieldValues, missingLabels: missingLabels, implausibleDateLabels_: implausibleDateLabels_ };
+}
+
+document.getElementById('listingForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  var submitBtn = document.getElementById('submitBtn');
+  var msgBox = document.getElementById('msgBox');
+  msgBox.style.display = 'none';
+
+  // 蒐集業務名單，依比例高低自動分成主要/次要業務
+  // （比例最高的算主要業務，並列最高的全部算主要；其他人算次要業務）
+  var allBusinessNames = getCheckedPersonNames();
+  var split = splitPrimarySecondaryByRatio();
+
+  if (allBusinessNames.length === 0 && !EDIT_MODE) {
+    msgBox.className = 'msg error';
+    msgBox.textContent = '請至少勾選一位業務名單。';
+    msgBox.style.display = 'block';
+    markMissingFields_(['業務名單（請至少勾選一位）']);
+    showToast('請至少勾選一位業務名單', 'error', true);
+    return;
+  }
+
+  var chk_ = listingCheck_();
+  var fieldValues = chk_.fieldValues;
+  var implausibleDateLabels_ = chk_.implausibleDateLabels_;
+  var missingLabels = chk_.missingLabels;
 
   if (missingLabels.length > 0) {
     msgBox.className = 'msg error';
@@ -4537,9 +4585,60 @@ function editRenderNeeds_() {
     var m1 = document.createElement('div'); m1.className = 'meta'; m1.textContent = [(editRole_ === '秘書' || editRole_ === '管理員') ? c.business : '', c.propertyTypes, c.demandType, c.region].filter(Boolean).join('｜') || '—';
     var m2 = document.createElement('div'); m2.className = 'meta';
     m2.textContent = '填表 ' + (c.fillDate || '—') + '｜' + (c.lastTrack ? ('最後追蹤 ' + c.lastTrack + '（' + c.trackCount + ' 筆）') : '還沒有追蹤紀錄');
-    row.appendChild(nm); row.appendChild(a); row.appendChild(m1); row.appendChild(m2);
+    var acts = document.createElement('div'); acts.className = 'row-actions';
+    if (editIsMine_(c.business)) acts.appendChild(editMatchBtn_('need', c.key));
+    acts.appendChild(a);
+    row.appendChild(nm); row.appendChild(acts); row.appendChild(m1); row.appendChild(m2);
     box.appendChild(row);
   });
+  editLoadMatch_();
+}
+// ------------------------------------------------------------
+// 配對（自己負責的物件／客需才有）：物件→符合的客需（不含客戶資料）、客需→符合的物件；按鈕上是區域符合的件數
+// ------------------------------------------------------------
+var editMatch_ = null, editMatchLoading_ = false;
+function editLoadMatch_() {
+  if (editMatch_ || editMatchLoading_ || !window.RuiheMatch || !editAuth_) return;
+  editMatchLoading_ = true;
+  Promise.all([RuiheMatch.loadListings(editAuth_), RuiheMatch.loadClients(editAuth_)]).then(function(a) {
+    editMatch_ = { listings: a[0], clients: a[1] };
+    editRenderList_();
+  }).catch(function() {}).then(function() { editMatchLoading_ = false; });
+}
+function editIsMine_(names) { return !!editAuth_ && editAgentNames_(names).indexOf(editAuth_.name) !== -1; }
+function editMatchFind_(kind, key) {
+  if (!editMatch_) return null;
+  return (kind === 'case' ? editMatch_.listings : editMatch_.clients).filter(function(x) { return x.key === key; })[0] || null;
+}
+function editMatchBtn_(kind, key) {
+  var b = document.createElement('button');
+  b.type = 'button'; b.className = 'edit-btn secondary';
+  var it = editMatchFind_(kind, key), n = null;
+  if (it) n = (kind === 'case' ? RuiheMatch.matchesForListing(it, editMatch_.clients) : RuiheMatch.matchesForClient(it, editMatch_.listings)).length;
+  b.textContent = n === null ? '配對' : '配對（' + n + '）';
+  b.addEventListener('click', function() { editShowMatch_(kind, key); });
+  return b;
+}
+function editShowMatch_(kind, key) {
+  var dlg = RuiheMatch.showModal(kind === 'case' ? '配對客需' : '配對物件', '<div style="color:#5D6B62;">讀取中…</div>');
+  var show = function(near) {
+    var it = editMatchFind_(kind, key);
+    if (!it) {
+      dlg.body.innerHTML = '<div style="color:#5D6B62;">' + (kind === 'case' ? '這件不在物件簡表（不是銷售中，或剛送出還在處理），不能配對。' : '客需簡表還沒有這一筆（剛新增的請稍後再看）。') + '</div>';
+      return;
+    }
+    if (kind === 'need' && it.closed) { dlg.body.innerHTML = '<div style="color:#5D6B62;">這筆客需已經結案，不配對。</div>'; return; }
+    var list = kind === 'case' ? RuiheMatch.matchesForListing(it, editMatch_.clients, near) : RuiheMatch.matchesForClient(it, editMatch_.listings, near);
+    dlg.body.innerHTML = '<div style="color:#5D6B62;font-size:13px;margin-bottom:4px;">比對物件類型、買／租、區域、坪數、預算' + (kind === 'case' ? '；不顯示客戶資料，有興趣請找負責業務' : '') + '。</div>' +
+      '<label style="display:inline-flex;align-items:center;gap:6px;margin:4px 0;font-weight:700;"><input type="checkbox" id="emNear" style="width:auto;"' + (near ? ' checked' : '') + '> 也顯示鄰近區域</label>' +
+      (list.length ? '<div style="font-weight:700;margin:6px 0;">符合 ' + list.length + (kind === 'case' ? ' 筆' : ' 件') + '</div>' +
+        list.slice(0, 50).map(function(x) { return kind === 'case' ? RuiheMatch.clientItemHtml(x, '') : RuiheMatch.listingItemHtml(x); }).join('')
+        : '<div style="padding:14px 0;color:#5D6B62;">目前沒有區域符合的' + (kind === 'case' ? '客需' : '物件') + '。</div>');
+    document.getElementById('emNear').addEventListener('change', function() { show(this.checked); });
+  };
+  if (editMatch_) show(false);
+  else Promise.all([RuiheMatch.loadListings(editAuth_), RuiheMatch.loadClients(editAuth_)]).then(function(a) { editMatch_ = { listings: a[0], clients: a[1] }; show(false); editRenderList_(); })
+    .catch(function(err) { dlg.body.innerHTML = '<div style="color:#B3261E;">讀取失敗：' + RuiheMatch.esc(err.message || '連不上系統') + '</div>'; });
 }
 function editSetTab_(tab) {
   editTab_ = tab;
@@ -4595,6 +4694,7 @@ function editRenderList_() {
     box.appendChild(empty);
     return;
   }
+  editLoadMatch_();
   shown.forEach(function(c) {
     var row = document.createElement('div');
     row.className = 'edit-case' + (c.editable ? '' : ' locked');
@@ -4605,7 +4705,10 @@ function editRenderList_() {
       var btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'edit-btn'; btn.textContent = '修改';
       btn.addEventListener('click', function() { editOpenCase_(c.key, btn); });
-      row.appendChild(btn);
+      var acts = document.createElement('div'); acts.className = 'row-actions';
+      if (editIsMine_(c.agents)) acts.appendChild(editMatchBtn_('case', c.key));
+      acts.appendChild(btn);
+      row.appendChild(acts);
       var meta = document.createElement('div'); meta.className = 'case-meta';
       meta.textContent = [(editRole_ === '秘書' || editRole_ === '管理員') ? c.agents : '', c.legacy ? '舊案件' : '', c.status && c.status !== '銷售中' ? c.status : '', c.contractNo, c.expiry ? ('到期 ' + c.expiry) : '', c.createdAt ? ('填寫 ' + c.createdAt) : ''].filter(Boolean).join('｜');
       row.appendChild(meta);
@@ -6237,6 +6340,89 @@ document.getElementById('deedInput').addEventListener('change', function() {
   this.value = '';
 });
 
+</script>
+<script>
+// ===== 第五批改版第 2 次（115/10/16）：左側段落目錄、底部固定送出列、手機收合（只加外觀和導覽，送出還是原本的程式） =====
+(function() {
+  var form = document.getElementById('listingForm');
+  if (!form) return;
+  var layout = document.createElement('div'); layout.className = 'lf-layout';
+  var toc = document.createElement('nav'); toc.className = 'lf-toc'; toc.setAttribute('aria-label', '段落目錄');
+  form.parentNode.insertBefore(layout, form);
+  layout.appendChild(toc); layout.appendChild(form);
+  var bar = document.createElement('div'); bar.className = 'lf-bar'; bar.hidden = true;
+  bar.innerHTML = '<div class="lf-bar-in"><span class="st" id="lfStatus"></span><button type="button" class="jump" id="lfJump">跳到第一項</button><button type="button" class="go" id="lfGo">送出</button></div>';
+  document.body.appendChild(bar);
+  var submitBtn = document.getElementById('submitBtn');
+  document.getElementById('lfGo').addEventListener('click', function() { if (submitBtn && !submitBtn.disabled) submitBtn.click(); });
+  var firstMissing = null;
+  document.getElementById('lfJump').addEventListener('click', function() {
+    if (!firstMissing) return;
+    var card = firstMissing.closest('.card'); if (card) card.classList.remove('lf-collapsed');
+    firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    var inp = firstMissing.querySelector('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select, textarea');
+    if (inp) setTimeout(function() { try { inp.focus({ preventScroll: true }); } catch (e) {} }, 400);
+  });
+  function sections() {
+    return [].filter.call(form.querySelectorAll('.card'), function(c) { return c.querySelector(':scope > h2') && c.offsetParent !== null; });
+  }
+  function refresh() {
+    var visible = form.offsetParent !== null;
+    bar.hidden = !visible;
+    document.body.classList.toggle('has-lf-bar', visible);
+    if (!visible) return;
+    if (submitBtn) { document.getElementById('lfGo').textContent = submitBtn.textContent; document.getElementById('lfGo').disabled = submitBtn.disabled; }
+    var miss = [];
+    try { miss = listingCheck_().missingLabels; } catch (e) {}
+    var perCard = new Map();
+    var fs = [];
+    miss.forEach(function(raw) {
+      var f = findFieldByLabel_(String(raw).replace(/（.*$/, ''));
+      if (!f) return;
+      fs.push(f);
+      var c = f.closest('.card'); if (c) perCard.set(c, (perCard.get(c) || 0) + 1);
+    });
+    fs.sort(function(x, y) { return (x.compareDocumentPosition(y) & 4) ? -1 : 1; });
+    firstMissing = fs[0] || null;
+    var st = document.getElementById('lfStatus');
+    st.textContent = miss.length ? '還有 ' + miss.length + ' 項必填沒填' : '必填都填好了 ✓';
+    st.className = 'st' + (miss.length ? '' : ' ok');
+    document.getElementById('lfJump').hidden = !firstMissing;
+    var secs = sections();
+    toc.innerHTML = secs.map(function(c, i) {
+      var t = c.querySelector(':scope > h2').textContent.replace(/^[一二三四五六七八九十]+、/, '').trim();
+      var m = perCard.get(c) || 0;
+      if (!c.id) c.id = 'lfSec' + i;
+      return '<a href="#' + c.id + '" class="' + (m ? '' : 'done') + '" data-sec="' + c.id + '"><span class="num">' + (m ? (i + 1) : '✓') + '</span><span>' + t.replace(/[<>&]/g, '') + '</span>' + (m ? '<span class="miss">' + m + '</span>' : '') + '</a>';
+    }).join('');
+    markActive();
+  }
+  function markActive() {
+    var secs = sections(), cur = null;
+    secs.forEach(function(c) { if (c.getBoundingClientRect().top < 140) cur = c; });
+    if (!cur) cur = secs[0];
+    [].forEach.call(toc.querySelectorAll('a'), function(a) { a.classList.toggle('on', !!cur && a.getAttribute('data-sec') === cur.id); });
+  }
+  toc.addEventListener('click', function(e) {
+    var a = e.target.closest('a[data-sec]'); if (!a) return;
+    e.preventDefault();
+    var c = document.getElementById(a.getAttribute('data-sec')); if (!c) return;
+    window.scrollTo({ top: c.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+  });
+  form.addEventListener('click', function(e) {
+    var h = e.target.closest('.card > h2');
+    if (!h || !window.matchMedia('(max-width: 700px)').matches) return;
+    h.parentNode.classList.toggle('lf-collapsed');
+  });
+  var t = null, busy = false;
+  function later() { if (busy) return; clearTimeout(t); t = setTimeout(function() { busy = true; try { refresh(); } finally { setTimeout(function() { busy = false; }, 0); } }, 400); }
+  form.addEventListener('input', later); form.addEventListener('change', later);
+  window.addEventListener('scroll', markActive, { passive: true });
+  new MutationObserver(later).observe(form, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'hidden', 'disabled'] });
+  if (submitBtn) new MutationObserver(later).observe(submitBtn, { childList: true, characterData: true, subtree: true, attributes: true });
+  var view = document.getElementById('editCaseView'); if (view) new MutationObserver(later).observe(view, { attributes: true, attributeFilter: ['style'] });
+  setTimeout(refresh, 600);
+})();
 </script>
 </body>
 </html>
