@@ -223,6 +223,62 @@
 <body>
   <div id="toast" role="status" aria-live="polite"></div>
   <div class="container">
+    <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="index.html" data-key="home" data-home="1">登入</a>
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
+    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="matching.html" data-key="matching" data-auth="1" style="display:none;">客需配對</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop() || 'index.html';
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'index.html' ? 'home' : page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
+    // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
+    window.ruiheUpdateNav_ = function() {
+      var o = null;
+      try { o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
+      var els = document.querySelectorAll('#siteNav [data-auth]');
+      for (var j = 0; j < els.length; j++) {
+        var roles = els[j].getAttribute('data-roles');
+        var okRole = !roles || roles.split(',').indexOf(role) !== -1;
+        els[j].style.display = (loggedIn && okRole) ? '' : 'none';
+      }
+      var home = document.querySelector('#siteNav [data-home]');
+      if (home) home.textContent = loggedIn ? '首頁' : '登入';
+    };
+    // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
+    if (page !== 'listing.html') {
+      setTimeout(function() {
+        try {
+          if (localStorage.getItem('ruihe_listing_options_v1')) return;
+          fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'getListingFormOptions', args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(res) { if (res && res.ok && res.result && res.result.districtData && Object.keys(res.result.districtData).length) localStorage.setItem('ruihe_listing_options_v1', JSON.stringify(res.result)); })
+            .catch(function() {});
+        } catch (e) {}
+      }, 2500);
+    }
+    window.ruiheUpdateNav_();
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
     <h1>瑞禾不動產　業務系統</h1>
     <div class="subtitle" id="subtitle">登入後可以使用物件、客需的各項功能</div>
 
@@ -372,6 +428,7 @@ function sharedLoginGet_() {
   catch (e) { return null; }
 }
 function sharedLoginSet_(name, code, role) {
+  setTimeout(function() { if (window.ruiheUpdateNav_) window.ruiheUpdateNav_(); }, 0);
   if (!role) { var prev = null; try { prev = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); } catch (e) {} role = prev && prev.name === name ? prev.role : ''; }
   try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code, role: role || '業務' })); } catch (e) {}
   if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
@@ -586,6 +643,7 @@ function enterPortal(name, code, r) {
   setTimeout(prefetchPages, 1500);   // 待辦先讀，再預先載入各頁資料
 }
 function logoutToLogin(msg) {
+  setTimeout(function() { if (window.ruiheUpdateNav_) window.ruiheUpdateNav_(); }, 0);
   sharedLoginClear_();
   auth = null; role = ''; state = { client: null, contract: null, clientErr: '', contractErr: '' };
   $('portal').hidden = true; $('loginView').hidden = false;
