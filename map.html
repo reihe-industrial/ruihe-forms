@@ -295,6 +295,30 @@
               <div class="chips" id="rsChips" role="group" aria-label="租／售"></div>
             </div>
             <div>
+              <span class="flabel">建物坪數</span>
+              <div class="range">
+                <input type="number" inputmode="decimal" step="any" min="0" id="fBldMin" placeholder="最小" aria-label="建物坪數最小">
+                <span>～</span>
+                <input type="number" inputmode="decimal" step="any" min="0" id="fBldMax" placeholder="最大" aria-label="建物坪數最大">
+              </div>
+            </div>
+            <div>
+              <span class="flabel">總價（萬）</span>
+              <div class="range">
+                <input type="number" inputmode="decimal" step="any" min="0" id="fTotalMin" placeholder="最低" aria-label="總價（萬）最低">
+                <span>～</span>
+                <input type="number" inputmode="decimal" step="any" min="0" id="fTotalMax" placeholder="最高" aria-label="總價（萬）最高">
+              </div>
+            </div>
+            <div>
+              <span class="flabel">土地坪數</span>
+              <div class="range">
+                <input type="number" inputmode="decimal" step="any" min="0" id="fLandMin" placeholder="最小" aria-label="土地坪數最小">
+                <span>～</span>
+                <input type="number" inputmode="decimal" step="any" min="0" id="fLandMax" placeholder="最大" aria-label="土地坪數最大">
+              </div>
+            </div>
+            <div>
               <label for="fAgent">業務</label>
               <select id="fAgent"><option value="">全部業務</option></select>
             </div>
@@ -471,7 +495,7 @@ function setSect(on) {
 }
 
 var auth = null, data = null, items = [], colIndex = {};
-var filters = { type: '', rs: '', agent: '', keyword: '' };
+var filters = { type: '', rs: '', agent: '', keyword: '', bldMin: '', bldMax: '', totalMin: '', totalMax: '', landMin: '', landMax: '' };
 var map = null, baseLayer = null, markerLayer = null, firstFit = true;
 var pollTimer = null, busy = false, lastCheckFailed = false;
 
@@ -574,10 +598,23 @@ function filtered() {
     if (filters.rs && it.rs !== filters.rs) return false;
     if (filters.agent && it.agents.indexOf(filters.agent) === -1) return false;
     for (var i = 0; i < words.length; i++) if (it.search.indexOf(words[i]) === -1) return false;
+    // 建物坪數、總價（萬）、土地坪數：有填最小或最大才篩；物件沒填那一欄就不列
+    var inRange = function(v, lo, hi) {
+      if (lo === '' && hi === '') return true;
+      if (v === null) return false;
+      if (lo !== '' && v < parseFloat(lo)) return false;
+      if (hi !== '' && v > parseFloat(hi)) return false;
+      return true;
+    };
+    if (!inRange(numOf(cell(it.row, '建物面積(坪)')), filters.bldMin, filters.bldMax)) return false;
+    if (!inRange(wanOf(cell(it.row, '總價')), filters.totalMin, filters.totalMax)) return false;
+    if (!inRange(numOf(cell(it.row, '土地面積(坪)')), filters.landMin, filters.landMax)) return false;
     return true;
   });
 }
-function activeFilterCount() { var n = 0; ['type', 'rs', 'agent'].forEach(function(k) { if (filters[k]) n++; }); if (filters.keyword.trim()) n++; return n; }
+function numOf(v) { var m = String(v == null ? '' : v).replace(/,/g, '').match(/\d+(?:\.\d+)?/); return m ? parseFloat(m[0]) : null; }
+function wanOf(v) { var s0 = String(v == null ? '' : v).replace(/,/g, ''); var m = s0.match(/(\d+(?:\.\d+)?)\s*億(?:\s*(\d+(?:\.\d+)?))?/); if (m) return parseFloat(m[1]) * 10000 + (m[2] ? parseFloat(m[2]) : 0); return numOf(s0); }
+function activeFilterCount() { var n = 0; ['type', 'rs', 'agent'].forEach(function(k) { if (filters[k]) n++; }); if (filters.keyword.trim()) n++; ['bld', 'total', 'land'].forEach(function(k) { if (filters[k + 'Min'] !== '' || filters[k + 'Max'] !== '') n++; }); return n; }
 
 // ---------------- 地圖 ----------------
 function setBase(id) {
@@ -670,7 +707,7 @@ function updateStatus() {
   if (lastCheckFailed) { el.textContent = '連不上系統，顯示的是 ' + timeText(data.checkedAt) + ' 的資料'; el.className = 'status warn'; }
   else { el.textContent = '最後檢查 ' + timeText(data.checkedAt) + '（每 5 分鐘自動檢查）'; el.className = 'status'; }
 }
-function clearFilters() { filters = { type: '', rs: '', agent: '', keyword: '' }; $('fKeyword').value = ''; buildFilterOptions(); render(true); }
+function clearFilters() { filters = { type: '', rs: '', agent: '', keyword: '', bldMin: '', bldMax: '', totalMin: '', totalMax: '', landMin: '', landMax: '' }; $('fKeyword').value = ''; ['fBldMin', 'fBldMax', 'fTotalMin', 'fTotalMax', 'fLandMin', 'fLandMax'].forEach(function(id) { $(id).value = ''; }); buildFilterOptions(); render(true); }
 
 // ---------------- 快取／檢查新版本 ----------------
 function loadCache() { try { var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && c.version && c.rows && c.coords && c.keys) return c; } catch (e) {} return null; }
@@ -804,6 +841,9 @@ $('filterToggle').addEventListener('click', function() {
   setTimeout(function() { if (map) map.invalidateSize(); }, 50);
 });
 $('fAgent').addEventListener('change', function() { filters.agent = this.value; render(true); });
+[['fBldMin', 'bldMin'], ['fBldMax', 'bldMax'], ['fTotalMin', 'totalMin'], ['fTotalMax', 'totalMax'], ['fLandMin', 'landMin'], ['fLandMax', 'landMax']].forEach(function(p) {
+  $(p[0]).addEventListener('input', function() { filters[p[1]] = this.value.trim(); clearTimeout(window.__rangeT); window.__rangeT = setTimeout(function() { render(true); }, 300); });
+});
 var kwTimer = null;
 $('fKeyword').addEventListener('input', function() { var v = this.value; clearTimeout(kwTimer); kwTimer = setTimeout(function() { filters.keyword = v; render(true); }, 250); });
 window.addEventListener('resize', function() { if (map) map.invalidateSize(); });

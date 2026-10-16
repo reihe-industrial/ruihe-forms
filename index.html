@@ -940,7 +940,19 @@ $('scopeSeg').addEventListener('click', function(e) {
   idleWatch_(function() { return !!auth; }, function(m) { logoutToLogin(m); });
   var saved = sharedLoginGet_();
   if (!saved) renderGoogleLogin();
-  if (saved) { login(saved); }
+  if (saved && saved.role) {
+    // 已經登入過：先直接進首頁（或回原本的功能頁），背景再確認登入憑證；憑證失效才跳回登入畫面（115/10/16 加快）
+    var nx = nextUrl();
+    if (nx && !msg) { location.replace(nx); return; }
+    enterPortal(saved.name, saved.code, saved.role);
+    if (msg) { var pn = $('portalNotice'); pn.textContent = msg; pn.style.display = 'block'; try { sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {} }
+    post(OBJ_API, 'summaryVerifyLogin', [saved.name, saved.code]).then(function(res) {
+      sharedLoginSet_(res.name, res.token || saved.code, res.role);
+      if (res.role && res.role !== saved.role) onRole(res.role);
+    }).catch(function(err) {
+      if (isAuthError(err)) { sharedLoginClear_(); logoutToLogin(err.message); }
+    });
+  } else if (saved) { login(saved); }
   else if (msg) { showLoginMsg(msg, true); try { sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {} }
 })();
 </script>

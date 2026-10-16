@@ -331,7 +331,8 @@
     .lf-layout { display: block; }
     .lf-toc { display: none; }
     @media (min-width: 1200px) {
-      .lf-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; align-items: start; }
+      .lf-layout:has(> .lf-toc:not([hidden])) { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; align-items: start; }
+      .lf-toc[hidden] { display: none; }
       .lf-toc { display: block; position: sticky; top: 76px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; }
       .lf-toc a { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; color: #4D5B52; text-decoration: none; font-size: 14px; }
       .lf-toc a:hover { background: var(--brand-soft); color: var(--brand); }
@@ -4605,7 +4606,8 @@ function editLoadMatch_() {
     editRenderList_();
   }).catch(function() {}).then(function() { editMatchLoading_ = false; });
 }
-function editIsMine_(names) { return !!editAuth_ && editAgentNames_(names).indexOf(editAuth_.name) !== -1; }
+// 配對按鈕：自己負責的；秘書、管理員每一筆都有
+function editIsMine_(names) { return !!editAuth_ && (editRole_ === '秘書' || editRole_ === '管理員' || editAgentNames_(names).indexOf(editAuth_.name) !== -1); }
 function editMatchFind_(kind, key) {
   if (!editMatch_) return null;
   return (kind === 'case' ? editMatch_.listings : editMatch_.clients).filter(function(x) { return x.key === key; })[0] || null;
@@ -6369,6 +6371,7 @@ document.getElementById('deedInput').addEventListener('change', function() {
   function refresh() {
     var visible = form.offsetParent !== null;
     bar.hidden = !visible;
+    toc.hidden = !visible; // 修改清單畫面（還沒打開案件）不顯示目錄的空框
     document.body.classList.toggle('has-lf-bar', visible);
     if (!visible) return;
     if (submitBtn) { document.getElementById('lfGo').textContent = submitBtn.textContent; document.getElementById('lfGo').disabled = submitBtn.disabled; }
@@ -6389,6 +6392,7 @@ document.getElementById('deedInput').addEventListener('change', function() {
     st.className = 'st' + (miss.length ? '' : ' ok');
     document.getElementById('lfJump').hidden = !firstMissing;
     var secs = sections();
+    toc.hidden = !secs.length;
     toc.innerHTML = secs.map(function(c, i) {
       var t = c.querySelector(':scope > h2').textContent.replace(/^[一二三四五六七八九十]+、/, '').trim();
       var m = perCard.get(c) || 0;

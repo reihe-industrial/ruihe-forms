@@ -165,6 +165,19 @@
     }
       .match-btn { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--brand); background: #fff; color: var(--brand); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .match-btn:hover { background: var(--brand-soft); }
+      /* 精簡表格：不用左右捲，字可以換行；「更多」展開其他欄位 */
+    .table-wrap.compact { overflow-x: visible; }
+    .table-wrap.compact table { width: 100%; table-layout: auto; }
+    .table-wrap.compact th, .table-wrap.compact td { white-space: normal; word-break: break-word; vertical-align: top; }
+    .table-wrap.compact td.name { min-width: 9em; }
+    .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
+    .more-btn { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+    tr.opened td { background: #FAFAF6; }
+    tr.more-row td { background: #FAFAF6; padding-top: 0; }
+    dl.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 18px; margin: 0; padding: 8px 4px 12px; }
+    dl.kv div { display: flex; gap: 8px; min-width: 0; }
+    dl.kv dt { color: var(--muted); flex: 0 0 auto; font-size: 13px; }
+    dl.kv dd { margin: 0; font-size: 13.5px; word-break: break-word; }
   </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261016b">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
@@ -745,25 +758,40 @@ function typeTagHtml(row) {
     return '<span class="tag ' + typeClass(t) + '">' + esc(t) + '</span>';
   }).join(' ');
 }
+// 電腦版表格：只放重點欄位，一頁看得完（不用左右捲）；其他欄位按「更多」展開（115/10/16）
+var KEY_COLS = ['類型', '案件名稱', '租/售', '契約類型', '總價', '單價', '坐落', '土地面積(坪)', '建物面積(坪)', '使用分區', '業務人員'];
+var openMore = {};
 function tableHtml(list) {
-  var cols = data.columns;
+  var cols = KEY_COLS.filter(function(c) { return data.columns.indexOf(c) !== -1; });
+  var rest = data.columns.filter(function(c) { return cols.indexOf(c) === -1; });
   var head = cols.map(function(c) {
     var arrow = sortState.label === c ? '<span class="arrow">' + (sortState.dir === 1 ? '▲' : '▼') + '</span>' : '';
     var aria = sortState.label === c ? (sortState.dir === 1 ? 'ascending' : 'descending') : 'none';
     return '<th aria-sort="' + aria + '"><button type="button" data-col="' + esc(c) + '">' + esc(c) + arrow + '</button></th>';
-  }).join('') + '<th>DM</th>';
+  }).join('') + '<th></th>';
   var body = list.map(function(it) {
-    return '<tr>' + cols.map(function(c, i) {
-      var v = it.row[i] || '';
-      if (c === C.type) return '<td>' + typeTagHtml(it.row) + '</td>';
+    var r = it.row, open = !!openMore[it.order];
+    var tds = cols.map(function(c) {
+      var v = cell(r, c);
+      if (c === C.type) return '<td>' + typeTagHtml(r) + '</td>';
       if (c === C.name) return '<td class="name">' + esc(v) + '</td>';
       if (c === C.contract) return '<td>' + contractTagHtml(v) + '</td>';
       if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(v) + '</td>';
       return '<td>' + esc(v) + '</td>';
-    }).join('') + '<td style="white-space:nowrap;"><button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button></td></tr>';
+    }).join('');
+    var more = rest.filter(function(c) { return String(cell(r, c)).trim() !== ''; });
+    var row = '<tr' + (open ? ' class="opened"' : '') + '>' + tds + '<td class="acts"><button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button>' +
+      (more.length ? ' <button type="button" class="more-btn" data-more="' + it.order + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
+    if (open && more.length) row += '<tr class="more-row"><td colspan="' + (cols.length + 1) + '"><dl class="kv">' +
+      more.map(function(c) { return '<div><dt>' + esc(c) + '</dt><dd>' + esc(cell(r, c)) + '</dd></div>'; }).join('') + '</dl></td></tr>';
+    return row;
   }).join('');
-  return '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+  return '<div class="table-wrap compact"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
 }
+document.addEventListener('click', function(e) {
+  var b = e.target.closest('[data-more]'); if (!b) return;
+  var k = b.getAttribute('data-more'); openMore[k] = !openMore[k]; applyAndRender();
+});
 function cardsHtml(list) {
   var others = data.columns.filter(function(c) { return CARD_LABELS.indexOf(c) === -1; });
   return '<div class="cards">' + list.map(function(it) {

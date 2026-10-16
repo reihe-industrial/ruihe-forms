@@ -192,6 +192,21 @@
     td .cell-input { width: 100%; min-width: 7em; box-sizing: border-box; padding: 4px 6px; font: inherit; border: 2px solid var(--brand); border-radius: 6px; }
     .more-wrap { text-align: center; margin: 12px 0 4px; }
     .more-wrap button { height: 42px; padding: 0 20px; border-radius: 10px; border: 1px solid var(--brand); background: #fff; color: var(--brand); font: inherit; font-weight: 700; cursor: pointer; }
+      /* 精簡表格：一頁看得完；「更多」展開其他欄位（115/10/16） */
+    .table-wrap.compact { overflow-x: visible; }
+    .table-wrap.compact table { width: 100%; }
+    .table-wrap.compact th, .table-wrap.compact td { white-space: normal; word-break: break-word; vertical-align: top; max-width: none; }
+    .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
+    .more-btn { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    tr.opened td, tr.more-row td { background: #FAFAF6 !important; }
+    .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 16px; padding: 6px 2px 12px; }
+    .kv-item { display: flex; gap: 8px; min-width: 0; padding: 4px 6px; border-radius: 6px; }
+    .kv-item .k { color: var(--muted); flex: 0 0 auto; font-size: 13px; }
+    .kv-item .v { font-size: 13.5px; word-break: break-word; min-width: 0; flex: 1 1 auto; }
+    .kv-item.editable { cursor: text; outline: 1px dashed #A9CDB6; }
+    .kv-item.editable:hover { background: #fff; }
+    .kv-item.edited { background: #FFF2CC; font-weight: 700; }
+    .kv-item.locked-col .v { color: #8a8f88; }
   </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261016b">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
@@ -307,6 +322,7 @@
               <input type="search" id="fKeyword" placeholder="案名、地段、契約編號…" autocomplete="off">
             </div>
             <div id="fDupWrap" hidden><label style="display:inline-flex;align-items:center;gap:6px;margin-top:22px;font-weight:700;"><input type="checkbox" id="fDup" style="width:auto;"> 只看相同、需要確認或相似的</label></div>
+            <div><label style="display:inline-flex;align-items:center;gap:6px;margin-top:22px;font-weight:700;"><input type="checkbox" id="fWide" style="width:auto;"> 表格顯示全部欄位（要左右捲）</label></div>
             <div class="filter-foot"><button type="button" class="btn ghost" id="clearBtn">清除篩選</button></div>
           </div>
         </div>
@@ -547,6 +563,9 @@ function detailHtml(t, row) {
 // 案名、業務、類型、照片等鎖住的欄位不能改（後端回傳 t.locked）；有人先改了同一格會提醒，不會蓋掉。
 // ------------------------------------------------------------
 var editMode = false, edits = {}, editingCell = null;
+// 精簡表格的重點欄位（有的才顯示）；其他欄位在「更多」裡
+var MASTER_KEY_COLS = ['案名', '案件狀態', '委託種類', '總價', '單價', '案件坐落', '詳細地址', '土地面積(坪)', '主建物面積(坪)', '主要業務名稱', '次要業務名稱', '契約編號', '合約到期'];
+var masterOpen = {};
 function canEditTable() { return (role === '秘書' || role === '管理員') && DESKTOP_QUERY.matches && data && current() && (current().keys || []).length > 0; }
 function editKey(t, i, label) { return t.type + '|' + t.keys[i] + '|' + label; }
 function editCount() { return Object.keys(edits).length; }
@@ -580,27 +599,47 @@ function render() {
   if (!t.rows.length) { $('results').innerHTML = '<div class="empty">沒有' + tab + '的資料。</div>'; return; }
   if (!full.length) { $('results').innerHTML = '<div class="empty">沒有符合條件的物件。</div>'; return; }
   if (DESKTOP_QUERY.matches) {
-    var head = t.columns.map(function(c) {
-      var on = sortState.col === c;
+    // 精簡表格（預設）：只放重點欄位，一頁看得完；每一列「更多」展開其他全部欄位（展開的欄位一樣可以改）。勾「全部欄位」回到原本的寬表格（115/10/16）
+    var wide = $('fWide') && $('fWide').checked;
+    var keyCols = wide ? t.columns.slice() : MASTER_KEY_COLS.filter(function(c) { return t.columns.indexOf(c) !== -1; });
+    if (!wide && keyCols.length < 5) keyCols = t.columns.slice(0, 10);
+    var keyIdx = keyCols.map(function(c) { return t.columns.indexOf(c); });
+    var nameI = colIdx(t, '案名');
+    var cellAttrs = function(x, i) {
+      var c = t.columns[i], cls = [], attrs = '', v = x.r[i];
+      if (editMode && canEditTable()) {
+        if ((t.locked || []).indexOf(c) === -1) { cls.push('editable'); attrs = ' data-ed="' + x.i + '|' + i + '"'; } else cls.push('locked-col');
+      }
+      var ek = (t.keys && t.keys[x.i]) ? editKey(t, x.i, c) : '';
+      if (ek && edits[ek]) { cls.push('edited'); v = edits[ek].value; }
+      return { cls: cls, attrs: attrs, v: v, edited: !!(ek && edits[ek]) };
+    };
+    var head = keyIdx.map(function(i) {
+      var c = t.columns[i], on = sortState.col === c;
       return '<th aria-sort="' + (on ? (sortState.dir === 1 ? 'ascending' : 'descending') : 'none') + '"><button type="button" data-col="' + esc(c) + '">' + esc(c) +
         (on ? '<span class="arrow">' + (sortState.dir === 1 ? '▲' : '▼') + '</span>' : '') + '</button></th>';
-    }).join('');
-    var nameI = colIdx(t, '案名');
-    // 電腦版：表格已經有全部欄位，不做點開；太長的格子滑鼠移上去看全文
+    }).join('') + (wide ? '' : '<th></th>');
     var body = list.map(function(x) {
-      var d = dupOf(t, x.i);
-      return '<tr' + (d ? ' class="dup' + dupCls(d) + '" title="' + esc(dupCat(d) + '：' + dupText(d)) + '"' : '') + '>' + t.columns.map(function(c, i) {
-        var tag = (d && i === nameI) ? dupTag(d) : '';
-        var cls = i === nameI ? ['name'] : [], attrs = '', val = x.r[i];
-        if (editMode && canEditTable()) {
-          if ((t.locked || []).indexOf(c) === -1) { cls.push('editable'); attrs = ' data-ed="' + x.i + '|' + i + '"'; } else cls.push('locked-col');
-        }
-        var ek = (t.keys && t.keys[x.i]) ? editKey(t, x.i, c) : '';
-        if (ek && edits[ek]) { cls.push('edited'); val = edits[ek].value; }
-        return '<td' + (cls.length ? ' class="' + cls.join(' ') + '"' : '') + attrs + (d ? '' : ' title="' + esc(val) + '"') + '>' + tag + esc(val) + '</td>';
-      }).join('') + '</tr>';
+      var d = dupOf(t, x.i), rk = t.type + '|' + x.i, open = !wide && !!masterOpen[rk];
+      var row = '<tr' + (d ? ' class="dup' + dupCls(d) + '" title="' + esc(dupCat(d) + '：' + dupText(d)) + '"' : (open ? ' class="opened"' : '')) + '>' + keyIdx.map(function(i) {
+        var a = cellAttrs(x, i), tag = (d && i === nameI) ? dupTag(d) : '';
+        if (i === nameI) a.cls.push('name');
+        return '<td' + (a.cls.length ? ' class="' + a.cls.join(' ') + '"' : '') + a.attrs + (d || !wide ? '' : ' title="' + esc(a.v) + '"') + '>' + tag + esc(a.v) + '</td>';
+      }).join('');
+      if (!wide) {
+        var restIdx = t.columns.map(function(c, i) { return i; }).filter(function(i) { return keyIdx.indexOf(i) === -1; });
+        var nEdited = restIdx.filter(function(i) { return cellAttrs(x, i).edited; }).length;
+        row += '<td class="acts"><button type="button" class="more-btn" data-mopen="' + esc(rk) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + (nEdited ? '（改了 ' + nEdited + ' 格）' : '') + '</button></td>';
+        row += '</tr>';
+        if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 1) + '"><div class="kv">' + restIdx.map(function(i) {
+          var a = cellAttrs(x, i);
+          if (!editMode && !String(a.v).trim()) return '';
+          return '<div class="kv-item ' + a.cls.join(' ') + '"' + a.attrs + '><span class="k">' + esc(t.columns[i]) + '</span><span class="v">' + esc(a.v) + '</span></div>';
+        }).join('') + '</div></td></tr>';
+      } else row += '</tr>';
+      return row;
     }).join('');
-    $('results').innerHTML = '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>' + moreHtml(full.length);
+    $('results').innerHTML = '<div class="table-wrap' + (wide ? '' : ' compact') + '"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>' + moreHtml(full.length);
     updateEditBar();
   } else {
     $('results').innerHTML = '<div class="cards">' + list.map(function(x) {
@@ -722,6 +761,7 @@ $('statusChips').addEventListener('click', function(e) {
 $('fDup').addEventListener('change', function() { filters.dupOnly = this.checked; render(); });
 document.addEventListener('click', function(e) { if (e.target && e.target.id === 'moreBtn') { shownCount += PAGE_SIZE; render(); } });
 $('editToggle').addEventListener('click', function() { editMode = !editMode; render(); });
+$('fWide').addEventListener('change', function() { render(); });
 $('editCancel').addEventListener('click', function() {
   if (!confirm('要放棄還沒儲存的 ' + editCount() + ' 格變更嗎？')) return;
   edits = {}; render();
@@ -770,14 +810,17 @@ $('filterToggle').addEventListener('click', function() {
   card.classList.toggle('open', open); this.setAttribute('aria-expanded', String(open));
 });
 $('results').addEventListener('click', function(e) {
-  var td = e.target.closest('td[data-ed]');
+  var mo = e.target.closest('[data-mopen]');
+  if (mo) { var mk = mo.getAttribute('data-mopen'); masterOpen[mk] = !masterOpen[mk]; render(); return; }
+  var td = e.target.closest('[data-ed]');
   if (td && editMode && !td.querySelector('input')) {
     var parts = td.getAttribute('data-ed').split('|'), t = current(), ri = parseInt(parts[0], 10), ci = parseInt(parts[1], 10);
     var label = t.columns[ci], k = editKey(t, ri, label), orig = t.rows[ri][ci];
     var input = document.createElement('input');
     input.className = 'cell-input'; input.value = edits[k] ? edits[k].value : orig;
     input.setAttribute('aria-label', label);
-    td.textContent = ''; td.appendChild(input); input.focus(); input.select();
+    var host = td.querySelector('.v') || td;
+    host.textContent = ''; host.appendChild(input); input.focus(); input.select();
     var done = false;
     var commit = function(save) {
       if (done) return; done = true;
