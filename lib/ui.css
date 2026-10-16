@@ -35,10 +35,10 @@ body {
 .site-nav::before {
   content: "瑞禾業務系統";
   flex: 0 0 auto; display: flex; align-items: center;
-  padding: 0 14px 0 34px; margin-right: 4px;
+  padding: 0 14px 0 38px; margin-right: 4px;
   font-weight: 700; font-size: 15.5px; color: var(--brand); white-space: nowrap;
   border-right: 1px solid var(--line);
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%231E4A32' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10.5 12 4l9 6.5'/%3E%3Cpath d='M5 9.5V20h14V9.5'/%3E%3Cpath d='M10 20v-5h4v5'/%3E%3C/svg%3E") no-repeat 8px center / 20px 20px;
+  background: url("img/logo-icon.png") no-repeat 8px center / 22px 22px;
 }
 .site-nav a {
   flex: 0 0 auto; display: flex; align-items: center;
