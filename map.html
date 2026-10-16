@@ -359,7 +359,11 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAq
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
 // 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
-var IDLE_LIMIT_MS = 30 * 60 * 1000;
+// 系統參數（管理員在秘書專區「系統設定」改的；首頁登入時讀一次存在這個瀏覽器）
+function ruiheSetting_(k, def) {
+  try { var v = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; return v && isFinite(Number(v[k])) ? Number(v[k]) : def; } catch (e) { return def; }
+}
+var IDLE_LIMIT_MS = ruiheSetting_('idleMinutes', 30) * 60 * 1000;
 var IDLE_KEY = 'ruihe_last_active_v1';
 var idleLastWrite_ = 0;
 function idleTouch_(force) {
@@ -378,7 +382,7 @@ function idleWatch_(isLoggedIn, onTimeout) {
   ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
     window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
   });
-  function check() { if (isLoggedIn() && idleExpired_()) onTimeout('30 分鐘沒有動作，已自動登出，請重新登入。'); }
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout(Math.round(IDLE_LIMIT_MS / 60000) + ' 分鐘沒有動作，已自動登出，請重新登入。'); }
   setInterval(check, 30000);
   document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
 }

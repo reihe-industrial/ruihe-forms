@@ -211,6 +211,12 @@
     .method-card .st { font-size: 14px; }
     .method-card .grow { flex: 1 1 auto; }
     .notice { background: #fff8e1; border: 1px solid #e0c341; border-radius: 10px; padding: 11px 14px; margin: 0 0 14px; font-size: 13.5px; color: #5a4a00; }
+      .ann { background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--brand); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; }
+    .ann.important { border-left-color: #B3261E; background: #FFF6F5; }
+    .ann h3 { margin: 0 0 4px; font-size: 16px; }
+    .ann .ann-tag { display: inline-block; background: #B3261E; color: #fff; font-size: 12px; border-radius: 6px; padding: 1px 7px; margin-right: 6px; vertical-align: 2px; }
+    .ann .ann-body { white-space: pre-wrap; font-size: 14.5px; line-height: 1.7; }
+    .ann .ann-meta { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -256,6 +262,7 @@
         <button type="button" class="btn ghost" id="logoutBtn">登出</button>
       </div>
 
+      <div id="annBox" hidden></div>
       <div class="sec-title"><h2>功能</h2></div>
       <div class="entries" id="entries"></div>
       <div class="sec-title"><h2>待辦提醒</h2><span class="note" id="remNote"></span></div>
@@ -272,7 +279,7 @@
         <div class="rem-body" id="bodyContract"><div class="rem-empty">讀取中…</div></div>
       </details>
       <details class="rem" id="remMatch" open hidden>
-        <summary>新物件符合你的客需（最近 7 天）<span class="badge" id="cntMatch">…</span></summary>
+        <summary>新物件符合你的客需（最近 <span id="matchDays">7</span> 天）<span class="badge" id="cntMatch">…</span></summary>
         <div class="rem-body" id="bodyMatch"></div>
       </details>
       <details class="rem" id="remReq" open hidden>
@@ -331,7 +338,11 @@ var CLIENT_API = 'https://script.google.com/macros/s/AKfycbz6EXnxZb40rln8q9xTaD_
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
 // 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
-var IDLE_LIMIT_MS = 30 * 60 * 1000;
+// 系統參數（管理員在秘書專區「系統設定」改的；首頁登入時讀一次存在這個瀏覽器）
+function ruiheSetting_(k, def) {
+  try { var v = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; return v && isFinite(Number(v[k])) ? Number(v[k]) : def; } catch (e) { return def; }
+}
+var IDLE_LIMIT_MS = ruiheSetting_('idleMinutes', 30) * 60 * 1000;
 var IDLE_KEY = 'ruihe_last_active_v1';
 var idleLastWrite_ = 0;
 function idleTouch_(force) {
@@ -350,7 +361,7 @@ function idleWatch_(isLoggedIn, onTimeout) {
   ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
     window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
   });
-  function check() { if (isLoggedIn() && idleExpired_()) onTimeout('30 分鐘沒有動作，已自動登出，請重新登入。'); }
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout(Math.round(IDLE_LIMIT_MS / 60000) + ' 分鐘沒有動作，已自動登出，請重新登入。'); }
   setInterval(check, 30000);
   document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
 }
@@ -534,6 +545,26 @@ function onRole(r) {
 }
 
 // ---------------- 登入／登出 ----------------
+// 首頁公告（管理員在秘書專區「公告」發的）
+function loadAnnouncements() {
+  if (!auth) return;
+  post(OBJ_API, 'announcementsGet', [auth.name, auth.code]).then(function(res) {
+    var items = res.items || [];
+    $('annBox').hidden = !items.length;
+    $('annBox').innerHTML = items.map(function(a) {
+      return '<div class="ann' + (a.important ? ' important' : '') + '"><h3>' + (a.important ? '<span class="ann-tag">重要</span>' : '') + esc(a.title) + '</h3>' +
+        (a.body ? '<div class="ann-body">' + esc(a.body) + '</div>' : '') + '<div class="ann-meta">' + esc(a.by) + '｜' + esc(a.updated) + '</div></div>';
+    }).join('');
+  }).catch(function() {});
+}
+// 系統參數：沒登入也讀得到，存在這個瀏覽器給各頁用（自動登出時間、配對、提醒天數）
+function loadSettings() {
+  post(OBJ_API, 'getPublicSettings', []).then(function(res) {
+    try { localStorage.setItem('ruihe_settings_v1', JSON.stringify({ values: res.values, at: Date.now() })); } catch (e) {}
+    IDLE_LIMIT_MS = ruiheSetting_('idleMinutes', 30) * 60 * 1000;
+  }).catch(function() {});
+}
+loadSettings();
 function enterPortal(name, code, r) {
   auth = { name: name, code: code };
   role = ''; scope = 'mine';
@@ -548,6 +579,7 @@ function enterPortal(name, code, r) {
   if (cached && cached.name === name && cached.scope === 'mine') { state.client = cached.client; state.contract = cached.contract; renderReminders(); }
   loadReminders(false);
   loadGoogleStatus();
+  loadAnnouncements();
   renderDupReminder();
   renderMatchReminder();
   setTimeout(prefetchPages, 1500);   // 待辦先讀，再預先載入各頁資料
@@ -592,7 +624,8 @@ function renderMatchReminder() {
   if (!auth || !window.RuiheMatch) { box.hidden = true; return; }
   var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), cc = readJson(localStorage, 'ruihe_client_summary_cache_v1');
   if (!sc || !sc.dates || !cc) { box.hidden = true; return; }
-  var since = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  var nd = ruiheSetting_('newMatchDays', 7); $('matchDays').textContent = nd;
+  var since = new Date(Date.now() - nd * 864e5).toISOString().slice(0, 10);
   var mine = cc.rows.map(function(r) { return RuiheMatch.parseClient(cc.columns, r); }).filter(function(c) { return !c.closed && c.agents.indexOf(auth.name) !== -1; });
   var items = [];
   sc.rows.forEach(function(r, i) {
@@ -664,12 +697,12 @@ function prefetchPages() {
   var who = auth.name, code = auth.code, r = role;
   // 物件簡表＋物件地圖：同一份資料，地圖多了座標
   var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), mc = readJson(localStorage, 'ruihe_map_cache_v1');
-  var known = (sc && mc && sc.version === mc.version && mc.coords && mc.keys && sc.dates) ? sc.version : '';
+  var known = (sc && mc && sc.version === mc.version && mc.coords && mc.keys && sc.dates && sc.keys) ? sc.version : '';
   post(OBJ_API, 'summaryGetListings', [who, code, known]).then(function(res) {
     if (res.unchanged || !auth) return;
     var now = Date.now();
     try {
-      localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], checkedAt: now }));
+      localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], keys: res.keys || [], checkedAt: now }));
       localStorage.setItem('ruihe_map_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], coords: res.coords || [], keys: res.keys || [], checkedAt: now }));
     } catch (e) {}
   }).then(function() { renderMatchReminder(); }, function() {});
@@ -787,7 +820,7 @@ $('backBtn').addEventListener('click', function() { showLoginChoice(false); });
 // ---------------- 事件 ----------------
 $('loginBtn').addEventListener('click', function() { login(); });
 $('loginCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
-$('refreshBtn').addEventListener('click', function() { loadReminders(true); });
+$('refreshBtn').addEventListener('click', function() { loadReminders(true); loadAnnouncements(); });
 $('logoutBtn').addEventListener('click', function() { logoutToLogin(''); });
 $('scopeSeg').addEventListener('click', function(e) {
   var b = e.target.closest('button'); if (!b) return;

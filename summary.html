@@ -340,6 +340,7 @@
   </div>
 
 <script src="lib/match.js"></script>
+<script src="lib/dm.js"></script>
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 
@@ -373,7 +374,11 @@ var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAq
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
 // 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
-var IDLE_LIMIT_MS = 30 * 60 * 1000;
+// 系統參數（管理員在秘書專區「系統設定」改的；首頁登入時讀一次存在這個瀏覽器）
+function ruiheSetting_(k, def) {
+  try { var v = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; return v && isFinite(Number(v[k])) ? Number(v[k]) : def; } catch (e) { return def; }
+}
+var IDLE_LIMIT_MS = ruiheSetting_('idleMinutes', 30) * 60 * 1000;
 var IDLE_KEY = 'ruihe_last_active_v1';
 var idleLastWrite_ = 0;
 function idleTouch_(force) {
@@ -392,7 +397,7 @@ function idleWatch_(isLoggedIn, onTimeout) {
   ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
     window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
   });
-  function check() { if (isLoggedIn() && idleExpired_()) onTimeout('30 分鐘沒有動作，已自動登出，請重新登入。'); }
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout(Math.round(IDLE_LIMIT_MS / 60000) + ' 分鐘沒有動作，已自動登出，請重新登入。'); }
   setInterval(check, 30000);
   document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
 }
@@ -538,7 +543,7 @@ function splitPlace(text) {
   var m2 = t.match(/^(.{2}[縣市])/);
   return { county: m2 ? m2[1] : '', town: '' };
 }
-function typeClass(t) { return t === '廠房' ? 't-factory' : t === '土地' ? 't-land' : (t === '房屋' || HOUSE_KINDS.indexOf(t) !== -1 || /^其他/.test(t)) ? 't-house' : ''; }
+function typeClass(t) { return t === '廠房' ? 't-factory' : (t === '土地' || ['工業地', '農地', '建地'].indexOf(t) !== -1) ? 't-land' : (t === '房屋' || HOUSE_KINDS.indexOf(t) !== -1 || /^其他/.test(t)) ? 't-house' : ''; }
 // 類型可能有好幾個（房屋的建物類別可以複選，例如「透天、別墅」）
 function splitTypes(v) { return String(v || '').split(/[、,，]/).map(function(x) { return normType(x); }).filter(Boolean); }
 
@@ -753,7 +758,7 @@ function tableHtml(list) {
       if (c === C.contract) return '<td>' + contractTagHtml(v) + '</td>';
       if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(v) + '</td>';
       return '<td>' + esc(v) + '</td>';
-    }).join('') + '<td><button type="button" class="match-btn" data-match="' + it.order + '">配對客需</button></td></tr>';
+    }).join('') + '<td style="white-space:nowrap;"><button type="button" class="match-btn" data-match="' + it.order + '">配對客需</button> <button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button></td></tr>';
   }).join('');
   return '<div class="table-wrap"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
 }
@@ -778,7 +783,7 @@ function cardsHtml(list) {
       (area.length ? '<div class="item-meta">' + area.join('｜') + '</div>' : '') +
       (cell(r, C.agent) ? '<div class="item-meta muted">業務：' + esc(cell(r, C.agent)) + '</div>' : '') +
       '<div class="item-more-hint"><span class="open-t">看其他欄位</span><span class="close-t">收起</span></div>' +
-      '</summary><div style="padding:0 0 10px;"><button type="button" class="match-btn" data-match="' + it.order + '">配對客需</button></div><dl class="item-more">' + (more || '<dt></dt><dd>沒有其他資料</dd>') + '</dl></details>';
+      '</summary><div style="padding:0 0 10px;display:flex;gap:8px;"><button type="button" class="match-btn" data-match="' + it.order + '">配對客需</button><button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button></div><dl class="item-more">' + (more || '<dt></dt><dd>沒有其他資料</dd>') + '</dl></details>';
   }).join('') + '</div>';
 }
 function updateStatus() {
@@ -804,7 +809,7 @@ function clearFilters() {
 function loadCache() {
   try {
     var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-    if (c && c.version && c.columns && c.rows) return c;
+    if (c && c.version && c.columns && c.rows && c.keys) return c;
   } catch (e) {}
   return null;
 }
@@ -830,7 +835,7 @@ function checkForUpdates(manual) {
         if (manual) toast('已經是最新資料');
       } else {
         var hadData = !!data;
-        data = { version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], checkedAt: Date.now() };
+        data = { version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], keys: res.keys || [], checkedAt: Date.now() };
         saveCache();
         buildItems();
         applyAndRender();
@@ -935,16 +940,27 @@ function logoutLocal_(reason) {
 
 // ---------------- 客需配對：這件物件符合哪些客需（客需簡表的資料，不含客戶資料） ----------------
 document.addEventListener('click', function(e) {
-  var b = e.target.closest('.match-btn');
+  var dmb = e.target.closest('[data-dm]');
+  if (dmb && data && window.RuiheDM) {
+    var di = parseInt(dmb.getAttribute('data-dm'), 10);
+    RuiheDM.open(auth, RuiheMatch.parseListing(data.columns, data.rows[di], (data.dates || [])[di], di), (data.keys || [])[di] || '');
+    return;
+  }
+  var b = e.target.closest('.match-btn[data-match]');
   if (!b || !data || !window.RuiheMatch) return;
   var i = parseInt(b.getAttribute('data-match'), 10);
   var L = RuiheMatch.parseListing(data.columns, data.rows[i], (data.dates || [])[i], i);
   var dlg = RuiheMatch.showModal('「' + (L.name || '物件') + '」配對客需', '<div style="color:#5D6B62;">讀取客需中…</div>');
   RuiheMatch.loadClients(auth).then(function(clients) {
-    var list = RuiheMatch.matchesForListing(L, clients);
-    dlg.body.innerHTML = '<div style="color:#5D6B62;font-size:13px;margin-bottom:4px;">比對物件類型、買／租、區域（同縣市）、坪數、預算；結案的客需不列。有興趣請找負責業務。</div>' +
-      (list.length ? '<div style="font-weight:700;margin:6px 0;">符合 ' + list.length + ' 筆</div>' + list.slice(0, 50).map(function(x) { return RuiheMatch.clientItemHtml(x, ''); }).join('')
-        : '<div style="padding:14px 0;color:#5D6B62;">目前沒有符合的客需。</div>');
+    var show = function(near) {
+      var list = RuiheMatch.matchesForListing(L, clients, near);
+      dlg.body.innerHTML = '<div style="color:#5D6B62;font-size:13px;margin-bottom:4px;">比對物件類型、買／租、區域、坪數、預算；結案的客需不列。有興趣請找負責業務。</div>' +
+        '<label style="display:inline-flex;align-items:center;gap:6px;margin:4px 0;font-weight:700;"><input type="checkbox" id="mNear" style="width:auto;"' + (near ? ' checked' : '') + '> 也顯示同縣市其他區的客需</label>' +
+        (list.length ? '<div style="font-weight:700;margin:6px 0;">符合 ' + list.length + ' 筆</div>' + list.slice(0, 50).map(function(x) { return RuiheMatch.clientItemHtml(x, ''); }).join('')
+          : '<div style="padding:14px 0;color:#5D6B62;">目前沒有區域符合的客需。</div>');
+      document.getElementById('mNear').addEventListener('change', function() { show(this.checked); });
+    };
+    show(false);
   }).catch(function(err) { dlg.body.innerHTML = '<div style="color:#B3261E;">讀取失敗：' + RuiheMatch.esc(err.message || '連不上系統') + '</div>'; });
 });
 

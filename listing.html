@@ -1191,6 +1191,7 @@ var FIELD_CONFIG = {
   ],
   '土地': [
     { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
+    { label: '土地類型', type: 'select-other', required: true, options: ['工業地', '農地', '建地'], hint: '選不到的請選「其他」自己填' },
     { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
     { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
@@ -4282,7 +4283,11 @@ var HOUSE_TYPE_OLD_TO_NEW = { '透天厝': '透天', '公寓': '無電梯公寓'
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
 // 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
-var IDLE_LIMIT_MS = 30 * 60 * 1000;
+// 系統參數（管理員在秘書專區「系統設定」改的；首頁登入時讀一次存在這個瀏覽器）
+function ruiheSetting_(k, def) {
+  try { var v = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; return v && isFinite(Number(v[k])) ? Number(v[k]) : def; } catch (e) { return def; }
+}
+var IDLE_LIMIT_MS = ruiheSetting_('idleMinutes', 30) * 60 * 1000;
 var IDLE_KEY = 'ruihe_last_active_v1';
 var idleLastWrite_ = 0;
 function idleTouch_(force) {
@@ -4301,7 +4306,7 @@ function idleWatch_(isLoggedIn, onTimeout) {
   ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
     window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
   });
-  function check() { if (isLoggedIn() && idleExpired_()) onTimeout('30 分鐘沒有動作，已自動登出，請重新登入。'); }
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout(Math.round(IDLE_LIMIT_MS / 60000) + ' 分鐘沒有動作，已自動登出，請重新登入。'); }
   setInterval(check, 30000);
   document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
 }

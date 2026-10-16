@@ -261,6 +261,7 @@
           <button type="button" data-scope="all" aria-pressed="false">全部</button>
         </span>
         <label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-weight:700;"><input type="checkbox" id="onlyHit" checked style="width:auto;"> 只看有符合的</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-weight:700;"><input type="checkbox" id="incNear" style="width:auto;"> 也顯示同縣市其他區</label>
         <label for="sortSel" style="margin:0;">排序</label>
         <select id="sortSel"><option value="hits">符合件數多的在前</option><option value="fill">填表日期新的在前</option></select>
         <span class="count" id="countText" aria-live="polite"></span>
@@ -303,7 +304,11 @@ var CLIENT_API = 'https://script.google.com/macros/s/AKfycbz6EXnxZb40rln8q9xTaD_
 // 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
 var SHARED_LOGIN_KEY = 'ruihe_login_v1';
 // 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
-var IDLE_LIMIT_MS = 30 * 60 * 1000;
+// 系統參數（管理員在秘書專區「系統設定」改的；首頁登入時讀一次存在這個瀏覽器）
+function ruiheSetting_(k, def) {
+  try { var v = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; return v && isFinite(Number(v[k])) ? Number(v[k]) : def; } catch (e) { return def; }
+}
+var IDLE_LIMIT_MS = ruiheSetting_('idleMinutes', 30) * 60 * 1000;
 var IDLE_KEY = 'ruihe_last_active_v1';
 var idleLastWrite_ = 0;
 function idleTouch_(force) {
@@ -322,7 +327,7 @@ function idleWatch_(isLoggedIn, onTimeout) {
   ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
     window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
   });
-  function check() { if (isLoggedIn() && idleExpired_()) onTimeout('30 分鐘沒有動作，已自動登出，請重新登入。'); }
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout(Math.round(IDLE_LIMIT_MS / 60000) + ' 分鐘沒有動作，已自動登出，請重新登入。'); }
   setInterval(check, 30000);
   document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
 }
@@ -400,7 +405,7 @@ function inScope(c) {
 }
 function compute() {
   rows = clients.filter(function(c) { return !c.closed && inScope(c); }).map(function(c) {
-    return { c: c, hits: RuiheMatch.matchesForClient(c, listings), name: names[c.key] || '' };
+    return { c: c, hits: RuiheMatch.matchesForClient(c, listings, $('incNear').checked), name: names[c.key] || '' };
   });
 }
 function render() {
@@ -450,6 +455,7 @@ $('results').addEventListener('click', function(e) {
   var k = b.getAttribute('data-k'); open[k] = !open[k]; render();
 });
 $('onlyHit').addEventListener('change', render);
+$('incNear').addEventListener('change', function() { compute(); render(); });
 $('sortSel').addEventListener('change', render);
 $('scopeSeg').addEventListener('click', function(e) {
   var b = e.target.closest('button'); if (!b) return;
