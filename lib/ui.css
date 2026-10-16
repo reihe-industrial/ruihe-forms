@@ -1,0 +1,58 @@
+/* ============================================================
+   瑞禾業務系統：共用樣式（第五批改版第 1 次，115/10/16）
+   每一頁在自己的 <style> 後面載入這一份，統一顏色、字體和頂部選單列（白底、深綠字、所在頁綠色底線）。
+   之後改顏色只要改這裡的 :root。
+   ============================================================ */
+:root {
+  --brand: #1E4A32;
+  --brand-dark: #1E4A32;
+  --brand-soft: #E6F0E9;
+  --paper: #F4F3EE;
+  --card: #FFFFFF;
+  --ink: #1F2A24;
+  --muted: #5D6B62;
+  --line: #E2E1D8;
+  --danger: #B3261E;
+  --danger-soft: #FDECEA;
+  --radius: 12px;
+}
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
+}
+
+/* ---------- 頂部選單列 ---------- */
+.site-nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: stretch; gap: 2px;
+  background: #FFFFFF; border: 1px solid var(--line); border-radius: 12px;
+  padding: 0 8px; margin: 0 0 18px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+  box-shadow: 0 1px 3px rgba(31, 42, 36, 0.05);
+}
+.site-nav::before {
+  content: "瑞禾業務系統";
+  flex: 0 0 auto; display: flex; align-items: center;
+  padding: 0 14px 0 34px; margin-right: 4px;
+  font-weight: 700; font-size: 15.5px; color: var(--brand); white-space: nowrap;
+  border-right: 1px solid var(--line);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%231E4A32' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10.5 12 4l9 6.5'/%3E%3Cpath d='M5 9.5V20h14V9.5'/%3E%3Cpath d='M10 20v-5h4v5'/%3E%3C/svg%3E") no-repeat 8px center / 20px 20px;
+}
+.site-nav a {
+  flex: 0 0 auto; display: flex; align-items: center;
+  padding: 13px 12px 11px;
+  border: none; border-bottom: 2px solid transparent; border-radius: 0;
+  background: none; color: #4D5B52;
+  font-size: 14.5px; font-weight: 500; text-decoration: none; white-space: nowrap;
+}
+.site-nav a:hover { color: var(--brand); background: none; border-color: transparent; border-bottom-color: var(--line); }
+.site-nav a.active { background: none; color: var(--brand); font-weight: 700; border-bottom-color: var(--brand); }
+.site-nav a:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.site-nav span[data-auth] { background: var(--line) !important; margin: 12px 6px !important; flex: 0 0 1px !important; }
+@media (max-width: 640px) {
+  .site-nav { border-radius: 0; margin-left: -12px; margin-right: -12px; border-left: none; border-right: none; }
+  .site-nav::before { content: "瑞禾"; padding-right: 10px; }
+  .site-nav a { padding: 12px 10px 10px; font-size: 14px; }
+}
