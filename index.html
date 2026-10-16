@@ -697,12 +697,12 @@ function prefetchPages() {
   var who = auth.name, code = auth.code, r = role;
   // 物件簡表＋物件地圖：同一份資料，地圖多了座標
   var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), mc = readJson(localStorage, 'ruihe_map_cache_v1');
-  var known = (sc && mc && sc.version === mc.version && mc.coords && mc.keys && sc.dates && sc.keys) ? sc.version : '';
+  var known = (sc && mc && sc.version === mc.version && mc.coords && mc.keys && sc.dates && sc.keys && sc.coords) ? sc.version : '';
   post(OBJ_API, 'summaryGetListings', [who, code, known]).then(function(res) {
     if (res.unchanged || !auth) return;
     var now = Date.now();
     try {
-      localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], keys: res.keys || [], checkedAt: now }));
+      localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], keys: res.keys || [], coords: res.coords || [], checkedAt: now }));
       localStorage.setItem('ruihe_map_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], coords: res.coords || [], keys: res.keys || [], checkedAt: now }));
     } catch (e) {}
   }).then(function() { renderMatchReminder(); }, function() {});

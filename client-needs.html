@@ -341,7 +341,7 @@
       <div class="card edit-card" id="matchCard">
         <h2>配對物件</h2>
         <div style="color:#5D6B62;font-size:13.5px;margin-bottom:6px;">依物件類型、買／租、區域、坪數、預算比對銷售中的物件；改了需求要存檔後才會用新的內容比對</div>
-        <label style="display:inline-flex;align-items:center;gap:6px;margin:0 0 6px;font-weight:700;"><input type="checkbox" id="matchNear" style="width:auto;"> 也顯示同縣市其他區的物件</label>
+        <label style="display:inline-flex;align-items:center;gap:6px;margin:0 0 6px;font-weight:700;"><input type="checkbox" id="matchNear" style="width:auto;"> 也顯示鄰近區域的物件</label>
         <div id="matchList"><div style="color:#5D6B62;">讀取中…</div></div>
       </div>
     </div>
@@ -1861,7 +1861,7 @@ function loadMatches_(key) {
     var near = document.getElementById('matchNear').checked;
     var list = RuiheMatch.matchesForClient(c, all[1], near);
     var nearN = near ? 0 : RuiheMatch.countNear(c, all[1]);
-    var nearNote = nearN ? '<div style="color:#5D6B62;font-size:13px;margin-top:6px;">同縣市其他區還有 ' + nearN + ' 件，勾上面的選項可以看。</div>' : '';
+    var nearNote = nearN ? '<div style="color:#5D6B62;font-size:13px;margin-top:6px;">鄰近區域還有 ' + nearN + ' 件，勾上面的選項可以看。</div>' : '';
     box.innerHTML = (list.length ? '<div style="font-weight:700;margin:4px 0;">符合 ' + list.length + ' 件' + (list.length > 30 ? '（顯示前 30 件）' : '') + '</div>' +
       list.slice(0, 30).map(RuiheMatch.listingItemHtml).join('') : '<div style="color:#5D6B62;">目前沒有區域符合的物件。</div>') + nearNote;
   }).catch(function(err) { box.innerHTML = '<div style="color:#B3261E;">讀取失敗：' + RuiheMatch.esc(err.message || '連不上系統') + '</div>'; });
