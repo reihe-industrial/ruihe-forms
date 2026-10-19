@@ -361,6 +361,19 @@
       #listingForm .card.lf-collapsed > :not(h2) { display: none !important; }
       .lf-bar .go { height: 44px; padding: 0 20px; }
     }
+    #editBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #editBar .edit-bar-title { flex: 1 1 auto; }
+    .cc-item { border-top: 1px solid var(--line, #E2E1D8); padding: 10px 2px; font-size: 14px; }
+    .cc-item:first-child { border-top: none; }
+    .cc-item .top { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+    .cc-item .no { font-weight: 700; }
+    .cc-item .latest { background: var(--brand, #1E4A32); color: #fff; font-size: 12px; border-radius: 6px; padding: 1px 7px; }
+    .cc-item .rcv { font-size: 12.5px; color: var(--muted, #5D6B62); margin-left: auto; }
+    .cc-item .rcv.ok { color: var(--brand, #1E4A32); font-weight: 700; }
+    .cc-item .chg { margin-top: 4px; color: #33403A; line-height: 1.7; }
+    .cc-form .field { margin-bottom: 10px; }
+    .cc-form .sub { display: none; margin: 4px 0 8px; }
+    .cc-form .sub.on { display: block; }
 </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261016b">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
@@ -464,9 +477,14 @@
     </div>
     <div class="edit-bar" id="editBar" style="display:none;">
       <div class="edit-bar-title" id="editBarTitle"></div>
+      <button type="button" class="edit-btn" id="ccBtn">契變</button>
       <button type="button" class="edit-btn secondary" id="editBackBtn">回到案件清單</button>
     </div>
     <div class="edit-notice" id="editNotice" style="display:none;"></div>
+    <div class="card" id="ccCard" style="display:none;">
+      <h2>契變紀錄</h2>
+      <div id="ccList"><div class="hint">讀取中…</div></div>
+    </div>
 
     <div id="draftBanner" style="display:none; background:#fff8e1; border:1px solid #e0c341; border-radius:10px; padding:14px; margin-bottom:16px; font-size:14px; color:#5a4a00;">
       偵測到瀏覽器裡有尚未送出的草稿，要繼續剛才填到一半的內容嗎？（照片沒辦法存進草稿，需要重新選取）
@@ -6436,6 +6454,87 @@ document.getElementById('deedInput').addEventListener('change', function() {
   if (submitBtn) new MutationObserver(later).observe(submitBtn, { childList: true, characterData: true, subtree: true, attributes: true });
   var view = document.getElementById('editCaseView'); if (view) new MutationObserver(later).observe(view, { attributes: true, attributeFilter: ['style'] });
   setTimeout(refresh, 600);
+})();
+</script>
+
+<script>
+// ===== 契變紀錄（115/10/19）：修改物件頁上方「契變」按鈕＋這件物件的契變歷史 =====
+(function() {
+  var card = document.getElementById('ccCard'), list = document.getElementById('ccList'), btn = document.getElementById('ccBtn');
+  var curKey = '';
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function render(records) {
+    if (!records.length) { list.innerHTML = '<div class="hint">這件物件還沒有契變紀錄。有契變書的話按上面的「契變」填寫，填完把契變書交給秘書。</div>'; return; }
+    list.innerHTML = records.map(function(r, i) {
+      var ch = [];
+      if (r['新到期日']) ch.push('到期日：' + (r['原到期日'] || '—') + ' → <b>' + esc(r['新到期日']) + '</b>');
+      if (r['新總價']) ch.push('總價：' + esc(r['原總價'] || '—') + ' → <b>' + esc(r['新總價']) + ' 萬</b>');
+      if (r['新委託人']) ch.push('委託人：' + esc(r['原委託人'] || '—') + ' → <b>' + esc(r['新委託人']) + '</b>');
+      if (r['委託內容']) ch.push('委託內容：' + esc(r['委託內容']));
+      if (r['其他']) ch.push('其他：' + esc(r['其他']));
+      return '<div class="cc-item"><div class="top"><span class="no">契變書 ' + esc(r['契變書編號']) + '</span>' + (i === 0 ? '<span class="latest">最新</span>' : '') +
+        '<span>' + esc(r['契變日期']) + '</span><span style="color:var(--muted,#5D6B62);">' + esc(r['填寫人']) + ' 填寫｜' + esc(r['填寫時間']) + '</span>' +
+        '<span class="rcv' + (r['秘書收件'] ? ' ok' : '') + '">' + (r['秘書收件'] ? '秘書已收件' : '契變書還沒交給秘書') + '</span></div>' +
+        '<div class="chg">' + ch.join('<br>') + '</div></div>';
+    }).join('');
+  }
+  function load() {
+    if (!editAuth_ || !editCase_ || !editCase_.key) return;
+    curKey = editCase_.key;
+    card.style.display = '';
+    list.innerHTML = '<div class="hint">讀取中…</div>';
+    runServer('contractChangeList', editAuth_.name, editAuth_.code, curKey).then(function(res) { if (editCase_ && editCase_.key === curKey) render(res.records || []); })
+      .catch(function(err) { list.innerHTML = '<div class="hint" style="color:#B3261E;">讀取失敗：' + esc(err.message || '連不上系統') + '</div>'; });
+  }
+  // 打開一件物件（上面的標題會換）就讀這件的契變；回到清單就藏起來
+  var bar = document.getElementById('editBar');
+  new MutationObserver(function() {
+    if (bar.style.display === 'none') { card.style.display = 'none'; curKey = ''; return; }
+    if (editCase_ && editCase_.key && editCase_.key !== curKey) load();
+  }).observe(document.getElementById('editBarTitle'), { childList: true, characterData: true, subtree: true });
+  new MutationObserver(function() { if (bar.style.display === 'none') { card.style.display = 'none'; curKey = ''; } else if (editCase_ && editCase_.key !== curKey) load(); })
+    .observe(bar, { attributes: true, attributeFilter: ['style'] });
+  btn.addEventListener('click', function() {
+    if (!editCase_ || !editAuth_) return;
+    var today = new Date(); var iso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    var dlg = RuiheMatch.showModal('「' + (editCase_.caseName || '物件') + '」契變',
+      '<div class="cc-form">' +
+      '<div class="field"><label class="required">契變書編號</label><input type="text" id="ccNo" maxlength="40"></div>' +
+      '<div class="field"><label class="required">契變日期</label><input type="date" id="ccDate" value="' + iso + '"></div>' +
+      '<div class="field"><label class="required">變更項目（可複選）</label><div class="checkbox-group">' +
+        ['到期日', '價格', '委託內容', '委託人', '其他'].map(function(x) { return '<label class="checkbox-item"><input type="checkbox" class="ccItem" value="' + x + '"> ' + x + '</label>'; }).join('') + '</div></div>' +
+      '<div class="sub" data-for="到期日"><label class="required">新的合約到期日</label><input type="date" id="ccExpiry"></div>' +
+      '<div class="sub" data-for="價格"><label class="required">新的總價（萬）</label><input type="text" inputmode="decimal" id="ccPrice" placeholder="例：2800"></div>' +
+      '<div class="sub" data-for="委託人"><label class="required">新的委託人</label><input type="text" id="ccClient"></div>' +
+      '<div class="sub" data-for="委託內容"><label class="required">委託內容變更了什麼</label><textarea id="ccContent" rows="2"></textarea></div>' +
+      '<div class="sub" data-for="其他"><label class="required">其他變更的內容</label><textarea id="ccOther" rows="2"></textarea></div>' +
+      '<div class="msg" id="ccMsg"></div>' +
+      '<button type="button" class="edit-btn" id="ccSave" style="width:100%;height:44px;font-size:15px;">儲存契變</button>' +
+      '<div class="hint" style="margin-top:8px;">契變書紙本請交給秘書。</div></div>');
+    var body = dlg.body;
+    body.addEventListener('change', function(e) {
+      if (!e.target.classList.contains('ccItem')) return;
+      [].forEach.call(body.querySelectorAll('.sub'), function(el) { el.classList.toggle('on', !!body.querySelector('.ccItem[value="' + el.getAttribute('data-for') + '"]:checked')); });
+    });
+    body.querySelector('#ccSave').addEventListener('click', function() {
+      var b = this, msg = body.querySelector('#ccMsg');
+      var ch = { no: body.querySelector('#ccNo').value, date: body.querySelector('#ccDate').value,
+        items: [].map.call(body.querySelectorAll('.ccItem:checked'), function(x) { return x.value; }),
+        expiry: body.querySelector('#ccExpiry').value, price: body.querySelector('#ccPrice').value, client: body.querySelector('#ccClient').value,
+        content: body.querySelector('#ccContent').value, other: body.querySelector('#ccOther').value };
+      b.disabled = true; b.textContent = '儲存中…'; msg.style.display = 'none';
+      runServer('contractChangeAdd', editAuth_.name, editAuth_.code, editCase_.key, ch).then(function(res) {
+        render(res.records || []);
+        dlg.close();
+        showToast('已記錄契變' + ((res.updated || []).length ? '，案件已更新成最新內容' : '') + '。契變書請交給秘書。', 'success');
+        // 重新打開這件，表單帶入更新後的到期日、價格、委託人
+        if ((res.updated || []).length) { var k = editCase_.key; curKey = k; setTimeout(function() { editOpenCase_(k); }, 300); }
+      }).catch(function(err) {
+        msg.className = 'msg error'; msg.textContent = err.message || '儲存失敗'; msg.style.display = 'block';
+        b.disabled = false; b.textContent = '儲存契變';
+      });
+    });
+  });
 })();
 </script>
 </body>
