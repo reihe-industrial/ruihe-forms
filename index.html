@@ -230,6 +230,38 @@
       .login-banner { display: block; width: 100%; max-width: 1180px; height: auto; border-radius: 14px; margin: 0 0 16px; box-shadow: 0 2px 10px rgba(31,42,36,0.08); }
     .login-banner[hidden] { display: none; }
     #loginView.card.narrow { margin-left: auto; margin-right: auto; }
+      /* 首頁上方：公告（窄）＋行事曆（寬）（115/10/19） */
+    .home-top { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 8px; }
+    @media (min-width: 980px) { .home-top { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; } }
+    .home-ann #annBox { max-height: 640px; overflow-y: auto; padding-right: 2px; }
+    .cal-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .cal-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .cal-head b { font-size: 17px; min-width: 7.5em; text-align: center; }
+    .cal-nav { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink); }
+    .cal-head .btn { height: 34px; padding: 0 12px; font-size: 13.5px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .cal-grid .wd { text-align: center; font-size: 12.5px; color: var(--muted); padding: 4px 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #FAFAF6; }
+    .cal-cell { min-height: 78px; padding: 3px 4px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); cursor: pointer; background: #fff; text-align: left; font: inherit; color: inherit; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+    .cal-cell:hover { background: #F6FAF7; }
+    .cal-cell.out { background: #FBFBF8; color: #A6ABA4; }
+    .cal-cell.sel { outline: 2px solid var(--brand); outline-offset: -2px; }
+    .cal-cell .dn { font-size: 12.5px; font-weight: 700; }
+    .cal-cell.today .dn { background: var(--brand); color: #fff; border-radius: 10px; padding: 0 6px; align-self: flex-start; }
+    .cal-chip { font-size: 11.5px; line-height: 1.35; border-radius: 4px; padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-chip.co { background: #E6F0E9; color: #1E4A32; }
+    .cal-chip.me { background: #FDEBD3; color: #8A4B08; }
+    .cal-more { font-size: 11px; color: var(--muted); }
+    .cal-legend { font-size: 12.5px; color: var(--muted); margin: 8px 2px 0; }
+    .cal-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+    .dot.co { background: #CFE3D6; } .dot.me { background: #F7D3A6; }
+    .cal-day { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+    .cal-day h3 { font-size: 15px; margin: 2px 0 6px; }
+    .cal-ev { display: flex; gap: 10px; align-items: flex-start; padding: 8px 6px; border-radius: 8px; cursor: pointer; }
+    .cal-ev:hover { background: #F6FAF7; }
+    .cal-ev .k { flex: 0 0 auto; font-size: 12px; border-radius: 6px; padding: 1px 6px; }
+    .cal-ev .k.co { background: #E6F0E9; color: #1E4A32; } .cal-ev .k.me { background: #FDEBD3; color: #8A4B08; }
+    .cal-ev .t { font-weight: 700; } .cal-ev .s { font-size: 13px; color: var(--muted); white-space: pre-wrap; }
+    @media (max-width: 640px) { .cal-cell { min-height: 54px; } .cal-chip { font-size: 10.5px; } }
   </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261016b">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
@@ -250,6 +282,7 @@
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="help.html" data-key="help">使用說明</a>
   </nav>
   <script>
   (function() {
@@ -334,7 +367,30 @@
         <button type="button" class="btn ghost" id="logoutBtn">登出</button>
       </div>
 
-      <div id="annBox" hidden></div>
+      <div class="home-top">
+        <div class="home-ann">
+          <div class="sec-title"><h2>公告</h2></div>
+          <div id="annBox" hidden></div>
+          <div class="rem-empty" id="annEmpty">目前沒有公告。</div>
+        </div>
+        <div class="home-cal">
+          <div class="sec-title"><h2>行事曆</h2><span class="note" id="calNote"></span></div>
+          <div class="cal-card" id="calCard">
+            <div class="cal-head">
+              <button type="button" class="cal-nav" id="calPrev" aria-label="上個月">‹</button>
+              <b id="calTitle"></b>
+              <button type="button" class="cal-nav" id="calNext" aria-label="下個月">›</button>
+              <button type="button" class="btn ghost cal-today" id="calToday">今天</button>
+              <span style="flex:1"></span>
+              <button type="button" class="btn ghost" id="calAddMine">＋ 我的行程</button>
+              <button type="button" class="btn" id="calAddCo" hidden>＋ 公司活動</button>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+            <div class="cal-legend"><span class="dot co"></span>公司活動　<span class="dot me"></span><span id="calLegendMe">我的行程</span></div>
+            <div class="cal-day" id="calDay"></div>
+          </div>
+        </div>
+      </div>
       <div class="sec-title"><h2>待辦提醒</h2><span class="note" id="remNote"></span></div>
       <div class="tiles" id="remTiles" role="tablist" aria-label="待辦"></div>
       <div id="remWrap">
@@ -362,8 +418,17 @@
         <summary>物件：相同、需要確認或相似<span class="badge" id="cntDup">…</span></summary>
         <div class="rem-body" id="bodyDup"><div class="rem-empty">讀取中…</div></div>
       </details>
+      <details class="rem" id="remCcP" hidden>
+        <summary>契變書待收件<span class="badge" id="cntCcP">…</span></summary>
+        <div class="rem-body" id="bodyCcP"><div class="rem-empty">讀取中…</div></div>
+      </details>
+      <details class="rem" id="remRegP" hidden>
+        <summary>調謄本：待申請<span class="badge" id="cntRegP">…</span></summary>
+        <div class="rem-body" id="bodyRegP"><div class="rem-empty">讀取中…</div></div>
+      </details>
       </div>
 
+      <div hidden><!-- 首頁不顯示登入方式（115/10/19） -->
       <div class="sec-title"><h2>登入方式</h2></div>
       <div class="method-card" id="methodCard">
         <span class="lbl">Google 帳號</span>
@@ -371,6 +436,7 @@
         <span class="grow"></span>
         <div id="gBindBtn"></div>
         <button type="button" class="btn ghost" id="gUnbindBtn" style="display:none;">解除綁定</button>
+      </div>
       </div>
     </div>
   </div>
@@ -659,6 +725,7 @@ function loadAnnouncements() {
   post(OBJ_API, 'announcementsGet', [auth.name, auth.code]).then(function(res) {
     var items = res.items || [];
     $('annBox').hidden = !items.length;
+    $('annEmpty').hidden = !!items.length;
     $('annBox').innerHTML = items.map(function(a) {
       return '<div class="ann' + (a.important ? ' important' : '') + '"><h3>' + (a.important ? '<span class="ann-tag">重要</span>' : '') + esc(a.title) + '</h3>' +
         (a.body ? '<div class="ann-body">' + esc(a.body) + '</div>' : '') + '<div class="ann-meta">' + esc(a.by) + '｜' + esc(a.updated) + '</div></div>';
@@ -965,6 +1032,141 @@ $('scopeSeg').addEventListener('click', function(e) {
   } else if (saved) { login(saved); }
   else if (msg) { showLoginMsg(msg, true); try { sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {} }
 })();
+</script>
+
+<script>
+// ===== 首頁行事曆（115/10/19）：公司活動（秘書、管理員新增）、我的行程（自己、秘書、管理員看得到） =====
+var cal = { month: null, sel: '', data: null, range: '' };
+function calIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function calIsSec() { return role === '秘書' || role === '管理員'; }
+function calRange() {
+  var first = new Date(cal.month.getFullYear(), cal.month.getMonth(), 1);
+  var start = new Date(first); start.setDate(1 - first.getDay());
+  var end = new Date(start); end.setDate(start.getDate() + 41);
+  return { start: start, end: end, from: calIso(start), to: calIso(end) };
+}
+function calEventsOn(iso) { return ((cal.data && cal.data.events) || []).filter(function(e) { return e.start <= iso && e.end >= iso; }).sort(function(a, b) { return (a.kind === b.kind ? 0 : a.kind === '公司' ? -1 : 1) || String(a.time).localeCompare(String(b.time)); }); }
+function calLabel(e) { return (e.kind === '行程' && calIsSec() && e.owner !== auth.name ? e.owner + '：' : '') + (e.time ? e.time + ' ' : '') + e.title; }
+function calRender() {
+  if (!cal.month) return;
+  var r = calRange(), today = calIso(new Date());
+  $('calTitle').textContent = cal.month.getFullYear() + ' 年 ' + (cal.month.getMonth() + 1) + ' 月';
+  $('calAddCo').hidden = !calIsSec();
+  $('calLegendMe').textContent = calIsSec() ? '業務的行程' : '我的行程（只有自己和秘書看得到）';
+  var h = ['日', '一', '二', '三', '四', '五', '六'].map(function(w) { return '<div class="wd">' + w + '</div>'; }).join('');
+  for (var i = 0; i < 42; i++) {
+    var d = new Date(r.start); d.setDate(r.start.getDate() + i);
+    var iso = calIso(d), evs = calEventsOn(iso);
+    h += '<button type="button" class="cal-cell' + (d.getMonth() !== cal.month.getMonth() ? ' out' : '') + (iso === today ? ' today' : '') + (iso === cal.sel ? ' sel' : '') + '" data-day="' + iso + '" aria-label="' + iso + '，' + evs.length + ' 個活動">' +
+      '<span class="dn">' + d.getDate() + '</span>' +
+      evs.slice(0, 3).map(function(e) { return '<span class="cal-chip ' + (e.kind === '公司' ? 'co' : 'me') + '">' + esc(calLabel(e)) + '</span>'; }).join('') +
+      (evs.length > 3 ? '<span class="cal-more">還有 ' + (evs.length - 3) + ' 個</span>' : '') + '</button>';
+  }
+  $('calGrid').innerHTML = h;
+  calRenderDay();
+}
+function calRenderDay() {
+  var iso = cal.sel || calIso(new Date()), evs = calEventsOn(iso);
+  var d = new Date(iso + 'T00:00:00');
+  $('calDay').innerHTML = '<h3>' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日（' + '日一二三四五六'[d.getDay()] + '）</h3>' +
+    (evs.length ? evs.map(function(e) {
+      return '<div class="cal-ev" data-ev="' + esc(e.id) + '"><span class="k ' + (e.kind === '公司' ? 'co' : 'me') + '">' + (e.kind === '公司' ? '公司' : (calIsSec() && e.owner !== auth.name ? esc(e.owner) : '我的行程')) + '</span>' +
+        '<div><div class="t">' + esc((e.time ? e.time + '　' : '') + e.title) + (e.end !== e.start ? '<span style="font-weight:400;color:var(--muted);font-size:12.5px;">（' + esc(e.start.slice(5).replace('-', '/')) + '～' + esc(e.end.slice(5).replace('-', '/')) + '）</span>' : '') + '</div>' +
+        (e.body ? '<div class="s">' + esc(e.body) + '</div>' : '') + '</div></div>';
+    }).join('') : '<div class="rem-empty">這天沒有活動或行程。</div>');
+}
+function calLoad(force) {
+  if (!auth) return;
+  if (!cal.month) { var t = new Date(); cal.month = new Date(t.getFullYear(), t.getMonth(), 1); cal.sel = calIso(t); }
+  var r = calRange(), key = r.from + '|' + r.to;
+  var ck = 'ruihe_cal_' + auth.name + '_' + key;
+  if (!force) { try { var c = JSON.parse(sessionStorage.getItem(ck) || 'null'); if (c) { cal.data = c; calRender(); } } catch (e) {} }
+  if (!cal.data) calRender();
+  $('calNote').textContent = '讀取中…';
+  cal.range = key;
+  post(OBJ_API, 'calendarGet', [auth.name, auth.code, r.from, r.to]).then(function(res) {
+    if (cal.range !== key) return;
+    cal.data = res; $('calNote').textContent = '';
+    try { sessionStorage.setItem(ck, JSON.stringify(res)); } catch (e) {}
+    calRender();
+  }).catch(function(err) { $('calNote').textContent = '行事曆讀取失敗：' + (err.message || '連不上系統'); });
+}
+function calEdit(ev, kind) {
+  var isNew = !ev, sec = calIsSec();
+  ev = ev || { kind: kind, start: cal.sel || calIso(new Date()), end: '', time: '', title: '', body: '' };
+  var dlg = RuiheMatch.showModal(isNew ? (ev.kind === '公司' ? '新增公司活動' : '新增我的行程') : (ev.canEdit ? '修改' : (ev.kind === '公司' ? '公司活動' : '行程')),
+    ev.canEdit === false ? ('<div class="cal-ev" style="cursor:default;"><div><div class="t">' + esc((ev.time ? ev.time + '　' : '') + ev.title) + '</div><div class="s">' + esc(ev.start + (ev.end !== ev.start ? ' ～ ' + ev.end : '')) + '</div>' + (ev.body ? '<div class="s" style="margin-top:6px;color:var(--ink);">' + esc(ev.body) + '</div>' : '') + '</div></div>') :
+    ('<div class="cal-form">' +
+      (!isNew && ev.kind === '行程' && ev.owner !== auth.name ? '<div class="note" style="margin-bottom:8px;">' + esc(ev.owner) + ' 的行程</div>' : '') +
+      '<label class="required">日期</label><input type="date" id="cfStart" value="' + esc(ev.start) + '">' +
+      '<label style="margin-top:8px;">結束日期（跨好幾天才填）</label><input type="date" id="cfEnd" value="' + esc(ev.end && ev.end !== ev.start ? ev.end : '') + '">' +
+      '<label style="margin-top:8px;">時間</label><input type="text" id="cfTime" maxlength="30" placeholder="例：14:00、下午" value="' + esc(ev.time) + '">' +
+      '<label class="required" style="margin-top:8px;">標題</label><input type="text" id="cfTitle" maxlength="80" value="' + esc(ev.title) + '">' +
+      '<label style="margin-top:8px;">內容</label><textarea id="cfBody" rows="4">' + esc(ev.body) + '</textarea>' +
+      '<div class="notice" id="cfMsg" style="display:none;margin-top:8px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;"><button type="button" class="btn" id="cfSave" style="flex:1;">儲存</button>' +
+      (!isNew ? '<button type="button" class="btn ghost" id="cfDel" style="color:#B3261E;">刪除</button>' : '') + '</div></div>'));
+  var b = dlg.body;
+  if (ev.canEdit === false) return;
+  var r = calRange();
+  var done = function(res) { cal.data = res; try { sessionStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {} calRender(); dlg.close(); };
+  var fail = function(btn, txt) { return function(err) { var m = b.querySelector('#cfMsg'); m.textContent = err.message || '儲存失敗'; m.style.display = 'block'; btn.disabled = false; btn.textContent = txt; }; };
+  b.querySelector('#cfSave').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.textContent = '儲存中…';
+    var data = { id: ev.id || '', kind: ev.kind, start: b.querySelector('#cfStart').value, end: b.querySelector('#cfEnd').value, time: b.querySelector('#cfTime').value,
+      title: b.querySelector('#cfTitle').value, body: b.querySelector('#cfBody').value, from: r.from, to: r.to };
+    post(OBJ_API, 'calendarSave', [auth.name, auth.code, data]).then(function(res) { done(res); toast('已儲存'); }).catch(fail(btn, '儲存'));
+  });
+  var del = b.querySelector('#cfDel');
+  if (del) del.addEventListener('click', function() {
+    if (!confirm('確定刪除「' + ev.title + '」？')) return;
+    var btn = this; btn.disabled = true;
+    post(OBJ_API, 'calendarDelete', [auth.name, auth.code, ev.id, r.from, r.to]).then(function(res) { done(res); toast('已刪除'); }).catch(fail(btn, '刪除'));
+  });
+}
+$('calGrid').addEventListener('click', function(e) {
+  var c = e.target.closest('[data-day]'); if (!c) return;
+  cal.sel = c.getAttribute('data-day');
+  var d = new Date(cal.sel + 'T00:00:00');
+  if (d.getMonth() !== cal.month.getMonth()) { cal.month = new Date(d.getFullYear(), d.getMonth(), 1); cal.data = null; calLoad(); } else calRender();
+});
+$('calDay').addEventListener('click', function(e) {
+  var x = e.target.closest('[data-ev]'); if (!x) return;
+  var ev = ((cal.data && cal.data.events) || []).filter(function(v) { return v.id === x.getAttribute('data-ev'); })[0];
+  if (ev) calEdit(ev);
+});
+$('calPrev').addEventListener('click', function() { cal.month = new Date(cal.month.getFullYear(), cal.month.getMonth() - 1, 1); cal.data = null; calLoad(); });
+$('calNext').addEventListener('click', function() { cal.month = new Date(cal.month.getFullYear(), cal.month.getMonth() + 1, 1); cal.data = null; calLoad(); });
+$('calToday').addEventListener('click', function() { var t = new Date(); cal.month = new Date(t.getFullYear(), t.getMonth(), 1); cal.sel = calIso(t); cal.data = null; calLoad(); });
+$('calAddMine').addEventListener('click', function() { calEdit(null, '行程'); });
+$('calAddCo').addEventListener('click', function() { calEdit(null, '公司'); });
+
+// ===== 秘書、管理員的待辦：契變書待收件、調謄本待申請（115/10/19） =====
+function loadSecReminders() {
+  var sec = calIsSec();
+  $('remCcP').hidden = !sec; $('remRegP').hidden = !sec;
+  if (!sec || !auth) return;
+  post(OBJ_API, 'adminContractChanges', [auth.name, auth.code]).then(function(res) {
+    var list = (res.records || []).filter(function(r) { return !r['秘書收件']; });
+    setBadge('cntCcP', list.length, 'warn');
+    $('bodyCcP').innerHTML = list.length ? list.slice(0, 8).map(function(r) {
+      return '<div class="rem-row"><div class="nm">' + esc(r['案名']) + '</div><div class="meta">' + esc(r['填寫人'] + '｜契變書 ' + r['契變書編號'] + '｜' + r['契變日期']) + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=cc">去收件</a></div></div>';
+    }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html?tab=cc">到秘書專區看全部</a></div>' : '') : '<div class="rem-empty">沒有待收件的契變書。</div>';
+  }).catch(function(err) { setBadge('cntCcP', '!', 'hot'); $('bodyCcP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
+  post(REG_API, 'regListRequests', [auth.name, auth.code]).then(function(reg) {
+    var si = reg.statusIdx, cols = reg.columns || [];
+    var ci = function(l) { var i = cols.indexOf(l); if (i !== -1) return i; for (var k = 0; k < cols.length; k++) if (String(cols[k]).indexOf(l) !== -1 && k !== reg.noteIdx && k !== si) return k; return -1; };
+    var v = function(r, l) { var i = ci(l); return i === -1 ? '' : (r.values[i] || ''); };
+    var list = (reg.rows || []).filter(function(r) { return !r.values[si] || r.values[si] === '待申請'; });
+    setBadge('cntRegP', list.length, 'warn');
+    $('bodyRegP').innerHTML = list.length ? list.slice(0, 8).map(function(r) {
+      return '<div class="rem-row"><div class="nm">' + esc(v(r, '縣市') + v(r, '鄉鎮') + v(r, '段')) + '</div><div class="meta">' + esc(v(r, '業務名稱') + '｜' + String(r.ts || '').split(' ')[0] + '｜' + v(r, '謄本')) + '</div><div class="go"><a class="link-btn" href="secretary.html">去處理</a></div></div>';
+    }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html">到秘書專區看全部</a></div>' : '') : '<div class="rem-empty">沒有待申請的謄本。</div>';
+  }).catch(function(err) { setBadge('cntRegP', '!', 'hot'); $('bodyRegP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
+}
+var _loadRemindersOrig = loadReminders;
+loadReminders = function(manual) { _loadRemindersOrig(manual); calLoad(!!manual); loadSecReminders(); };
+if (auth && !$('portal').hidden) { calLoad(); loadSecReminders(); }
 </script>
 </body>
 </html>

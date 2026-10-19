@@ -396,6 +396,7 @@
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="help.html" data-key="help">使用說明</a>
   </nav>
   <script src="lib/match.js?v=20261019a"></script>
 <script>
@@ -6538,6 +6539,24 @@ document.getElementById('deedInput').addEventListener('change', function() {
     });
   });
 })();
+</script>
+
+<script>
+// 有條件必填（例如管理費選「有」→ 管理費用、繳費方式必填）：條件成立時欄位名稱顯示紅色星號（115/10/19）
+function updateRequiredIfStars_() {
+  (FIELD_CONFIG[currentType] || []).forEach(function(f) {
+    if (!f.requiredIf) return;
+    var fe = findFieldByLabel_(f.label); if (!fe) return;
+    var lab = fe.querySelector('label'); if (!lab) return;
+    var ctl = document.querySelector('#listingForm [data-label="' + f.requiredIf.label + '"]');
+    var v = ctl ? (ctl.type === 'radio' ? ((document.querySelector('#listingForm [data-label="' + f.requiredIf.label + '"]:checked') || {}).value || '') : ctl.value) : '';
+    lab.classList.toggle('required', v === f.requiredIf.value);
+  });
+}
+document.getElementById('listingForm').addEventListener('change', updateRequiredIfStars_);
+new MutationObserver(function() { clearTimeout(window.__rqT); window.__rqT = setTimeout(updateRequiredIfStars_, 200); })
+  .observe(document.getElementById('listingForm'), { childList: true, subtree: false });
+setTimeout(updateRequiredIfStars_, 800);
 </script>
 </body>
 </html>

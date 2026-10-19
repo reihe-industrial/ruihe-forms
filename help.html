@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>使用說明｜瑞禾業務系統</title>
+  <style>
+    body { margin: 0; line-height: 1.75; }
+    .container { max-width: 1180px; margin: 0 auto; padding: 16px 16px 60px; }
+    h1 { font-size: 24px; color: var(--brand, #1E4A32); margin: 6px 0 2px; }
+    .subtitle { color: var(--muted, #5D6B62); font-size: 14px; margin-bottom: 16px; }
+    .help-layout { display: block; }
+    .help-toc { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .help-toc a { font-size: 13.5px; padding: 5px 10px; border: 1px solid var(--line, #E2E1D8); border-radius: 999px; background: #fff; color: var(--ink, #1F2A24); text-decoration: none; }
+    .help-toc a:hover { border-color: var(--brand, #1E4A32); color: var(--brand, #1E4A32); }
+    @media (min-width: 1100px) {
+      .help-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 22px; align-items: start; }
+      .help-toc { position: sticky; top: 80px; flex-direction: column; flex-wrap: nowrap; background: #fff; border: 1px solid var(--line, #E2E1D8); border-radius: 12px; padding: 8px; }
+      .help-toc a { border: none; border-radius: 8px; padding: 7px 10px; }
+      .help-toc a:hover { background: var(--brand-soft, #E6F0E9); }
+    }
+    .hs { background: #fff; border: 1px solid var(--line, #E2E1D8); border-radius: 14px; padding: 16px 20px; margin-bottom: 14px; scroll-margin-top: 80px; }
+    .hs h2 { font-size: 18px; color: var(--brand, #1E4A32); margin: 0 0 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .hs h4 { font-size: 15px; margin: 14px 0 4px; }
+    .hs p, .hs li, .hs dd { font-size: 15px; }
+    .hs ul, .hs ol { padding-left: 1.4em; margin: 6px 0; }
+    .hs dt { font-weight: 700; margin-top: 10px; }
+    .hs dd { margin: 2px 0 0 0; color: #33403A; }
+    .who { font-size: 12px; font-weight: 700; color: var(--brand, #1E4A32); background: var(--brand-soft, #E6F0E9); border-radius: 6px; padding: 2px 8px; }
+    .tip { background: #FFF8E1; border: 1px solid #E8D48A; border-radius: 10px; padding: 8px 12px; font-size: 14px; margin: 8px 0; }
+  </style>
+  <link rel="stylesheet" href="lib/ui.css?v=20261016b">
+  <link rel="icon" type="image/png" href="lib/img/favicon.png">
+  <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
+</head>
+<body>
+  <div class="container">
+  <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="index.html" data-key="home" data-home="1">登入</a>
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
+    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="help.html" data-key="help">使用說明</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'help.html' ? 'help' : page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
+    // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
+    window.ruiheUpdateNav_ = function() {
+      var o = null;
+      try { o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
+      var els = document.querySelectorAll('#siteNav [data-auth]');
+      for (var j = 0; j < els.length; j++) {
+        var roles = els[j].getAttribute('data-roles');
+        var okRole = !roles || roles.split(',').indexOf(role) !== -1;
+        els[j].style.display = (loggedIn && okRole) ? '' : 'none';
+      }
+      var home = document.querySelector('#siteNav [data-home]');
+      if (home) home.textContent = loggedIn ? '首頁' : '登入';
+    };
+    // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
+    if (page !== 'listing.html') {
+      setTimeout(function() {
+        try {
+          if (localStorage.getItem('ruihe_listing_options_v1')) return;
+          fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'getListingFormOptions', args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(res) { if (res && res.ok && res.result && res.result.districtData && Object.keys(res.result.districtData).length) localStorage.setItem('ruihe_listing_options_v1', JSON.stringify(res.result)); })
+            .catch(function() {});
+        } catch (e) {}
+      }, 2500);
+    }
+    window.ruiheUpdateNav_();
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
+    <h1>使用說明</h1>
+    <div class="subtitle">瑞禾業務系統的操作方式。標籤寫「所有人」的大家都會用到，其他的是主管、秘書、管理員才有的功能。</div>
+    <div class="help-layout">
+      <nav class="help-toc" aria-label="說明目錄"><a href="#login">登入</a><a href="#home">首頁</a><a href="#listing">新增物件</a><a href="#edit">修改物件／客需／物件配對</a><a href="#needs">新增客需、客需追蹤</a><a href="#summary">物件簡表、產生 DM</a><a href="#csummary">客需簡表</a><a href="#map">物件地圖</a><a href="#registry">調謄本</a><a href="#manager">主管</a><a href="#secretary">秘書專區</a><a href="#admin">管理員</a><a href="#faq">常見問題</a></nav>
+      <div><section id="login" class="hs"><h2>登入<span class="who">所有人</span></h2>
+<p>從「首頁」登入，有兩種方式：</p>
+<ul>
+<li><b>使用 Google 帳戶登入</b>：管理員在「人員管理」幫你設定好 Gmail 後就能用，按一下就登入。</li>
+<li><b>使用通關碼登入</b>：選自己的名字，輸入通關碼。忘記通關碼請找管理員。</li>
+</ul>
+<p>同一個瀏覽器分頁登入一次，其他功能頁都不用再登入。<b>30 分鐘沒有動作會自動登出</b>。</p>
+<div class="tip">在共用電腦上用完，一定要按右上角的「登出」。</div>
+<p>新增物件、新增客需、調謄本<b>不用登入</b>也可以填。</p>
+</section><section id="home" class="hs"><h2>首頁<span class="who">所有人</span></h2>
+<p>登入後的首頁分成三個區塊：</p>
+<ul>
+<li><b>公告</b>：公司的通知，紅色「重要」的放在最上面。</li>
+<li><b>行事曆</b>：
+  <ul>
+  <li>綠色是<b>公司活動</b>（秘書、管理員新增），大家都看得到。</li>
+  <li>橘色是<b>我的行程</b>：按「＋ 我的行程」新增，<b>只有自己和秘書看得到</b>，其他業務看不到。</li>
+  <li>點日期看當天的內容；點一筆可以修改或刪除自己的行程。</li>
+  </ul></li>
+<li><b>待辦提醒</b>：數字卡片，點了下面才展開清單。紅色、橘色是要處理的，灰色的 0 表示沒有。
+  <ul>
+  <li>客需：今天要聯絡、超過 30 天沒追蹤</li>
+  <li>物件：合約 30 天內到期</li>
+  <li>新物件符合你的客需（最近 7 天）</li>
+  </ul></li>
+</ul>
+<p>主管、秘書、管理員可以切換「我的／全公司」。</p>
+</section><section id="listing" class="hs"><h2>新增物件<span class="who">所有人</span></h2>
+<ol>
+<li>選上面的類型：<b>廠房／土地／房屋</b>。</li>
+<li>從上往下填。紅色星號 <span style="color:#B3261E;">*</span> 是必填；有些欄位要看前面的選擇才必填（例如房屋的管理費選「有」，管理費用和繳費方式就要填）。</li>
+<li>電腦版左邊的<b>目錄</b>顯示每一段還缺幾項，點了直接跳過去。</li>
+<li>最下面的送出列會顯示「還有 N 項必填沒填」，按「<b>跳到第一項</b>」可以直接跳到沒填的欄位。</li>
+<li>照片：可以一次選好幾張。權狀、謄本、使用執照、合約這類要看清楚小字的，請在檔案旁勾「保留原圖」。</li>
+<li>按「<b>送出</b>」，看到成功訊息就完成了。</li>
+</ol>
+<div class="tip">填到一半離開，回來時會問要不要繼續使用草稿。</div>
+</section><section id="edit" class="hs"><h2>修改物件／客需／物件配對<span class="who">所有人</span></h2>
+<p>登入後從選單進入，分成「物件」「客需」兩個分頁，只會列出<b>你負責的</b>（秘書、管理員看全部）。</p>
+<h4>修改</h4>
+<p>按「修改」打開，改完按最下面的「儲存」。如果有人在試算表直接改過，上方會列出最新的值。</p>
+<h4>配對</h4>
+<p>每一筆旁邊的「<b>配對（N）</b>」，N 是符合的件數：</p>
+<ul>
+<li>物件 → 看符合的<b>客需</b>（不顯示客戶資料，有興趣請找負責業務）。</li>
+<li>客需 → 看符合的<b>物件</b>。</li>
+</ul>
+<p>配對會比對：類型、買／租、區域、坪數、預算。預設只列<b>同一區</b>的，勾「也顯示鄰近區域」會多列附近的。</p>
+<h4>契變</h4>
+<ol>
+<li>打開物件後，按上方的「<b>契變</b>」。</li>
+<li>填契變書編號、契變日期，勾變更項目（到期日、價格、委託內容、委託人、其他），再填新的內容。</li>
+<li>按「儲存契變」，到期日、價格、委託人會更新成新的內容。</li>
+<li><b>契變書紙本交給秘書。</b></li>
+</ol>
+<p>下方的「契變紀錄」會保留每一次契變，最新的標「最新」。</p>
+</section><section id="needs" class="hs"><h2>新增客需、客需追蹤<span class="who">所有人</span></h2>
+<p>必填：負責業務、填表日期、資訊來源、物件類型、需求類型、目標區域，以及依物件類型：</p>
+<ul>
+<li>廠房：產業類別、廠房面積</li>
+<li>土地：土地面積、需求土地種類</li>
+<li>房屋：房屋面積</li>
+</ul>
+<p>面積和預算可以寫一個數字或範圍（例如 200～300）。<b>坪數、預算有填，配對才會準</b>。</p>
+<h4>追蹤紀錄</h4>
+<p>到「修改物件／客需／物件配對」→「客需」→「修改／追蹤」，在上方新增追蹤紀錄，填下次聯絡日期，首頁就會提醒你。成交或不需要了，記得把客需結案。</p>
+</section><section id="summary" class="hs"><h2>物件簡表、產生 DM<span class="who">所有人</span></h2>
+<p>全公司銷售中的物件（含住商物件），可以用類型、租售、區域、坪數、總價、業務篩選。每一列按「更多」看其他欄位。</p>
+<h4>產生 DM</h4>
+<ol>
+<li>按那一件的「<b>產生 DM</b>」。</li>
+<li>「下載圖片」：直式圖片，適合傳 LINE。</li>
+<li>「A4 版面（存成 PDF）」：跳出列印視窗，目的地選「另存為 PDF」。</li>
+</ol>
+<p>DM 上的聯絡業務是<b>產生 DM 的人</b>，電話來自人員管理的設定；公司資訊和經紀人資訊會自動帶入。</p>
+</section><section id="csummary" class="hs"><h2>客需簡表<span class="who">所有人</span></h2>
+<p>全公司的客戶需求（不含客戶聯絡資料），可以篩選類型、區域、業務。有符合的客戶，請找負責業務。</p>
+</section><section id="map" class="hs"><h2>物件地圖<span class="who">所有人</span></h2>
+<p>銷售中的物件放在地圖上，點標記看簡介。可以篩選類型、租售、業務、建物坪數、總價、土地坪數。</p>
+</section><section id="registry" class="hs"><h2>調謄本<span class="who">所有人</span></h2>
+<ol>
+<li>勾負責業務。</li>
+<li>選縣市、鄉鎮市區、段名，填地號或建號，勾謄本種類。<b>有填建號的話，地址必填</b>。</li>
+<li>好幾個段可以按「＋ 新增一筆地段」一次申請。</li>
+<li>按「送出申請」。90 天內申請過同一筆會提醒你。</li>
+</ol>
+</section><section id="manager" class="hs"><h2>主管<span class="who">主管</span></h2>
+<ul>
+<li>首頁可以切換「全組」，看組員的待辦。</li>
+<li>「物件總表」只能看，不能改；同組的客需看不到客戶資料。</li>
+<li>只能修改自己負責的物件和客需。</li>
+</ul>
+</section><section id="secretary" class="hs"><h2>秘書專區<span class="who">秘書、管理員</span></h2>
+<ul>
+<li><b>申調謄本</b>：改狀態、內部備註、費用，按「儲存變更」。可以勾好幾筆一起改狀態。</li>
+<li><b>人員管理</b>：在職、身分、組別、電話（DM 會用到）、通關碼、Gmail。秘書改身分或組別要送申請，由管理員同意。</li>
+<li><b>契變</b>：業務填的契變，收到契變書勾「已收件」。</li>
+<li><b>公告</b>：首頁的公告，可以設重要（紅色置頂）和顯示期間。</li>
+<li><b>異動紀錄</b>：誰在什麼時候改了哪一筆。</li>
+<li>首頁的行事曆可以新增<b>公司活動</b>，也看得到所有業務的行程。</li>
+<li>物件總表可以直接改格子：「修改資料」→ 點格子改 → 「儲存變更」。</li>
+</ul>
+</section><section id="admin" class="hs"><h2>管理員<span class="who">管理員</span></h2>
+<ul>
+<li><b>系統設定</b>：提醒天數、自動登出時間、配對的坪數和預算差距、鄰近區域公里數等，不用改程式。最下面有「讀取速度測試」。</li>
+<li><b>系統狀態</b>：排程最後一次有沒有成功、背景處理有沒有卡住、座標待確認幾筆。</li>
+<li><b>權限對照</b>：每種身分可以做什麼。</li>
+<li>新同仁要用 Google 登入：在人員管理填 Gmail 就好。</li>
+</ul>
+</section><section id="faq" class="hs"><h2>常見問題<span class="who">所有人</span></h2>
+<dl>
+<dt>畫面跟同事說的不一樣、按鈕不見了</dt><dd>按 <b>Ctrl＋F5</b>（手機把瀏覽器關掉重開），讀最新版的網頁。</dd>
+<dt>資料不是最新的</dt><dd>按頁面上的「重新整理」。剛送出的物件要等一下下才會出現在簡表。</dd>
+<dt>忘記通關碼、Google 登入說還沒設定</dt><dd>找管理員。</dd>
+<dt>看到「連線比較慢」</dt><dd>系統會自動再試一次，稍等一下；一直不行就重新整理。</dd>
+<dt>填錯送出了</dt><dd>到「修改物件／客需／物件配對」改；改不了的欄位（例如業務比例）請找管理員。</dd>
+</dl>
+</section>
+        <div class="subtitle">最後更新：民國 115 年 10 月 19 日。有問題請找管理員。</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

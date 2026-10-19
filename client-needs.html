@@ -243,6 +243,7 @@
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="help.html" data-key="help">使用說明</a>
   </nav>
   <script src="lib/formui.js?v=20261016a"></script>
 <script src="lib/match.js?v=20261019a"></script>
@@ -364,7 +365,7 @@
       <input type="date" id="fillDate">
     </div>
     <div class="field">
-      <label>資訊來源</label>
+      <label class="required">資訊來源</label>
       <select id="sourceSelect">
         <option value="">請選擇</option>
         <option>服務中心</option><option>網路詢問</option><option>廣告來電</option>
@@ -423,7 +424,7 @@
     </div>
 
     <div class="field" id="landKindBlock" style="display:none;">
-      <label>需求土地種類（可複選）</label>
+      <label class="required">需求土地種類（可複選）</label>
       <div class="checkbox-group" id="landKindGroup">
         <label><input type="checkbox" class="landKindCheckbox" value="建廠用">建廠用</label>
         <label><input type="checkbox" class="landKindCheckbox" value="農地">農地</label>
@@ -1187,6 +1188,11 @@ function clientCheck_() {
     if (wantBuy && !filled(buyId)) missing.push(buyLabel);
     if (wantRent && !filled(rentId)) missing.push(rentLabel);
   };
+  // 資訊來源（選「其他」要寫內容）；選了土地要勾需求土地種類（115/10/19）
+  var srcSel = document.getElementById('sourceSelect');
+  if (!srcSel.value || (srcSel.value === '其他' && !document.getElementById('sourceOtherInput').value.trim())) missing.push('資訊來源');
+  if (propertyTypes.indexOf('土地') !== -1 && !document.querySelectorAll('.landKindCheckbox:checked').length &&
+      !(document.getElementById('landKindOtherInput') && document.getElementById('landKindOtherInput').value.trim())) missing.push('需求土地種類（可複選）');
   if (propertyTypes.indexOf('廠房') !== -1) {
     var hasIndustry = document.querySelectorAll('#industryCheckGroup input:checked').length > 0 || !!document.getElementById('industryOtherInput').value.trim();
     if (!hasIndustry) missing.push('產業類別');
