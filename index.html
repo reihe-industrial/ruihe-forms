@@ -218,7 +218,7 @@
     .ann .ann-body { white-space: pre-wrap; font-size: 14.5px; line-height: 1.7; }
     .ann .ann-meta { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
       /* 待辦數字卡片：點了下面才展開那一類（115/10/16） */
-    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 0 0 14px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 14px; } /* 卡片撐滿整排 */
     .tile { text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 10px; cursor: pointer; font: inherit; color: var(--ink); }
     .tile .n { font-size: 30px; font-weight: 800; line-height: 1.1; color: var(--muted); }
     .tile .t { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
@@ -231,9 +231,22 @@
     .login-banner[hidden] { display: none; }
     #loginView.card.narrow { margin-left: auto; margin-right: auto; }
       /* 首頁上方：公告（窄）＋行事曆（寬）（115/10/19） */
-    .home-top { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 8px; }
-    @media (min-width: 980px) { .home-top { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; } }
-    .home-ann #annBox { max-height: 640px; overflow-y: auto; padding-right: 2px; }
+    .home-top { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 14px 0 8px; }
+    @media (min-width: 980px) { .home-top { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: stretch; } }
+    .home-top.no-ann { grid-template-columns: 1fr; }
+    .home-top.no-ann .home-ann { display: none; }
+    .home-ann, .home-cal { display: flex; flex-direction: column; min-width: 0; }
+    .home-ann .ann-card { flex: 1 1 0; min-height: 200px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+    .home-ann .ann-card #annBox > * { margin-bottom: 10px; }
+    .home-ann .ann-card #annBox > *:last-child { margin-bottom: 0; }
+    .home-cal .cal-card { flex: 1 1 auto; }
+    @media (max-width: 979px) { .home-ann .ann-card { max-height: 420px; flex: none; } }
+    .cal-card { container-type: inline-size; }
+    .cal-body { display: block; }
+    @container (min-width: 660px) {
+      .cal-body { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 14px; align-items: start; }
+      .cal-day { margin-top: 0 !important; border-top: none !important; padding-top: 0 !important; border-left: 1px solid var(--line); padding-left: 14px; max-height: 470px; overflow-y: auto; }
+    }
     .cal-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
     .cal-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
     .cal-head b { font-size: 17px; min-width: 7.5em; text-align: center; }
@@ -241,7 +254,7 @@
     .cal-head .btn { height: 34px; padding: 0 12px; font-size: 13.5px; }
     .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
     .cal-grid .wd { text-align: center; font-size: 12.5px; color: var(--muted); padding: 4px 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #FAFAF6; }
-    .cal-cell { min-height: 78px; padding: 3px 4px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); cursor: pointer; background: #fff; text-align: left; font: inherit; color: inherit; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+    .cal-cell { min-height: 66px; padding: 3px 4px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); cursor: pointer; background: #fff; text-align: left; font: inherit; color: inherit; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
     .cal-cell:hover { background: #F6FAF7; }
     .cal-cell.out { background: #FBFBF8; color: #A6ABA4; }
     .cal-cell.sel { outline: 2px solid var(--brand); outline-offset: -2px; }
@@ -367,30 +380,6 @@
         <button type="button" class="btn ghost" id="logoutBtn">登出</button>
       </div>
 
-      <div class="home-top">
-        <div class="home-ann">
-          <div class="sec-title"><h2>公告</h2></div>
-          <div id="annBox" hidden></div>
-          <div class="rem-empty" id="annEmpty">目前沒有公告。</div>
-        </div>
-        <div class="home-cal">
-          <div class="sec-title"><h2>行事曆</h2><span class="note" id="calNote"></span></div>
-          <div class="cal-card" id="calCard">
-            <div class="cal-head">
-              <button type="button" class="cal-nav" id="calPrev" aria-label="上個月">‹</button>
-              <b id="calTitle"></b>
-              <button type="button" class="cal-nav" id="calNext" aria-label="下個月">›</button>
-              <button type="button" class="btn ghost cal-today" id="calToday">今天</button>
-              <span style="flex:1"></span>
-              <button type="button" class="btn ghost" id="calAddMine">＋ 我的行程</button>
-              <button type="button" class="btn" id="calAddCo" hidden>＋ 公司活動</button>
-            </div>
-            <div class="cal-grid" id="calGrid"></div>
-            <div class="cal-legend"><span class="dot co"></span>公司活動　<span class="dot me"></span><span id="calLegendMe">我的行程</span></div>
-            <div class="cal-day" id="calDay"></div>
-          </div>
-        </div>
-      </div>
       <div class="sec-title"><h2>待辦提醒</h2><span class="note" id="remNote"></span></div>
       <div class="tiles" id="remTiles" role="tablist" aria-label="待辦"></div>
       <div id="remWrap">
@@ -426,6 +415,34 @@
         <summary>調謄本：待申請<span class="badge" id="cntRegP">…</span></summary>
         <div class="rem-body" id="bodyRegP"><div class="rem-empty">讀取中…</div></div>
       </details>
+      </div>
+      <div class="home-top no-ann" id="homeTop">
+        <div class="home-ann">
+          <div class="sec-title"><h2>公告</h2></div>
+          <div class="ann-card"><div id="annBox" hidden></div>
+          <div class="rem-empty" id="annEmpty">目前沒有公告。</div></div>
+        </div>
+        <div class="home-cal">
+          <div class="sec-title"><h2>行事曆</h2><span class="note" id="calNote"></span></div>
+          <div class="cal-card" id="calCard">
+            <div class="cal-head">
+              <button type="button" class="cal-nav" id="calPrev" aria-label="上個月">‹</button>
+              <b id="calTitle"></b>
+              <button type="button" class="cal-nav" id="calNext" aria-label="下個月">›</button>
+              <button type="button" class="btn ghost cal-today" id="calToday">今天</button>
+              <span style="flex:1"></span>
+              <button type="button" class="btn ghost" id="calAddMine">＋ 我的行程</button>
+              <button type="button" class="btn" id="calAddCo" hidden>＋ 公司活動</button>
+            </div>
+            <div class="cal-body">
+              <div class="cal-main">
+                <div class="cal-grid" id="calGrid"></div>
+                <div class="cal-legend"><span class="dot co"></span>公司活動　<span class="dot me"></span><span id="calLegendMe">我的行程</span></div>
+              </div>
+              <div class="cal-day" id="calDay"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div hidden><!-- 首頁不顯示登入方式（115/10/19） -->
@@ -726,6 +743,7 @@ function loadAnnouncements() {
     var items = res.items || [];
     $('annBox').hidden = !items.length;
     $('annEmpty').hidden = !!items.length;
+    $('homeTop').classList.toggle('no-ann', !items.length); // 沒有公告：行事曆佔滿整排
     $('annBox').innerHTML = items.map(function(a) {
       return '<div class="ann' + (a.important ? ' important' : '') + '"><h3>' + (a.important ? '<span class="ann-tag">重要</span>' : '') + esc(a.title) + '</h3>' +
         (a.body ? '<div class="ann-body">' + esc(a.body) + '</div>' : '') + '<div class="ann-meta">' + esc(a.by) + '｜' + esc(a.updated) + '</div></div>';

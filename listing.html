@@ -6466,7 +6466,10 @@ document.getElementById('deedInput').addEventListener('change', function() {
   var card = document.getElementById('ccCard'), list = document.getElementById('ccList'), btn = document.getElementById('ccBtn');
   var curKey = '';
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function canDel(r) { return editAuth_ && (r['填寫人'] === editAuth_.name || editRole_ === '秘書' || editRole_ === '管理員'); }
+  var lastRecords = [];
   function render(records) {
+    lastRecords = records;
     if (!records.length) { list.innerHTML = '<div class="hint">這件物件還沒有契變紀錄。有契變書的話按上面的「契變」填寫，填完把契變書交給秘書。</div>'; return; }
     list.innerHTML = records.map(function(r, i) {
       var ch = [];
@@ -6477,7 +6480,8 @@ document.getElementById('deedInput').addEventListener('change', function() {
       if (r['其他']) ch.push('其他：' + esc(r['其他']));
       return '<div class="cc-item"><div class="top"><span class="no">契變書 ' + esc(r['契變書編號']) + '</span>' + (i === 0 ? '<span class="latest">最新</span>' : '') +
         '<span>' + esc(r['契變日期']) + '</span><span style="color:var(--muted,#5D6B62);">' + esc(r['填寫人']) + ' 填寫｜' + esc(r['填寫時間']) + '</span>' +
-        '<span class="rcv' + (r['秘書收件'] ? ' ok' : '') + '">' + (r['秘書收件'] ? '秘書已收件' : '契變書還沒交給秘書') + '</span></div>' +
+        '<span class="rcv' + (r['秘書收件'] ? ' ok' : '') + '">' + (r['秘書收件'] ? '秘書已收件' : '契變書還沒交給秘書') + '</span>' +
+        (canDel(r) ? '<button type="button" class="edit-btn secondary" data-ccdel="' + r.row + '" data-latest="' + (i === 0 ? 1 : 0) + '" style="height:30px;padding:0 10px;font-size:13px;">刪除</button>' : '') + '</div>' +
         '<div class="chg">' + ch.join('<br>') + '</div></div>';
     }).join('');
   }
@@ -6489,6 +6493,26 @@ document.getElementById('deedInput').addEventListener('change', function() {
     runServer('contractChangeList', editAuth_.name, editAuth_.code, curKey).then(function(res) { if (editCase_ && editCase_.key === curKey) render(res.records || []); })
       .catch(function(err) { list.innerHTML = '<div class="hint" style="color:#B3261E;">讀取失敗：' + esc(err.message || '連不上系統') + '</div>'; });
   }
+  // 刪除契變（填寫的人、秘書、管理員）；最新的一筆可以同時改回契變前的值
+  list.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-ccdel]'); if (!b) return;
+    var row = b.getAttribute('data-ccdel'), latest = b.getAttribute('data-latest') === '1';
+    var r = lastRecords.filter(function(x) { return String(x.row) === row; })[0] || {};
+    var dlg = RuiheMatch.showModal('刪除契變書 ' + (r['契變書編號'] || ''),
+      '<p style="margin:0 0 10px;">確定要刪除這筆契變紀錄嗎？</p>' +
+      (latest && (r['新到期日'] || r['新總價'] || r['新委託人']) ? '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:700;margin-bottom:10px;"><input type="checkbox" id="ccRevert" checked style="width:auto;margin-top:4px;"> 同時把到期日、總價、委託人改回契變前的值</label>' : '') +
+      '<div class="msg" id="ccDelMsg"></div><div style="display:flex;gap:8px;"><button type="button" class="edit-btn" id="ccDelGo" style="flex:1;background:#B3261E;">刪除</button><button type="button" class="edit-btn secondary" id="ccDelNo">取消</button></div>');
+    dlg.body.querySelector('#ccDelNo').addEventListener('click', function() { dlg.close(); });
+    dlg.body.querySelector('#ccDelGo').addEventListener('click', function() {
+      var go = this, rv = dlg.body.querySelector('#ccRevert'), revert = !!(rv && rv.checked);
+      go.disabled = true; go.textContent = '刪除中…';
+      runServer('contractChangeDelete', editAuth_.name, editAuth_.code, row, revert).then(function(res) {
+        render(res.records || []); dlg.close();
+        showToast('已刪除' + ((res.reverted || []).length ? '，' + res.reverted.join('、') + ' 已改回原本的值' : '') + ((res.skipped || []).length ? '；' + res.skipped.join('、') + ' 後來有人改過，沒有改回' : ''), 'success');
+        if ((res.reverted || []).length && editCase_) { var k = editCase_.key; curKey = k; setTimeout(function() { editOpenCase_(k); }, 300); }
+      }).catch(function(err) { var m = dlg.body.querySelector('#ccDelMsg'); m.className = 'msg error'; m.textContent = err.message || '刪除失敗'; m.style.display = 'block'; go.disabled = false; go.textContent = '刪除'; });
+    });
+  });
   // 打開一件物件（上面的標題會換）就讀這件的契變；回到清單就藏起來
   var bar = document.getElementById('editBar');
   new MutationObserver(function() {
