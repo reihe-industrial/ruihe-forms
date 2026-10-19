@@ -188,6 +188,7 @@
   <div class="subtitle">可以一次申請好幾個不同的段，每一段各自勾選需要的謄本種類、各自填備註</div>
   <div id="msgBox" class="msg" role="status"></div>
 
+  <div id="lrForm">
   <div class="card">
     <label class="field-label">負責業務（可複選）<span class="required-star">*</span></label>
     <div id="businessNameGroup" class="biz-group" role="group" aria-label="負責業務"><span style="color:#888;font-size:13px;">載入中…</span></div>
@@ -198,8 +199,10 @@
   <button type="button" class="add-entry-btn" id="addEntryBtn">＋ 新增一筆地段</button>
 
   <button id="submitBtn">送出申請</button>
+  </div>
 </div>
 
+<script src="lib/formui.js?v=20261016a"></script>
 <script>
 // 部署 Apps Script 後，把「管理部署作業」裡的網頁應用程式網址（結尾 /exec）貼在這裡
 var API_URL = 'https://script.google.com/macros/s/AKfycbxBxEn3c_mfLtT_gH-O2MgT6byDTNdJCWEf0IxFtYVp1oqYJxmFbGXuXzcX3SEam93E/exec';
@@ -603,6 +606,34 @@ function registryHasContent_() {
 }
 window.addEventListener('beforeunload', function(e) {
   if (registryHasContent_()) { e.preventDefault(); e.returnValue = ''; }
+});
+</script>
+
+<script>
+// 第五批改版第 3 次（115/10/16）：左側目錄、底部送出列（lib/formui.js）。
+// 底部的件數用 registryCheck_：跟送出時同樣的規則，但不標紅框、不改畫面
+var regCheckEls_ = {};
+function registryCheck_() {
+  regCheckEls_ = {};
+  var out = [], add = function(label, el) { out.push(label); regCheckEls_[label.replace(/（.*$/, '')] = el; };
+  if (!selectedBiz_()) add('負責業務', document.getElementById('businessNameGroup').closest('.card'));
+  document.querySelectorAll('.district-entry').forEach(function(el, idx) {
+    var county = el.querySelector('.countySelect').value, town = el.querySelector('.townSelect').value, district = el.querySelector('.districtSelect').value;
+    var building = el.querySelector('.buildingInput').value.trim(), address = el.querySelector('.addressInput').value.trim();
+    var types = el.querySelectorAll('.transcriptTypeCheckbox:checked').length;
+    if (!county || !town || !district) add('第 ' + (idx + 1) + ' 筆：縣市/鄉鎮市區/段名', el);
+    if (!types) add('第 ' + (idx + 1) + ' 筆：謄本種類（至少勾選一項）', el);
+    if (building && !address) add('第 ' + (idx + 1) + ' 筆：地址（有填建號的話必填）', el);
+  });
+  return out;
+}
+RuiheFormUI.init({
+  form: document.getElementById('lrForm'),
+  sectionSelector: '.card, .district-entry',
+  titleSelector: ':scope > h2, :scope > .district-entry-title, :scope > .field-label',
+  submitBtn: document.getElementById('submitBtn'),
+  check: registryCheck_,
+  findField: function(name) { return regCheckEls_[name] || null; }
 });
 </script>
 </body>

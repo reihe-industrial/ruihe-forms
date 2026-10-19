@@ -244,7 +244,8 @@
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
   </nav>
-  <script src="lib/match.js?v=20261016h"></script>
+  <script src="lib/formui.js?v=20261016a"></script>
+<script src="lib/match.js?v=20261016h"></script>
 <script>
   (function() {
     var page = location.pathname.split('/').pop();
@@ -349,6 +350,7 @@
     </div>
   </div>
 
+  <div id="cnForm">
   <!-- 一、客戶資料 -->
   <div class="card">
     <h2>一、客戶資料</h2>
@@ -612,6 +614,7 @@
   </div>
 
   <button type="button" class="submit" id="submitBtn">送出</button>
+  </div>
 </div>
 
 <script>
@@ -1162,10 +1165,8 @@ function collectFormData_() {
   return data;
 }
 
-document.getElementById('submitBtn').addEventListener('click', function() {
-  var msgBox = document.getElementById('msgBox');
-  msgBox.style.display = 'none';
-
+// 算出目前還有哪些必填沒填（送出時、底部送出列的件數都用這個；115/10/16 從送出程式抽出來，內容沒改）
+function clientCheck_() {
   var business = getBusinessList().join('、');
   var clientName = document.getElementById('clientNameInput').value.trim();
   var propertyTypes = Array.prototype.slice.call(document.querySelectorAll('.propertyTypeCheckbox:checked')).map(function(cb) { return cb.value; });
@@ -1193,6 +1194,16 @@ document.getElementById('submitBtn').addEventListener('click', function() {
   needArea('廠房', 'factoryAreaBuy', 'factoryAreaRent', '廠房需求坪數', '廠房需求坪數(承租)');
   needArea('土地', 'landAreaBuy', 'landAreaRent', '土地需求面積(坪)', '土地需求面積(承租)(坪)');
   needArea('房屋', 'houseAreaBuy', 'houseAreaRent', '房屋需求坪數', '房屋需求坪數(承租)');
+
+  return { missing: missing, business: business, clientName: clientName, propertyTypes: propertyTypes, demandType: demandType };
+}
+
+document.getElementById('submitBtn').addEventListener('click', function() {
+  var msgBox = document.getElementById('msgBox');
+  msgBox.style.display = 'none';
+
+  var cc_ = clientCheck_();
+  var business = cc_.business, clientName = cc_.clientName, propertyTypes = cc_.propertyTypes, demandType = cc_.demandType, missing = cc_.missing;
 
   if (missing.length > 0) {
     msgBox.className = 'msg error';
@@ -1486,6 +1497,16 @@ function ruiheGoHome_(msg) {
   var here = location.pathname.split('/').pop() + location.search;
   location.replace('index.html?next=' + encodeURIComponent(here));
 }
+// 資料安全：物件簡表、地圖、客需簡表的暫存放在這台電腦（關掉瀏覽器還在，為了下次打開比較快）；
+// 登出、自動登出會清掉，超過 12 小時沒更新也清掉（沒按登出就關瀏覽器的情況）
+(function() {
+  try {
+    ['ruihe_summary_cache_v1', 'ruihe_client_summary_cache_v1', 'ruihe_map_cache_v1'].forEach(function(k) {
+      var c = JSON.parse(localStorage.getItem(k) || 'null');
+      if (c && (!c.checkedAt || Date.now() - c.checkedAt > 12 * 3600 * 1000)) localStorage.removeItem(k);
+    });
+  } catch (e) {}
+})();
 function sharedLoginClear_() {
   // 登出：讓後端的登入憑證馬上失效（憑證才會失效，不影響通關碼）
   try {
@@ -1957,6 +1978,18 @@ if (EDIT_MODE) {
     if (b) deleteTrack_(b.getAttribute('data-id'));
   });
 }
+</script>
+
+<script>
+// 第五批改版第 3 次（115/10/16）：左側目錄、底部送出列、手機收合（lib/formui.js）
+RuiheFormUI.init({
+  form: document.getElementById('cnForm'),
+  sectionSelector: '.card',
+  submitBtn: document.getElementById('submitBtn'),
+  check: function() { return clientCheck_().missing; },
+  findField: function(name) { return findFieldByLabel_(name); },
+  watch: [document.getElementById('editCaseView'), document.getElementById('editListView'), document.getElementById('editLoginView')]
+});
 </script>
 </body>
 </html>

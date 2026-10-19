@@ -4381,6 +4381,16 @@ function ruiheGoHome_(msg) {
   var here = location.pathname.split('/').pop() + location.search;
   location.replace('index.html?next=' + encodeURIComponent(here));
 }
+// 資料安全：物件簡表、地圖、客需簡表的暫存放在這台電腦（關掉瀏覽器還在，為了下次打開比較快）；
+// 登出、自動登出會清掉，超過 12 小時沒更新也清掉（沒按登出就關瀏覽器的情況）
+(function() {
+  try {
+    ['ruihe_summary_cache_v1', 'ruihe_client_summary_cache_v1', 'ruihe_map_cache_v1'].forEach(function(k) {
+      var c = JSON.parse(localStorage.getItem(k) || 'null');
+      if (c && (!c.checkedAt || Date.now() - c.checkedAt > 12 * 3600 * 1000)) localStorage.removeItem(k);
+    });
+  } catch (e) {}
+})();
 function sharedLoginClear_() {
   // 登出：讓後端的登入憑證馬上失效（憑證才會失效，不影響通關碼）
   try {
