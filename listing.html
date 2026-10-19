@@ -375,7 +375,7 @@
     <a href="client-needs.html" data-key="needs">新增客需</a>
     <a href="land-registry.html" data-key="registry">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
-    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需</a>
+    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
@@ -5135,9 +5135,9 @@ function submitEditCase_(fieldValues, photoUrls) {
     return;
   }
   link.innerHTML = '<a href="' + base + '">新增案件</a>';
-  document.title = '修改案件｜瑞禾不動產';
-  document.querySelector('h1').textContent = '修改物件／客需';
-  document.getElementById('pageSubtitle').textContent = '登入後可以修改自己負責的物件和客需（同一個分頁登入一次就好）';
+  document.title = '修改物件／客需／物件配對｜瑞禾不動產';
+  document.querySelector('h1').textContent = '修改物件／客需／物件配對';
+  document.getElementById('pageSubtitle').textContent = '修改自己負責的物件和客需；每一筆旁邊按「配對」，看符合的客需或物件';
   document.querySelector('.type-switch').style.display = 'none';
   document.getElementById('draftBanner').style.display = 'none';
   document.getElementById('bizPersonField').style.display = 'none';
