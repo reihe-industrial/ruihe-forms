@@ -271,6 +271,8 @@
     .edit-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
     .edit-tabs button { flex: 1; border: 1px solid var(--line); background: #fbfaf6; color: var(--ink); border-radius: 999px; padding: 8px 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
     .edit-tabs button[aria-selected="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .edit-del { color: #B3261E !important; }
+    .edit-del:disabled { color: #8a8f88 !important; opacity: 1; cursor: default; }
     .row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
     .needs-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
     .needs-row:last-child { border-bottom: none; }
@@ -4620,6 +4622,7 @@ function editRenderNeeds_() {
     var acts = document.createElement('div'); acts.className = 'row-actions';
     if (editIsMine_(c.business)) acts.appendChild(editMatchBtn_('need', c.key));
     acts.appendChild(a);
+    if (c.editable !== false) acts.appendChild(editDelBtn_('客需', c.key, c.clientName || '（未填客戶名稱）', ''));
     row.appendChild(nm); row.appendChild(acts); row.appendChild(m1); row.appendChild(m2);
     box.appendChild(row);
   });
@@ -4628,6 +4631,54 @@ function editRenderNeeds_() {
 // ------------------------------------------------------------
 // 配對（自己負責的物件／客需才有）：物件→符合的客需（不含客戶資料）、客需→符合的物件；按鈕上是區域符合的件數
 // ------------------------------------------------------------
+// ------------------------------------------------------------
+// 刪除（115/10/19）：秘書、管理員直接刪（先備份）；業務、主管送「刪除申請」，秘書、管理員在秘書專區看過同意才刪
+// ------------------------------------------------------------
+var editDelPending_ = {}, editDelLoaded_ = false;
+function editLoadDelPending_() {
+  if (!editAuth_ || editDelLoaded_) return;
+  editDelLoaded_ = true;
+  runServer('deleteRequestList', editAuth_.name, editAuth_.code).then(function(res) {
+    editDelPending_ = {}; (res.pendingKeys || []).forEach(function(k) { editDelPending_[k] = 1; }); editRenderList_();
+  }).catch(function() {});
+}
+function editIsSec_() { return editRole_ === '秘書' || editRole_ === '管理員'; }
+function editDelBtn_(kind, key, label, typeTab) {
+  var b = document.createElement('button');
+  b.type = 'button'; b.className = 'edit-btn secondary edit-del';
+  if (editDelPending_[key]) { b.textContent = '刪除申請中'; b.disabled = true; b.title = '等秘書或管理員審核'; return b; }
+  b.textContent = editIsSec_() ? '刪除' : '申請刪除';
+  b.addEventListener('click', function() { editDelAsk_(kind, key, label, typeTab); });
+  return b;
+}
+function editDelAsk_(kind, key, label, typeTab) {
+  var sec = editIsSec_();
+  var dlg = RuiheMatch.showModal((sec ? '刪除' : '申請刪除') + kind + '「' + label + '」',
+    (sec ? '<p style="margin:0 0 8px;">刪除後所有地方都會移除（資料會先備份）。' + (kind === '物件' ? '只是不賣了請改「案件狀態」為已下架，不要刪除。' : '') + '</p>'
+         : '<p style="margin:0 0 8px;">送出後由秘書或管理員看過、同意才會刪除。' + (kind === '物件' ? '只是不賣了請改「案件狀態」為已下架，不要刪除。' : '') + '</p>') +
+    '<label class="required">刪除原因</label><input type="text" id="delReason" maxlength="200" placeholder="例：重複輸入、類型填錯">' +
+    '<div class="msg" id="delMsg" style="margin-top:8px;"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="edit-btn" id="delGo" style="flex:1;background:#B3261E;">' + (sec ? '刪除' : '送出申請') + '</button><button type="button" class="edit-btn secondary" id="delNo">取消</button></div>');
+  var body = dlg.body;
+  body.querySelector('#delNo').addEventListener('click', function() { dlg.close(); });
+  body.querySelector('#delGo').addEventListener('click', function() {
+    var go = this, reason = body.querySelector('#delReason').value.trim(), msg = body.querySelector('#delMsg');
+    if (!reason) { msg.className = 'msg error'; msg.textContent = '請填刪除原因'; msg.style.display = 'block'; return; }
+    go.disabled = true; go.textContent = '處理中…';
+    var p;
+    if (!sec) p = runServer('deleteRequestAdd', editAuth_.name, editAuth_.code, kind, key, label, typeTab, reason);
+    else if (kind === '物件') p = runServer('adminDeleteCase', editAuth_.name, editAuth_.code, key, reason);
+    else p = fetch(CLIENT_API_URL, { method: 'POST', body: JSON.stringify({ fn: 'clientAdminDelete', args: [editAuth_.name, editAuth_.code, key, reason] }) })
+      .then(function(r) { return r.json(); }).then(function(res) { if (!res.ok) throw new Error(res.message || '刪除失敗'); return res.result; });
+    p.then(function(res) {
+      dlg.close();
+      if (!sec) { editDelPending_ = {}; (res.pendingKeys || []).forEach(function(k) { editDelPending_[k] = 1; }); editRenderList_(); showToast('已送出刪除申請，等秘書或管理員審核', 'success'); return; }
+      showToast('已刪除「' + label + '」', 'success');
+      if (kind === '物件') { editCases_ = editCases_.filter(function(c) { return c.key !== key; }); editSaveLists_(); editRenderList_(); editRefreshList_(); }
+      else { editNeeds_ = (editNeeds_ || []).filter(function(c) { return c.key !== key; }); editSaveLists_(); editRenderList_(); editLoadNeeds_(); }
+    }).catch(function(err) { msg.className = 'msg error'; msg.textContent = err.message || '處理失敗'; msg.style.display = 'block'; go.disabled = false; go.textContent = sec ? '刪除' : '送出申請'; });
+  });
+}
 var editMatch_ = null, editMatchLoading_ = false;
 function editLoadMatch_() {
   if (editMatch_ || editMatchLoading_ || !window.RuiheMatch || !editAuth_) return;
@@ -4728,6 +4779,7 @@ function editRenderList_() {
     return;
   }
   editLoadMatch_();
+  editLoadDelPending_();
   shown.forEach(function(c) {
     var row = document.createElement('div');
     row.className = 'edit-case' + (c.editable ? '' : ' locked');
@@ -4741,6 +4793,7 @@ function editRenderList_() {
       var acts = document.createElement('div'); acts.className = 'row-actions';
       if (editIsMine_(c.agents)) acts.appendChild(editMatchBtn_('case', c.key));
       acts.appendChild(btn);
+      if (c.editable) acts.appendChild(editDelBtn_('物件', c.key, c.caseName, c.typeTab));
       row.appendChild(acts);
       var meta = document.createElement('div'); meta.className = 'case-meta';
       meta.textContent = [(editRole_ === '秘書' || editRole_ === '管理員') ? c.agents : '', c.legacy ? '舊案件' : '', c.status && c.status !== '銷售中' ? c.status : '', c.contractNo, c.expiry ? ('到期 ' + c.expiry) : '', c.createdAt ? ('填寫 ' + c.createdAt) : ''].filter(Boolean).join('｜');

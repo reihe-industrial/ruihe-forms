@@ -275,6 +275,12 @@
     .cal-ev .k.co { background: #E6F0E9; color: #1E4A32; } .cal-ev .k.me { background: #FDEBD3; color: #8A4B08; }
     .cal-ev .t { font-weight: 700; } .cal-ev .s { font-size: 13px; color: var(--muted); white-space: pre-wrap; }
     @media (max-width: 640px) { .cal-cell { min-height: 54px; } .cal-chip { font-size: 10.5px; } }
+      /* 公告：只顯示前兩行，點一下看完整內容（115/10/19） */
+    #annBox .ann { cursor: pointer; }
+    #annBox .ann .ann-body { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    #annBox .ann.open .ann-body { display: block; -webkit-line-clamp: unset; overflow: visible; }
+    #annBox .ann:not(.short) .ann-meta::after { content: "　點一下看全部"; color: var(--brand); font-weight: 700; }
+    #annBox .ann.open .ann-meta::after { content: "　點一下收起"; }
   </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261016b">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
@@ -410,6 +416,10 @@
       <details class="rem" id="remCcP" hidden>
         <summary>契變書待收件<span class="badge" id="cntCcP">…</span></summary>
         <div class="rem-body" id="bodyCcP"><div class="rem-empty">讀取中…</div></div>
+      </details>
+      <details class="rem" id="remDelP" hidden>
+        <summary>刪除申請待審核<span class="badge" id="cntDelP">…</span></summary>
+        <div class="rem-body" id="bodyDelP"><div class="rem-empty">讀取中…</div></div>
       </details>
       <details class="rem" id="remRegP" hidden>
         <summary>調謄本：待申請<span class="badge" id="cntRegP">…</span></summary>
@@ -744,8 +754,9 @@ function loadAnnouncements() {
     $('annBox').hidden = !items.length;
     $('annEmpty').hidden = !!items.length;
     $('homeTop').classList.toggle('no-ann', !items.length); // 沒有公告：行事曆佔滿整排
+    setTimeout(function() { [].forEach.call(document.querySelectorAll('#annBox .ann'), function(el) { var b = el.querySelector('.ann-body'); el.classList.toggle('short', !b || b.scrollHeight <= b.clientHeight + 2); }); }, 0);
     $('annBox').innerHTML = items.map(function(a) {
-      return '<div class="ann' + (a.important ? ' important' : '') + '"><h3>' + (a.important ? '<span class="ann-tag">重要</span>' : '') + esc(a.title) + '</h3>' +
+      return '<div class="ann' + (a.important ? ' important' : '') + '" tabindex="0" role="button" aria-expanded="false" title="點一下看完整內容"><h3>' + (a.important ? '<span class="ann-tag">重要</span>' : '') + esc(a.title) + '</h3>' +
         (a.body ? '<div class="ann-body">' + esc(a.body) + '</div>' : '') + '<div class="ann-meta">' + esc(a.by) + '｜' + esc(a.updated) + '</div></div>';
     }).join('');
   }).catch(function() {});
@@ -1162,7 +1173,7 @@ $('calAddCo').addEventListener('click', function() { calEdit(null, '公司'); })
 // ===== 秘書、管理員的待辦：契變書待收件、調謄本待申請（115/10/19） =====
 function loadSecReminders() {
   var sec = calIsSec();
-  $('remCcP').hidden = !sec; $('remRegP').hidden = !sec;
+  $('remCcP').hidden = !sec; $('remRegP').hidden = !sec; $('remDelP').hidden = !sec;
   if (!sec || !auth) return;
   post(OBJ_API, 'adminContractChanges', [auth.name, auth.code]).then(function(res) {
     var list = (res.records || []).filter(function(r) { return !r['秘書收件']; });
@@ -1171,6 +1182,13 @@ function loadSecReminders() {
       return '<div class="rem-row"><div class="nm">' + esc(r['案名']) + '</div><div class="meta">' + esc(r['填寫人'] + '｜契變書 ' + r['契變書編號'] + '｜' + r['契變日期']) + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=cc">去收件</a></div></div>';
     }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html?tab=cc">到秘書專區看全部</a></div>' : '') : '<div class="rem-empty">沒有待收件的契變書。</div>';
   }).catch(function(err) { setBadge('cntCcP', '!', 'hot'); $('bodyCcP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
+  post(OBJ_API, 'deleteRequestList', [auth.name, auth.code]).then(function(res) {
+    var list = (res.requests || []).filter(function(r) { return r['狀態'] === '待審核'; });
+    setBadge('cntDelP', list.length, 'warn');
+    $('bodyDelP').innerHTML = list.length ? list.slice(0, 8).map(function(r) {
+      return '<div class="rem-row"><div class="nm">' + esc(r['案名']) + '</div><div class="meta">' + esc(r['申請人'] + '｜' + r['種類'] + '｜原因：' + r['原因']) + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=del">去審核</a></div></div>';
+    }).join('') : '<div class="rem-empty">沒有待審核的刪除申請。</div>';
+  }).catch(function(err) { setBadge('cntDelP', '!', 'hot'); $('bodyDelP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
   post(REG_API, 'regListRequests', [auth.name, auth.code]).then(function(reg) {
     var si = reg.statusIdx, cols = reg.columns || [];
     var ci = function(l) { var i = cols.indexOf(l); if (i !== -1) return i; for (var k = 0; k < cols.length; k++) if (String(cols[k]).indexOf(l) !== -1 && k !== reg.noteIdx && k !== si) return k; return -1; };
@@ -1185,6 +1203,16 @@ function loadSecReminders() {
 var _loadRemindersOrig = loadReminders;
 loadReminders = function(manual) { _loadRemindersOrig(manual); calLoad(!!manual); loadSecReminders(); };
 if (auth && !$('portal').hidden) { calLoad(); loadSecReminders(); }
+</script>
+
+<script>
+// 公告：點一下展開／收起
+document.getElementById('annBox').addEventListener('click', function(e) {
+  if (e.target.closest('a')) return;
+  var a = e.target.closest('.ann'); if (!a || a.classList.contains('short')) return;
+  a.classList.toggle('open'); a.setAttribute('aria-expanded', String(a.classList.contains('open')));
+});
+document.getElementById('annBox').addEventListener('keydown', function(e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('ann')) { e.preventDefault(); e.target.click(); } });
 </script>
 </body>
 </html>
