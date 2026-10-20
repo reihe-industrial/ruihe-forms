@@ -398,9 +398,9 @@
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
-    <a href="help.html" data-key="help">使用說明</a>
+    <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
-  <script src="lib/match.js?v=20261019a"></script>
+  <script src="lib/match.js?v=20261020a"></script>
 <script>
   (function() {
     var page = location.pathname.split('/').pop();
@@ -445,7 +445,7 @@
   </script>
 
     <h1>委託物件資料輸入</h1>
-    <div class="subtitle" id="pageSubtitle">請依實際委託內容填寫，送出後會自動同步進總彙整表、個人試算表、物件簡表</div>
+    <div class="subtitle" id="pageSubtitle">請依實際委託內容填寫</div>
     <div class="mode-link" id="modeLink"></div>
     <div class="msg" id="msgBox" role="status"></div>
 
@@ -4713,7 +4713,7 @@ function editShowMatch_(kind, key) {
     }
     if (kind === 'need' && it.closed) { dlg.body.innerHTML = '<div style="color:#5D6B62;">這筆客需已經結案，不配對。</div>'; return; }
     var list = kind === 'case' ? RuiheMatch.matchesForListing(it, editMatch_.clients, near) : RuiheMatch.matchesForClient(it, editMatch_.listings, near);
-    dlg.body.innerHTML = '<div style="color:#5D6B62;font-size:13px;margin-bottom:4px;">比對物件類型、買／租、區域、坪數、預算' + (kind === 'case' ? '；不顯示客戶資料，有興趣請找負責業務' : '') + '。</div>' +
+    dlg.body.innerHTML = '<div style="color:#5D6B62;font-size:13px;margin-bottom:4px;">比對物件類型、買／租、區域、坪數、預算' + (kind === 'case' ? '；有興趣請找負責業務' : '') + '。</div>' +
       '<label style="display:inline-flex;align-items:center;gap:6px;margin:4px 0;font-weight:700;"><input type="checkbox" id="emNear" style="width:auto;"' + (near ? ' checked' : '') + '> 也顯示鄰近區域</label>' +
       (list.length ? '<div style="font-weight:700;margin:6px 0;">符合 ' + list.length + (kind === 'case' ? ' 筆' : ' 件') + '</div>' +
         list.slice(0, 50).map(function(x) { return kind === 'case' ? RuiheMatch.clientItemHtml(x, '') : RuiheMatch.listingItemHtml(x); }).join('')

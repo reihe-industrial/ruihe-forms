@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+  <script>
+  // 使用說明只給登入的同仁看：這個分頁沒有登入就帶到首頁登入，登入後回來
+  (function() {
+    var ok = false;
+    try { var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); ok = !!(v && v.name && v.code); } catch (e) {}
+    if (!ok) location.replace('index.html?next=' + encodeURIComponent('help.html' + location.hash));
+  })();
+  </script>
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>使用說明｜瑞禾業務系統</title>
@@ -47,7 +56,7 @@
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
-    <a href="help.html" data-key="help">使用說明</a>
+    <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
   (function() {
@@ -103,7 +112,6 @@
 </ul>
 <p>同一個瀏覽器分頁登入一次，其他功能頁都不用再登入。<b>30 分鐘沒有動作會自動登出</b>。</p>
 <div class="tip">在共用電腦上用完，一定要按右上角的「登出」。</div>
-<p>新增物件、新增客需、調謄本<b>不用登入</b>也可以填。</p>
 </section><section id="home" class="hs"><h2>首頁<span class="who">所有人</span></h2>
 <p>登入後的首頁由上而下分成三個區塊：</p>
 <ul>
@@ -146,7 +154,7 @@
 <h4>配對</h4>
 <p>每一筆旁邊的「<b>配對（N）</b>」，N 是符合的件數：</p>
 <ul>
-<li>物件 → 看符合的<b>客需</b>（不顯示客戶資料，有興趣請找負責業務）。</li>
+<li>物件 → 看符合的<b>客需</b>（有興趣請找負責業務）。</li>
 <li>客需 → 看符合的<b>物件</b>。</li>
 </ul>
 <p>配對會比對：類型、買／租、區域、坪數、預算。預設只列<b>同一區</b>的，勾「也顯示鄰近區域」會多列附近的。</p>
@@ -179,7 +187,7 @@
 </ol>
 <p>DM 上的聯絡業務是<b>產生 DM 的人</b>，電話來自人員管理的設定；公司資訊和經紀人資訊會自動帶入。</p>
 </section><section id="csummary" class="hs"><h2>客需簡表<span class="who">所有人</span></h2>
-<p>全公司的客戶需求（不含客戶聯絡資料），可以篩選類型、區域、業務。有符合的客戶，請找負責業務。</p>
+<p>全公司的客戶需求，可以篩選類型、區域、業務。有符合的客戶，請找負責業務。</p>
 </section><section id="map" class="hs"><h2>物件地圖<span class="who">所有人</span></h2>
 <p>銷售中的物件放在地圖上，點標記看簡介。可以篩選類型、租售、業務、建物坪數、總價、土地坪數。</p>
 </section><section id="registry" class="hs"><h2>調謄本<span class="who">所有人</span></h2>
@@ -192,7 +200,7 @@
 </section><section id="manager" class="hs"><h2>主管<span class="who">主管</span></h2>
 <ul>
 <li>首頁可以切換「全組」，看組員的待辦。</li>
-<li>「物件總表」只能看，不能改；同組的客需看不到客戶資料。</li>
+<li>「物件總表」只能看，不能改。</li>
 <li>只能修改自己負責的物件和客需。</li>
 </ul>
 </section><section id="secretary" class="hs"><h2>秘書專區<span class="who">秘書、管理員</span></h2>
