@@ -379,7 +379,7 @@
     .cc-form .sub { display: none; margin: 4px 0 8px; }
     .cc-form .sub.on { display: block; }
 </style>
-  <link rel="stylesheet" href="lib/ui.css?v=20261016b">
+  <link rel="stylesheet" href="lib/ui.css?v=20261020a">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
   <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
 </head>
@@ -400,7 +400,7 @@
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
-  <script src="lib/match.js?v=20261020e"></script>
+  <script src="lib/match.js?v=20261020f"></script>
 <script>
   (function() {
     var page = location.pathname.split('/').pop();
@@ -446,6 +446,7 @@
 
     <h1>委託物件資料輸入</h1>
     <div class="subtitle" id="pageSubtitle">請依實際委託內容填寫</div>
+    <div class="notice" id="deedTip" style="display:block;background:#FFF8E1;border:1px solid #E8D48A;border-radius:10px;padding:10px 14px;margin:0 0 14px;font-size:14.5px;">填寫物件前請先調謄本，可以加快物件填寫的速度。<a href="land-registry.html" style="font-weight:700;margin-left:6px;">去調謄本 →</a></div>
     <div class="mode-link" id="modeLink"></div>
     <div class="msg" id="msgBox" role="status"></div>
 
@@ -1232,8 +1233,8 @@ var FIELD_CONFIG = {
       options: ['天車','吊車','客梯','貨梯','卸貨碼頭','汙水處理設備','蓄水池','瓦斯','辦公室','空調系統','電力設備','無塵室','消防設備','會議室','水井'] },
     { label: '建築能效標示', type: 'select', options: ['是', '否'], required: true, subForm: 'energy', onlyForEntrust: true, hint: '本標的或社區是否有取得建築能效標示。契約類型是「委託」才需要填' },
     { label: '太陽光電發電設備', type: 'select', options: ['是', '否'], required: true, subForm: 'solar', onlyForEntrust: true, hint: '本標的或社區是否有設置太陽光電發電設備。契約類型是「委託」才需要填' },
-    { label: '半徑300公尺是否有嫌惡設施', type: 'textarea', required: true,
-      hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
+    { label: '半徑300公尺是否有嫌惡設施', type: 'checkbox-other', required: true, noneExclusive: '無', options: ['無','殯儀館','火化場','公墓','靈骨塔','葬儀社','私人墳墓','寺廟','神壇','垃圾場','垃圾掩埋場','焚化爐','資源回收場','汙水處理廠','畜牧業','高壓電塔','變電所','基地台','加油站','瓦斯行','瓦斯槽','飛機場','高架道路','夜市','KTV','遊樂場','特種行業','醫院','警察局','消防隊','監獄','看守所','中途之家','儲能廠'],
+      hint: '沒有請勾「無」；查詢：https://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
       hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！(如: 工業區生活機能高、出入方便免倒車/貨櫃車迴轉空間大、近交流道/學校/市場/高鐵站、屋況佳、鋼骨結構、大面寬/前後有路、獨棟行政大樓/適合企業總部、可分割、角地、體地無汙染整治公告......等。)' },
     { label: '取得原因', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記' },
@@ -1283,8 +1284,8 @@ var FIELD_CONFIG = {
     { label: '基地面寬', type: 'text', required: true, hint: '無需填單位。範例：60' },
     { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
     { label: '土地朝向(土地)', type: 'select', options: DIRECTIONS, required: true },
-    { label: '半徑300公尺是否有嫌惡設施', type: 'textarea', required: true,
-      hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
+    { label: '半徑300公尺是否有嫌惡設施', type: 'checkbox-other', required: true, noneExclusive: '無', options: ['無','殯儀館','火化場','公墓','靈骨塔','葬儀社','私人墳墓','寺廟','神壇','垃圾場','垃圾掩埋場','焚化爐','資源回收場','汙水處理廠','畜牧業','高壓電塔','變電所','基地台','加油站','瓦斯行','瓦斯槽','飛機場','高架道路','夜市','KTV','遊樂場','特種行業','醫院','警察局','消防隊','監獄','看守所','中途之家','儲能廠'],
+      hint: '沒有請勾「無」；查詢：https://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
       hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！' },
     { label: '取得原因', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記' },
@@ -1375,8 +1376,8 @@ var FIELD_CONFIG = {
       options: ['冷氣','洗衣機','冰箱','熱水器','瓦斯爐','床組','衣櫃','沙發','餐桌','電視','網路','對講機','保全系統','電梯'] },
     { label: '建築能效標示', type: 'select', options: ['是', '否'], required: true, subForm: 'energy', onlyForEntrust: true, hint: '本標的或社區是否有取得建築能效標示。契約類型是「委託」才需要填' },
     { label: '太陽光電發電設備', type: 'select', options: ['是', '否'], required: true, subForm: 'solar', onlyForEntrust: true, hint: '本標的或社區是否有設置太陽光電發電設備。契約類型是「委託」才需要填' },
-    { label: '半徑300公尺是否有嫌惡設施', type: 'textarea', required: true,
-      hint: '飛機埸、加油站、瓦斯槽、高壓電塔、變電所、基地台、神壇、焚化爐、墳墓、垃圾場、高架道路...等\n※嫌惡設施查詢網站\nhttps://www.map.com.tw/' },
+    { label: '半徑300公尺是否有嫌惡設施', type: 'checkbox-other', required: true, noneExclusive: '無', options: ['無','殯儀館','火化場','公墓','靈骨塔','葬儀社','私人墳墓','寺廟','神壇','垃圾場','垃圾掩埋場','焚化爐','資源回收場','汙水處理廠','畜牧業','高壓電塔','變電所','基地台','加油站','瓦斯行','瓦斯槽','飛機場','高架道路','夜市','KTV','遊樂場','特種行業','醫院','警察局','消防隊','監獄','看守所','中途之家','儲能廠'],
+      hint: '沒有請勾「無」；查詢：https://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
       hint: '除不動產說明書外，此說明也會放置在網路上，添加此項有助於客戶搜尋物件、了解物件、提升詢問及購買意願，快為您的物件添上豐富的特色說明吧！' },
     { label: '取得原因', type: 'textarea', hint: '可上傳上方的謄本自動帶入，也可以自己填寫或修改。\n例如：買賣、第一次登記、繼承；各筆不同請分開寫，例如：地號 375：買賣；建號 595：第一次登記', group: 'existingHouse' },
@@ -5211,6 +5212,7 @@ function submitEditCase_(fieldValues, photoUrls) {
   link.innerHTML = '<a href="' + base + '">新增案件</a>';
   document.title = '修改物件／客需／物件配對｜瑞禾不動產';
   document.querySelector('h1').textContent = '修改物件／客需／物件配對';
+  if (document.getElementById('deedTip')) document.getElementById('deedTip').style.display = 'none';
   document.getElementById('pageSubtitle').textContent = '修改自己負責的物件和客需；每一筆旁邊按「配對」，看符合的客需或物件';
   document.querySelector('.type-switch').style.display = 'none';
   document.getElementById('draftBanner').style.display = 'none';
@@ -6634,6 +6636,22 @@ document.getElementById('listingForm').addEventListener('change', updateRequired
 new MutationObserver(function() { clearTimeout(window.__rqT); window.__rqT = setTimeout(updateRequiredIfStars_, 200); })
   .observe(document.getElementById('listingForm'), { childList: true, subtree: false });
 setTimeout(updateRequiredIfStars_, 800);
+</script>
+
+<script>
+// 複選裡的「無」跟其他選項互斥（例如嫌惡設施：勾「無」就清掉其他的；勾其他的就取消「無」）（115/10/20）
+document.getElementById('listingForm').addEventListener('change', function(e) {
+  var cb = e.target; if (!cb || cb.type !== 'checkbox') return;
+  var field = cb.closest('.field'); if (!field) return;
+  var lab = field.querySelector('label'); var name = lab ? lab.textContent.replace(/[*＊\s]/g, '') : '';
+  var cfg = (FIELD_CONFIG[currentType] || []).filter(function(f) { return f.noneExclusive && name.indexOf(f.label) === 0; })[0];
+  if (!cfg || !cb.checked) return;
+  var boxes = field.querySelectorAll('input[type=checkbox]');
+  [].forEach.call(boxes, function(x) {
+    if (x === cb) return;
+    if (cb.value === cfg.noneExclusive ? true : x.value === cfg.noneExclusive) { x.checked = false; x.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+});
 </script>
 </body>
 </html>

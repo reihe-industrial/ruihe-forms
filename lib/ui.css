@@ -56,3 +56,11 @@ body {
   .site-nav::before { content: "瑞禾"; padding-right: 10px; }
   .site-nav a { padding: 12px 10px 10px; font-size: 14px; }
 }
+
+/* ---------- 表格：格線＋標題列顏色，一眼分得出欄位（115/10/20） ---------- */
+.table-wrap table { border-collapse: collapse; }
+.table-wrap th, .table-wrap td { border: 1px solid #DCE3DD; }
+.table-wrap thead th { background: #E6F0E9 !important; color: #1E4A32 !important; font-weight: 700; }
+.table-wrap thead th button { color: #1E4A32 !important; font-weight: 700; }
+.table-wrap tbody tr:nth-child(even) > td { background-color: #FAFBF9; }
+.table-wrap tbody tr:hover > td { background-color: #F1F7F3; }
