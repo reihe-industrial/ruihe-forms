@@ -207,6 +207,13 @@
     .kv-item.editable:hover { background: #fff; }
     .kv-item.edited { background: #FFF2CC; font-weight: 700; }
     .kv-item.locked-col .v { color: #8a8f88; }
+      /* 「更多」展開區：一格一格的小方框，欄位名稱淺綠底深綠字在上、內容在下（115/10/20） */
+    .kv { gap: 0 !important; border-top: 1px solid #DCE3DD; border-left: 1px solid #DCE3DD; padding: 0 !important; margin: 6px 0 10px; background: #fff; }
+    .kv-item { display: flex !important; flex-direction: column; gap: 0 !important; padding: 0 !important; border-right: 1px solid #DCE3DD; border-bottom: 1px solid #DCE3DD; border-radius: 0 !important; min-width: 0; }
+    .kv-item .k { display: block; background: #E6F0E9; color: #1E4A32 !important; font-weight: 700; font-size: 12.5px !important; padding: 4px 8px; }
+    .kv-item .v { display: block; padding: 6px 8px; font-size: 14px !important; color: var(--ink); white-space: pre-wrap; }
+    .kv-item.long { grid-column: span 2; }
+    .kv-item.edited .v { background: #FFF2CC; }
   </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261020a">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
@@ -645,7 +652,7 @@ function render() {
         if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 1) + '"><div class="kv">' + restIdx.map(function(i) {
           var a = cellAttrs(x, i);
           if (!editMode && !String(a.v).trim()) return '';
-          return '<div class="kv-item ' + a.cls.join(' ') + '"' + a.attrs + '><span class="k">' + esc(t.columns[i]) + '</span><span class="v">' + esc(a.v) + '</span></div>';
+          return '<div class="kv-item ' + a.cls.join(' ') + (String(a.v).length > 36 ? ' long' : '') + '"' + a.attrs + '><span class="k">' + esc(t.columns[i]) + '</span><span class="v">' + esc(a.v) + '</span></div>';
         }).join('') + '</div></td></tr>';
       } else row += '</tr>';
       return row;

@@ -599,7 +599,7 @@ function buildFilterOptions() {
   var ac = countBy(items, function(it) { return it.agents; });
   var agents = sortedKeys(ac);
   if (filters.agent && agents.indexOf(filters.agent) === -1) filters.agent = '';
-  $('fAgent').innerHTML = '<option value="">全部業務</option>' + agents.map(function(a) { return '<option value="' + esc(a) + '">' + esc(a) + '（' + ac[a] + '）</option>'; }).join('');
+  $('fAgent').innerHTML = '<option value="">全部業務</option>' + agents.map(function(a) { return '<option value="' + esc(a) + '">' + esc(a) + '</option>'; }).join('');
   $('fAgent').value = filters.agent;
 }
 function filtered() {
