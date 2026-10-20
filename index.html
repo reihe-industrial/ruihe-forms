@@ -301,6 +301,11 @@
     .cal-cell .hn { font-size: 10.5px; font-weight: 700; margin-left: 4px; color: #B3261E; }
     .cal-cell.today.hol .dn { color: #fff; } .cal-cell.today .hn { color: #fff; }
     .hol-tag { font-size: 12px; color: #B3261E; background: #FDECEA; border-radius: 6px; padding: 1px 7px; margin-left: 6px; font-weight: 700; }
+      .cf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; align-items: center; }
+    .cf-chip { border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; background: #fff; cursor: pointer; font: inherit; font-size: 14px; color: var(--ink); }
+    .cf-chip:hover { border-color: var(--brand); }
+    .cf-chip.on { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 700; }
+    .trip-form label { display: block; }
   </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261016b">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
@@ -488,7 +493,7 @@
     </div>
   </div>
 
-<script src="lib/match.js?v=20261020a"></script>
+<script src="lib/match.js?v=20261020c"></script>
 <script>
 var GOOGLE_CLIENT_ID = '145144542151-spm8h66cenm8pdshn3rrf4p3964emp55.apps.googleusercontent.com';
 var OBJ_API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';      // 物件後端（登入、合約提醒）
@@ -1157,6 +1162,66 @@ function calLoad(force) {
     calRender();
   }).catch(function(err) { $('calNote').textContent = '行事曆讀取失敗：' + (err.message || '連不上系統'); });
 }
+
+// 我的行程：大部分用點的（115/10/20）。欄位 id 跟原本一樣（cfStart、cfType…），點按鈕就把值填進去，儲存的程式不用改
+var CAL_TIMES = ['上午', '中午', '下午', '晚上', '09:00', '10:00', '11:00', '13:30', '14:00', '15:00', '16:00'];
+var CAL_AMOUNTS = ['500', '1000', '2000', '3000', '5000', '10000'];
+function calRecent(field) {
+  var seen = {}, out = [];
+  ((cal.data && cal.data.events) || []).filter(function(e) { return e.kind === '行程' && e.owner === auth.name && e[field]; })
+    .sort(function(a, b) { return String(b.start).localeCompare(String(a.start)); })
+    .forEach(function(e) { var v = String(e[field]).trim(); if (v && !seen[v] && out.length < 6) { seen[v] = 1; out.push(v); } });
+  return out;
+}
+function calChips(group, list, cur, fmt) {
+  return '<div class="cf-chips" data-group="' + group + '">' + list.map(function(v) {
+    return '<button type="button" class="cf-chip' + (String(cur) === String(v) ? ' on' : '') + '" data-v="' + esc(v) + '">' + esc(fmt ? fmt(v) : v) + '</button>';
+  }).join('') + '</div>';
+}
+function calTripFormHtml(ev, types, isNew) {
+  var t = new Date(), iso = function(n) { var d = new Date(t.getFullYear(), t.getMonth(), t.getDate() + n); return calIso(d); };
+  var days = [[iso(0), '今天'], [iso(1), '明天'], [iso(2), '後天']];
+  var places = calRecent('place'), targets = calRecent('target');
+  var money = function(v) { return Number(v) >= 10000 ? (Number(v) / 10000) + ' 億' : v + ' 萬'; };
+  return '<div class="cal-form trip-form">' +
+    (!isNew && ev.owner !== auth.name ? '<div class="note" style="margin-bottom:8px;">' + esc(ev.owner) + ' 的行程</div>' : '') +
+    '<label class="required">行程類型</label>' + calChips('type', types, ev.type) + '<input type="hidden" id="cfType" value="' + esc(ev.type || '') + '">' +
+    '<label class="required" style="margin-top:10px;">日期</label>' +
+    '<div class="cf-chips" data-group="day">' + days.map(function(d) { return '<button type="button" class="cf-chip' + (ev.start === d[0] ? ' on' : '') + '" data-v="' + d[0] + '">' + d[1] + '</button>'; }).join('') +
+    '<input type="date" id="cfStart" value="' + esc(ev.start) + '" style="width:auto;flex:0 0 auto;"></div><input type="hidden" id="cfEnd" value="' + esc(ev.end && ev.end !== ev.start ? ev.end : '') + '">' +
+    '<label style="margin-top:10px;">時間</label>' + calChips('time', CAL_TIMES, ev.time) + '<input type="hidden" id="cfTime" value="' + esc(ev.time || '') + '">' +
+    '<label style="margin-top:10px;">對象（客戶、地主或物件）</label>' + (targets.length ? calChips('target', targets, ev.target) : '') +
+    '<input type="text" id="cfTarget" maxlength="80" placeholder="點上面的，或輸入新的" value="' + esc(ev.target || '') + '">' +
+    '<label style="margin-top:10px;">地點</label>' + (places.length ? calChips('place', places, ev.place) : '') +
+    '<input type="text" id="cfPlace" maxlength="80" placeholder="點上面的，或輸入新的" value="' + esc(ev.place || '') + '">' +
+    '<label style="margin-top:10px;">預期效益開發金額</label>' + calChips('amount', CAL_AMOUNTS, ev.amount, money) +
+    '<input type="text" inputmode="decimal" id="cfAmount" placeholder="其他金額（萬）" value="' + esc(ev.amount || '') + '" style="max-width:12em;">' +
+    '<details style="margin-top:10px;"' + (ev.title || ev.body ? ' open' : '') + '><summary style="cursor:pointer;color:var(--brand);font-weight:700;">標題、補充說明（可以不填）</summary>' +
+      '<label style="margin-top:8px;">標題</label><input type="text" id="cfTitle" maxlength="80" placeholder="不填就用「行程類型｜對象」" value="' + esc(ev.title || '') + '">' +
+      '<label style="margin-top:8px;">補充說明</label><textarea id="cfBody" rows="3">' + esc(ev.body || '') + '</textarea></details>' +
+    '<div class="notice" id="cfMsg" style="display:none;margin-top:8px;"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:12px;"><button type="button" class="btn" id="cfSave" style="flex:1;">儲存</button>' +
+    (!isNew ? '<button type="button" class="btn ghost" id="cfDel" style="color:#B3261E;">刪除</button>' : '') + '</div></div>';
+}
+function calTripBind(b) {
+  var target = { type: 'cfType', day: 'cfStart', time: 'cfTime', target: 'cfTarget', place: 'cfPlace', amount: 'cfAmount' };
+  b.addEventListener('click', function(e) {
+    var c = e.target.closest('.cf-chip'); if (!c) return;
+    var g = c.parentNode.getAttribute('data-group'), inp = b.querySelector('#' + target[g]);
+    var on = !c.classList.contains('on');
+    [].forEach.call(c.parentNode.querySelectorAll('.cf-chip'), function(x) { x.classList.remove('on'); });
+    if (on || g === 'type' || g === 'day') { c.classList.add('on'); inp.value = c.getAttribute('data-v'); } else inp.value = '';
+  });
+  // 自己輸入的時候，取消上面按鈕的選取
+  ['cfTarget', 'cfPlace', 'cfAmount', 'cfStart'].forEach(function(id) {
+    var inp = b.querySelector('#' + id); if (!inp) return;
+    inp.addEventListener('input', function() {
+      var grp = inp.parentNode.querySelector('.cf-chips') || inp.previousElementSibling;
+      var box = id === 'cfStart' ? inp.parentNode : (inp.previousElementSibling && inp.previousElementSibling.classList.contains('cf-chips') ? inp.previousElementSibling : null);
+      if (box) [].forEach.call(box.querySelectorAll('.cf-chip'), function(x) { x.classList.toggle('on', x.getAttribute('data-v') === inp.value); });
+    });
+  });
+}
 function calEdit(ev, kind) {
   var isNew = !ev, sec = calIsSec();
   ev = ev || { kind: kind, start: cal.sel || calIso(new Date()), end: '', time: '', title: '', body: '', type: '', place: '', target: '', amount: '' };
@@ -1164,7 +1229,7 @@ function calEdit(ev, kind) {
   var isTrip = ev.kind === '行程';
   var dlg = RuiheMatch.showModal(isNew ? (ev.kind === '公司' ? '新增公司活動' : '新增我的行程') : (ev.canEdit ? '修改' : (ev.kind === '公司' ? '公司活動' : '行程')),
     ev.canEdit === false ? ('<div class="cal-ev" style="cursor:default;"><div><div class="t">' + esc((ev.time ? ev.time + '　' : '') + ev.title) + '</div><div class="s">' + esc(ev.start + (ev.end !== ev.start ? ' ～ ' + ev.end : '')) + '</div>' + (ev.kind === '行程' ? '<div class="s">' + esc([ev.type, ev.place ? '地點：' + ev.place : '', ev.target ? '對象：' + ev.target : '', ev.amount ? '預期效益 ' + ev.amount + ' 萬' : ''].filter(Boolean).join('｜')) + '</div>' : '') + (ev.body ? '<div class="s" style="margin-top:6px;color:var(--ink);">' + esc(ev.body) + '</div>' : '') + '</div></div>') :
-    ('<div class="cal-form">' +
+    isTrip ? calTripFormHtml(ev, types, isNew) : ('<div class="cal-form">' +
       (!isNew && ev.kind === '行程' && ev.owner !== auth.name ? '<div class="note" style="margin-bottom:8px;">' + esc(ev.owner) + ' 的行程</div>' : '') +
       '<label class="required">日期</label><input type="date" id="cfStart" value="' + esc(ev.start) + '">' +
       '<label style="margin-top:8px;">結束日期（跨好幾天才填）</label><input type="date" id="cfEnd" value="' + esc(ev.end && ev.end !== ev.start ? ev.end : '') + '">' +
@@ -1180,6 +1245,7 @@ function calEdit(ev, kind) {
       (!isNew ? '<button type="button" class="btn ghost" id="cfDel" style="color:#B3261E;">刪除</button>' : '') + '</div></div>'));
   var b = dlg.body;
   if (ev.canEdit === false) return;
+  if (isTrip) calTripBind(b);
   var r = calRange();
   var done = function(res) { cal.data = res; try { sessionStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {} calRender(); dlg.close(); };
   var fail = function(btn, txt) { return function(err) { var m = b.querySelector('#cfMsg'); m.textContent = err.message || '儲存失敗'; m.style.display = 'block'; btn.disabled = false; btn.textContent = txt; }; };
