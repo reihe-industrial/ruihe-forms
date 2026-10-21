@@ -583,6 +583,15 @@ function detailHtml(t, row) {
 // ------------------------------------------------------------
 var editMode = false, edits = {}, editingCell = null;
 // 精簡表格的重點欄位（有的才顯示）；其他欄位在「更多」裡
+function withRatio(names, ratios) {
+  var n = String(names || '').split(/[、,，\/]+/).map(function(x) { return x.trim(); }).filter(Boolean);
+  var r = String(ratios || '').split(/[、,，\/\s]+/).map(function(x) { return x.trim(); }).filter(Boolean);
+  if (!n.length || !r.length || /^(無|0)$/.test(r.join(''))) return names;
+  var pct = function(x) { return /%$/.test(x) ? x : x + '%'; };
+  if (r.length === n.length) return n.map(function(x, k) { return x + ' ' + pct(r[k]); }).join('、');
+  if (r.length === 1) return n.map(function(x) { return x + ' ' + pct(r[0]); }).join('、');
+  return n.join('、') + '（' + r.map(pct).join('、') + '）';
+}
 var MASTER_KEY_COLS = ['案名', '案件狀態', '委託種類', '總價', '單價', '案件坐落', '詳細地址', '土地面積(坪)', '主建物面積(坪)', '主要業務名稱', '次要業務名稱', '契約編號', '合約到期'];
 var masterOpen = {};
 function canEditTable() { return (role === '秘書' || role === '管理員') && DESKTOP_QUERY.matches && data && current() && (current().keys || []).length > 0; }
@@ -631,6 +640,8 @@ function render() {
       }
       var ek = (t.keys && t.keys[x.i]) ? editKey(t, x.i, c) : '';
       if (ek && edits[ek]) { cls.push('edited'); v = edits[ek].value; }
+      // 業務名稱後面接比例（不用另外對照比例欄）；修改模式維持原本的值（115/10/21）
+      if (!editMode && (c === '主要業務名稱' || c === '次要業務名稱')) v = withRatio(v, val(t, x.r, c === '主要業務名稱' ? '主要業務人員比例' : '次要業務人員比例'));
       return { cls: cls, attrs: attrs, v: v, edited: !!(ek && edits[ek]) };
     };
     var head = keyIdx.map(function(i) {
@@ -664,7 +675,9 @@ function render() {
     $('results').innerHTML = '<div class="cards">' + list.map(function(x) {
       var k = rowKey(t, x.r, x.i), st = statusOf(t, x.r);
       var lines = CARD_LABELS.filter(function(l) { return l !== '案名' && l !== '案件狀態' && val(t, x.r, l); }).map(function(l) {
-        return '<div class="item-meta"><span style="color:var(--muted);">' + esc(l) + '：</span>' + esc(val(t, x.r, l)) + '</div>';
+        var vv = val(t, x.r, l);
+        if (l === '主要業務名稱' || l === '次要業務名稱') vv = withRatio(vv, val(t, x.r, l === '主要業務名稱' ? '主要業務人員比例' : '次要業務人員比例'));
+        return '<div class="item-meta"><span style="color:var(--muted);">' + esc(l) + '：</span>' + esc(vv) + '</div>';
       }).join('');
       var d = dupOf(t, x.i);
       return '<details class="item' + (d ? ' dup' + dupCls(d) : '') + '" data-k="' + esc(k) + '"' + (openKeys[k] ? ' open' : '') + '><summary>' +

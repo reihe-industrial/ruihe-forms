@@ -362,8 +362,8 @@
     </div>
   </div>
 
-<script src="lib/match.js?v=20261020i"></script>
-<script src="lib/dm.js?v=20261020i"></script>
+<script src="lib/match.js?v=20261021a"></script>
+<script src="lib/dm.js?v=20261021a"></script>
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 
@@ -991,7 +991,7 @@ document.addEventListener('click', function(e) {
   var dmb = e.target.closest('[data-dm]');
   if (dmb && data && window.RuiheDM) {
     var di = parseInt(dmb.getAttribute('data-dm'), 10);
-    RuiheDM.open(auth, RuiheMatch.parseListing(data.columns, data.rows[di], (data.dates || [])[di], di), (data.keys || [])[di] || '');
+    RuiheDM.open(auth, (function(Lx) { Lx.coord = Lx.coord || (data.coords || [])[di] || null; return Lx; })(RuiheMatch.parseListing(data.columns, data.rows[di], (data.dates || [])[di], di)), (data.keys || [])[di] || '');
     return;
   }
   // 配對改到「修改物件／客需」清單（115/10/16）
