@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>週會｜瑞禾業務系統</title>
+  <script>
+  (function() { var ok = false; try { var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); ok = !!(v && v.name && v.code); } catch (e) {}
+    if (!ok) location.replace('index.html?next=meeting.html'); })();
+  </script>
+  <style>
+    body { margin: 0; }
+    .container { max-width: 1180px; margin: 0 auto; padding: 16px 16px 60px; }
+    h1 { font-size: 24px; color: var(--brand); margin: 6px 0 2px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+    .btn { height: 40px; padding: 0 16px; border-radius: 10px; border: none; background: var(--brand); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    .btn.ghost { background: #fff; color: var(--brand); border: 1px solid var(--line); }
+    .btn:disabled { opacity: .6; cursor: default; }
+    .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; }
+    .bar .wk { font-size: 18px; font-weight: 800; min-width: 10em; text-align: center; }
+    .nav-btn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font-size: 20px; cursor: pointer; }
+    .bar select { height: 38px; border-radius: 10px; border: 1px solid var(--line); padding: 0 10px; font: inherit; }
+    .item { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px 14px; }
+    .item .no { grid-row: span 3; width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .item .ttl { font-size: 17px; font-weight: 800; }
+    .item .meta { color: var(--muted); font-size: 13.5px; }
+    .item .acts { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
+    .item .acts button { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+    .item .acts .del { color: #B3261E; }
+    .links { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .links a { font-size: 13.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid #CFE3D6; background: #F3F8F5; color: var(--brand); text-decoration: none; font-weight: 700; }
+    .note { grid-column: 2 / -1; font-size: 14px; white-space: pre-wrap; background: #FAFBF9; border-left: 3px solid #CFE3D6; padding: 6px 10px; margin-top: 4px; }
+    .minutes { grid-column: 2 / -1; margin-top: 6px; }
+    .minutes textarea { width: 100%; box-sizing: border-box; min-height: 56px; border-radius: 8px; border: 1px solid var(--line); padding: 8px; font: inherit; }
+    .minutes .lbl { font-size: 12.5px; font-weight: 700; color: var(--brand); }
+    .empty { background: #fff; border: 1px dashed var(--line); border-radius: 14px; padding: 30px; text-align: center; color: var(--muted); }
+    .pick { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 8px 6px; border-bottom: 1px solid var(--line); cursor: pointer; }
+    .pick:hover { background: #F3F8F5; }
+    .f-label { font-weight: 700; margin: 10px 0 4px; display: block; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: #fff; cursor: pointer; font: inherit; font-size: 13.5px; }
+    .chip.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .lrow { display: flex; gap: 6px; margin-top: 6px; }
+    .lrow input { flex: 1; height: 36px; border-radius: 8px; border: 1px solid var(--line); padding: 0 8px; font: inherit; }
+    textarea.full { width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid var(--line); padding: 8px; font: inherit; }
+    /* 播放 */
+    #show { position: fixed; inset: 0; background: #0F1F17; color: #fff; z-index: 200; display: none; flex-direction: column; }
+    #show.on { display: flex; }
+    #show .top { display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: #173326; }
+    #show .top .cnt { margin-left: auto; opacity: .8; }
+    #show .top button, #show .ctl button { height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,.3); background: transparent; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    #show .body { flex: 1; display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px; padding: 18px; min-height: 0; }
+    #show .ph { background: #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0; }
+    #show .ph img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    #show .thumbs { display: flex; gap: 6px; margin-top: 8px; }
+    #show .thumbs img { width: 90px; height: 64px; object-fit: cover; border-radius: 6px; opacity: .6; cursor: pointer; border: 2px solid transparent; }
+    #show .thumbs img.on { opacity: 1; border-color: #9FD3B1; }
+    #show .info { overflow-y: auto; }
+    #show .info h2 { font-size: 30px; margin: 0 0 4px; }
+    #show .info .tg { opacity: .8; }
+    #show .info .pr { font-size: 34px; font-weight: 800; color: #FFB4A8; margin: 8px 0; }
+    #show .info dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 10px 0; font-size: 17px; }
+    #show .info dt { opacity: .7; }
+    #show .info .ft { font-size: 16px; white-space: pre-wrap; line-height: 1.7; margin-top: 8px; }
+    #show .info .lk a { display: inline-block; margin: 4px 6px 0 0; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.12); color: #fff; text-decoration: none; font-weight: 700; }
+    #show .ctl { display: flex; justify-content: center; gap: 10px; padding: 10px; }
+    @media (max-width: 800px) { #show .body { grid-template-columns: 1fr; overflow-y: auto; } .item { grid-template-columns: 36px minmax(0,1fr); } .item .acts { grid-column: 2; justify-content: flex-start; } }
+  </style>
+  <link rel="stylesheet" href="lib/ui.css?v=20261020b">
+  <link rel="icon" type="image/png" href="lib/img/favicon.png">
+  <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
+</head>
+<body>
+  <div class="container">
+  <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="index.html" data-key="home" data-home="1">登入</a>
+    <a href="listing.html" data-key="listing">新增物件</a>
+    <a href="client-needs.html" data-key="needs">新增客需</a>
+    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
+    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'meeting.html' ? 'meeting' : page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
+    // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
+    window.ruiheUpdateNav_ = function() {
+      var o = null;
+      try { o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
+      var els = document.querySelectorAll('#siteNav [data-auth]');
+      for (var j = 0; j < els.length; j++) {
+        var roles = els[j].getAttribute('data-roles');
+        var okRole = !roles || roles.split(',').indexOf(role) !== -1;
+        els[j].style.display = (loggedIn && okRole) ? '' : 'none';
+      }
+      var home = document.querySelector('#siteNav [data-home]');
+      if (home) home.textContent = loggedIn ? '首頁' : '登入';
+    };
+    // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
+    if (page !== 'listing.html') {
+      setTimeout(function() {
+        try {
+          if (localStorage.getItem('ruihe_listing_options_v1')) return;
+          fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'getListingFormOptions', args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(res) { if (res && res.ok && res.result && res.result.districtData && Object.keys(res.result.districtData).length) localStorage.setItem('ruihe_listing_options_v1', JSON.stringify(res.result)); })
+            .catch(function() {});
+        } catch (e) {}
+      }, 2500);
+    }
+    window.ruiheUpdateNav_();
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
+    <h1>週會</h1>
+    <div class="subtitle">每週三週會要介紹的物件。業務先把自己的物件加進來，週會時按「開始播放」。</div>
+    <div class="bar">
+      <button type="button" class="nav-btn" id="prevW" aria-label="上一週">‹</button>
+      <span class="wk" id="wk">…</span>
+      <button type="button" class="nav-btn" id="nextW" aria-label="下一週">›</button>
+      <span style="margin-left:6px;">主持人：</span><span id="hostBox">…</span>
+      <span style="flex:1"></span>
+      <button type="button" class="btn ghost" id="addBtn">＋ 加入我的物件</button>
+      <button type="button" class="btn" id="playBtn">▶ 開始播放</button>
+    </div>
+    <div id="list"><div class="loading">讀取中…</div></div>
+  </div>
+  <div id="show" role="dialog" aria-modal="true" aria-label="週會播放">
+    <div class="top"><b id="sTitle"></b><span class="cnt" id="sCnt"></span><button type="button" id="sClose">結束播放</button></div>
+    <div class="body"><div style="display:flex;flex-direction:column;min-height:0;"><div class="ph" id="sPh" style="flex:1;"></div><div class="thumbs" id="sThumbs"></div></div><div class="info" id="sInfo"></div></div>
+    <div class="ctl"><button type="button" id="sPrev">← 上一件</button><button type="button" id="sNext">下一件 →</button></div>
+  </div>
+<script src="lib/match.js?v=20261020a"></script>
+<script src="lib/dm.js?v=20261020i"></script>
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
+var auth = null; try { auth = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+var $ = function(id) { return document.getElementById(id); };
+function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1E4A32;color:#fff;padding:10px 18px;border-radius:999px;z-index:300;font-weight:700;'; document.body.appendChild(d); setTimeout(function() { d.remove(); }, 2200); }
+function post(fn, args) {
+  return fetch(API, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) }).then(function(r) { return r.json(); }).then(function(j) {
+    if (!j.ok) { var e = new Error(j.message || '發生錯誤'); if (/通關碼|請選擇姓名|登入/.test(e.message)) { try { sessionStorage.removeItem('ruihe_login_v1'); } catch (x) {} location.replace('index.html?next=meeting.html'); } throw e; }
+    return j.result;
+  });
+}
+var M = null, listings = [], byKey = {};
+var TYPE_LINKS = ['PPT', 'PDF', 'Word', '網址', '雲端資料夾', '影片'];
+function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function shift(dateIso, days) { var d = new Date(dateIso + 'T12:00:00'); d.setDate(d.getDate() + days); return iso(d); }
+function wkText(dt) { var d = new Date(dt + 'T12:00:00'); return (d.getFullYear() - 1911) + ' 年 ' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日（三）'; }
+function L(it) { return byKey[it.key] || null; }
+function mapLinks(it) {
+  var l = L(it), out = [];
+  if (l && l.coord) out.push('<a href="https://www.google.com/maps?q=' + l.coord[0] + ',' + l.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a>');
+  out.push('<a href="map.html?k=' + encodeURIComponent(it.key) + '" target="_blank" rel="noopener">物件地圖（國土測繪）</a>');
+  return out;
+}
+function render() {
+  $('wk').textContent = wkText(M.date);
+  $('hostBox').innerHTML = M.canSetHost ? '<select id="hostSel" aria-label="主持人"><option value="">（還沒選）</option>' + M.people.map(function(p) { return '<option' + (p === M.host ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' : '<b>' + esc(M.host || '還沒選') + '</b>';
+  if ($('hostSel')) $('hostSel').addEventListener('change', function() { post('meetingSetHost', [auth.name, auth.code, M.date, this.value]).then(function(r) { M = r; render(); toast('已設定主持人'); }).catch(function(e) { alert(e.message); }); });
+  $('playBtn').disabled = !M.items.length;
+  if (!M.items.length) { $('list').innerHTML = '<div class="empty">這一週還沒有人加物件。按「＋ 加入我的物件」把要介紹的物件加進來。</div>'; return; }
+  $('list').innerHTML = M.items.map(function(it, i) {
+    var l = L(it), mine = it.agent === auth.name, can = M.canManage;
+    var sum = l ? [l.typesText, l.rs === '租' ? '出租' : l.rs === '售' ? '出售' : '', l.priceText || '', l.placeText || ''].filter(Boolean).join('・') : (it.typeTab || '');
+    return '<div class="item" data-id="' + esc(it.id) + '"><div class="no">' + (i + 1) + '</div>' +
+      '<div><div class="ttl">' + esc(it.caseName || (l && l.name) || '（案名）') + '</div><div class="meta">' + esc(it.agent) + '｜' + esc(sum) + '</div></div>' +
+      '<div class="acts">' + (can ? '<button type="button" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button type="button" data-down="' + i + '"' + (i < M.items.length - 1 ? '' : ' disabled') + '>↓</button>' : '') +
+        (mine || can ? '<button type="button" data-edit="' + esc(it.id) + '">編輯</button><button type="button" class="del" data-del="' + esc(it.id) + '">移除</button>' : '') + '</div>' +
+      '<div class="links">' + mapLinks(it).concat((it.links || []).map(function(k) { return '<a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.label) + '</a>'; })).join('') + '</div>' +
+      (it.note ? '<div class="note">' + esc(it.note) + '</div>' : '') +
+      (can ? '<div class="minutes"><div class="lbl">會議紀錄</div><textarea data-min="' + esc(it.id) + '" placeholder="例：甲公司有興趣，下週帶看">' + esc(it.minutes || '') + '</textarea></div>'
+           : (it.minutes ? '<div class="minutes"><div class="lbl">會議紀錄</div><div class="note" style="margin:0;">' + esc(it.minutes) + '</div></div>' : '')) +
+      '</div>';
+  }).join('');
+}
+function load(date) {
+  $('list').innerHTML = '<div class="loading">讀取中…</div>';
+  return post('meetingGet', [auth.name, auth.code, date || '']).then(function(r) { M = r; render(); }).catch(function(e) { $('list').innerHTML = '<div class="empty" style="color:#B3261E;">讀取失敗：' + esc(e.message) + '</div>'; });
+}
+$('prevW').addEventListener('click', function() { if (M) load(shift(M.date, -7)); });
+$('nextW').addEventListener('click', function() { if (M) load(shift(M.date, 7)); });
+// 加入物件／編輯
+function linkRows(links) {
+  links = (links && links.length ? links : [{ label: 'PPT', url: '' }]);
+  return links.map(function(k) { return '<div class="lrow"><input type="text" class="lLabel" value="' + esc(k.label) + '" style="max-width:8em;" list="lTypes"><input type="url" class="lUrl" placeholder="https://…" value="' + esc(k.url) + '"></div>'; }).join('');
+}
+function itemForm(title, it, onSave) {
+  var dlg = RuiheMatch.showModal(title,
+    '<label class="f-label">補充說明</label><textarea class="full" id="fNote" rows="3" placeholder="例：屋主急售、可議價">' + esc((it && it.note) || '') + '</textarea>' +
+    '<label class="f-label">連結（PPT、PDF、Word、網址、雲端資料夾…）</label><datalist id="lTypes">' + TYPE_LINKS.map(function(t) { return '<option value="' + t + '">'; }).join('') + '</datalist>' +
+    '<div id="fLinks">' + linkRows(it && it.links) + '</div><button type="button" class="btn ghost" id="fMore" style="height:34px;margin-top:6px;">＋ 再加一個連結</button>' +
+    '<div style="margin-top:14px;"><button type="button" class="btn" id="fSave" style="width:100%;">儲存</button></div>');
+  var b = dlg.body;
+  b.querySelector('#fMore').addEventListener('click', function() { b.querySelector('#fLinks').insertAdjacentHTML('beforeend', linkRows([{ label: '網址', url: '' }])); });
+  b.querySelector('#fSave').addEventListener('click', function() {
+    var btn = this, links = [].map.call(b.querySelectorAll('.lrow'), function(r) { return { label: r.querySelector('.lLabel').value.trim() || '連結', url: r.querySelector('.lUrl').value.trim() }; }).filter(function(x) { return x.url; });
+    btn.disabled = true; btn.textContent = '儲存中…';
+    onSave(b.querySelector('#fNote').value, links).then(function(r) { M = r; render(); dlg.close(); toast('已儲存'); }).catch(function(e) { alert(e.message); btn.disabled = false; btn.textContent = '儲存'; });
+  });
+}
+$('addBtn').addEventListener('click', function() {
+  var sec = auth.role === '秘書' || auth.role === '管理員';
+  var inWeek = {}; (M ? M.items : []).forEach(function(i) { inWeek[i.key] = 1; });
+  var mine = listings.filter(function(l) { return l.key && !inWeek[l.key] && (sec || String(l.agents || '').split(/[、,，\s]+/).indexOf(auth.name) !== -1); });
+  var dlg = RuiheMatch.showModal('選要介紹的物件', '<input type="text" id="pkQ" placeholder="搜尋案名、地區" style="width:100%;box-sizing:border-box;height:38px;border-radius:8px;border:1px solid var(--line);padding:0 10px;font:inherit;margin-bottom:8px;"><div id="pkList"></div>');
+  var draw = function() {
+    var q = dlg.body.querySelector('#pkQ').value.trim();
+    var list = mine.filter(function(l) { return !q || (l.name + l.placeText).indexOf(q) !== -1; });
+    dlg.body.querySelector('#pkList').innerHTML = list.length ? list.slice(0, 80).map(function(l) { return '<div class="pick" data-k="' + esc(l.key) + '"><div><b>' + esc(l.name) + '</b><div style="color:var(--muted);font-size:13px;">' + esc([l.typesText, l.placeText].filter(Boolean).join('・')) + '</div></div><span style="color:var(--brand);font-weight:700;">選這件</span></div>'; }).join('')
+      : '<div class="empty">' + (listings.length ? '沒有可以加的物件（只列銷售中、你負責的物件）。' : '讀取物件中…') + '</div>';
+  };
+  draw();
+  dlg.body.querySelector('#pkQ').addEventListener('input', draw);
+  dlg.body.addEventListener('click', function(e) {
+    var p = e.target.closest('[data-k]'); if (!p) return;
+    var k = p.getAttribute('data-k'), l = byKey[k]; dlg.close();
+    itemForm('「' + (l ? l.name : '') + '」加入週會', null, function(note, links) { return post('meetingAddItem', [auth.name, auth.code, M.date, k, note, links]); });
+  });
+});
+$('list').addEventListener('click', function(e) {
+  var t = e.target;
+  var up = t.closest('[data-up]'), down = t.closest('[data-down]'), ed = t.closest('[data-edit]'), del = t.closest('[data-del]');
+  if (up || down) {
+    var i = Number((up || down).getAttribute(up ? 'data-up' : 'data-down')), j = up ? i - 1 : i + 1;
+    var ids = M.items.map(function(x) { return x.id; }); var tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
+    post('meetingReorder', [auth.name, auth.code, M.date, ids]).then(function(r) { M = r; render(); }).catch(function(e2) { alert(e2.message); });
+  } else if (ed) {
+    var it = M.items.filter(function(x) { return x.id === ed.getAttribute('data-edit'); })[0];
+    itemForm('編輯「' + it.caseName + '」', it, function(note, links) { return post('meetingUpdateItem', [auth.name, auth.code, it.id, note, links]); });
+  } else if (del) {
+    if (!confirm('從這一週的週會移除？')) return;
+    post('meetingRemoveItem', [auth.name, auth.code, del.getAttribute('data-del')]).then(function(r) { M = r; render(); toast('已移除'); }).catch(function(e2) { alert(e2.message); });
+  }
+});
+$('list').addEventListener('change', function(e) {
+  var ta = e.target.closest('[data-min]'); if (!ta) return;
+  post('meetingSaveMinutes', [auth.name, auth.code, ta.getAttribute('data-min'), ta.value]).then(function(r) { M = r; toast('已儲存會議紀錄'); }).catch(function(e2) { alert(e2.message); });
+});
+// 播放：一件一頁全螢幕；照片、價格、規格、特色從 DM 的資料帶
+var S = { i: 0, dm: {}, ph: 0 };
+function showSlide() {
+  var it = M.items[S.i], l = L(it);
+  $('sTitle').textContent = wkText(M.date) + ' 週會'; $('sCnt').textContent = (S.i + 1) + ' / ' + M.items.length + '　' + it.agent;
+  $('sPrev').disabled = S.i === 0; $('sNext').disabled = S.i === M.items.length - 1;
+  var paint = function(dm) {
+    var d = l && window.RuiheDM ? RuiheDM.compose(l, dm || {}) : { name: it.caseName, tags: it.typeTab, price: '', unit: '', specs: [], feature: '', photos: [] };
+    var photos = (dm && dm.photos) || [];
+    S.ph = Math.min(S.ph, Math.max(photos.length - 1, 0));
+    $('sPh').innerHTML = photos.length ? '<img src="' + photos[S.ph] + '" alt="物件照片">' : '<div style="opacity:.6;">' + (dm ? '沒有照片' : '讀取照片中…') + '</div>';
+    $('sThumbs').innerHTML = photos.map(function(p, k) { return '<img src="' + p + '" data-ph="' + k + '" class="' + (k === S.ph ? 'on' : '') + '" alt="">'; }).join('');
+    $('sInfo').innerHTML = '<h2>' + esc(d.name || it.caseName) + '</h2><div class="tg">' + esc(d.tags || '') + '</div>' +
+      (d.price ? '<div class="pr">' + esc(d.price) + (d.unit ? '<span style="font-size:18px;opacity:.8;margin-left:10px;">' + esc(d.unit) + '</span>' : '') + '</div>' : '') +
+      '<dl>' + (d.allSpecs || d.specs || []).slice(0, 10).map(function(s) { return '<dt>' + esc(s[0]) + '</dt><dd style="margin:0;">' + esc(s[1]) + '</dd>'; }).join('') + '</dl>' +
+      (d.feature ? '<div class="ft">' + esc(d.feature) + '</div>' : '') +
+      (it.note ? '<div class="ft" style="margin-top:12px;border-left:3px solid #9FD3B1;padding-left:10px;">' + esc(it.note) + '</div>' : '') +
+      '<div class="lk" style="margin-top:12px;">' + mapLinks(it).concat((it.links || []).map(function(k) { return '<a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.label) + '</a>'; })).join('') + '</div>';
+  };
+  var cached = S.dm[it.key];
+  paint(cached);
+  if (!cached) post('dmGetData', [auth.name, auth.code, it.key]).then(function(dm) { S.dm[it.key] = dm; if (M.items[S.i] && M.items[S.i].key === it.key) paint(dm); }).catch(function() { S.dm[it.key] = { photos: [] }; if (M.items[S.i] && M.items[S.i].key === it.key) paint(S.dm[it.key]); });
+}
+$('playBtn').addEventListener('click', function() { if (!M.items.length) return; S.i = 0; S.ph = 0; $('show').classList.add('on'); showSlide(); try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); } catch (e) {} });
+function closeShow() { $('show').classList.remove('on'); try { document.fullscreenElement && document.exitFullscreen(); } catch (e) {} }
+$('sClose').addEventListener('click', closeShow);
+$('sPrev').addEventListener('click', function() { if (S.i > 0) { S.i--; S.ph = 0; showSlide(); } });
+$('sNext').addEventListener('click', function() { if (S.i < M.items.length - 1) { S.i++; S.ph = 0; showSlide(); } });
+$('sThumbs').addEventListener('click', function(e) { var t = e.target.closest('[data-ph]'); if (!t) return; S.ph = Number(t.getAttribute('data-ph')); showSlide(); });
+document.addEventListener('keydown', function(e) {
+  if (!$('show').classList.contains('on')) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); $('sNext').click(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); $('sPrev').click(); }
+  else if (e.key === 'Escape') closeShow();
+});
+if (auth) {
+  load('');
+  RuiheMatch.loadListings(auth).then(function(ls) { listings = ls || []; byKey = {}; listings.forEach(function(l) { if (l.key) byKey[l.key] = l; }); if (M) render(); }).catch(function() {});
+}
+</script>
+</body>
+</html>

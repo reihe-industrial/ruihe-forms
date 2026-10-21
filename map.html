@@ -205,6 +205,7 @@
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
     <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
@@ -544,6 +545,8 @@ function mainType(types) {
 function typeClass(t) { return t === '廠房' ? 't-factory' : t === '土地' ? 't-land' : (t === '房屋' || HOUSE_KINDS.indexOf(t) !== -1) ? 't-house' : ''; }
 function cell(row, label) { var i = colIndex[label]; return i === undefined ? '' : (row[i] || ''); }
 
+var FOCUS_KEY = (/[?&]k=([^&#]+)/.exec(location.search) || [0, ''])[1], focusMarker = null;
+try { FOCUS_KEY = decodeURIComponent(FOCUS_KEY); } catch (e) {}
 function buildItems() {
   colIndex = {};
   data.columns.forEach(function(c, i) { colIndex[c] = i; });
@@ -692,7 +695,10 @@ function render(fit) {
     m.bindTooltip(cell(it.row, '案件名稱') || '（未填案名）', { direction: 'top', offset: [0, -6] });
     markerLayer.addLayer(m);
     pts.push(it.draw);
+    if (FOCUS_KEY && it.key === FOCUS_KEY) focusMarker = m;
   });
+  // 網址帶 ?k=案件鍵（例如從週會頁點「物件地圖」）：直接移到那一件、打開簡介（115/10/20）
+  if (focusMarker) { var fm = focusMarker; focusMarker = null; FOCUS_KEY = ''; setTimeout(function() { map.setView(fm.getLatLng(), 17); fm.openPopup(); }, 400); return; }
   if (fit || firstFit) {
     setTimeout(function() {
       map.invalidateSize();
