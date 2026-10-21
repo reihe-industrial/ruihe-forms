@@ -592,7 +592,7 @@ function withRatio(names, ratios) {
   if (r.length === 1) return n.map(function(x) { return x + ' ' + pct(r[0]); }).join('、');
   return n.join('、') + '（' + r.map(pct).join('、') + '）';
 }
-var MASTER_KEY_COLS = ['案名', '案件狀態', '委託種類', '總價', '單價', '案件坐落', '詳細地址', '土地面積(坪)', '主建物面積(坪)', '主要業務名稱', '次要業務名稱', '契約編號', '合約到期'];
+var MASTER_KEY_COLS = ['案名', '案件狀態', '委託種類', '總價', '單價', '案件坐落', '詳細地址', '土地面積(坪)', '主建物面積(坪)', '主要業務名稱', '次要業務名稱', '契約編號', '委託類別', '合約到期'];
 var masterOpen = {};
 function canEditTable() { return (role === '秘書' || role === '管理員') && DESKTOP_QUERY.matches && data && current() && (current().keys || []).length > 0; }
 function editKey(t, i, label) { return t.type + '|' + t.keys[i] + '|' + label; }
