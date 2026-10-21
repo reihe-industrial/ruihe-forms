@@ -64,3 +64,11 @@ body {
 .table-wrap thead th button { color: #1E4A32 !important; font-weight: 700; }
 .table-wrap tbody tr:nth-child(even) > td { background-color: #FAFBF9; }
 .table-wrap tbody tr:hover > td { background-color: #F1F7F3; }
+
+/* ---------- 讀取中：會動的灰色載入條，比較不會覺得卡住（115/10/20） ---------- */
+@keyframes rf-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.loading { color: var(--muted); font-size: 13px; }
+.loading::before, .loading::after { content: ""; display: block; height: 12px; border-radius: 6px; margin: 6px 0;
+  background: linear-gradient(90deg, #ECEFEA 25%, #F7F9F6 37%, #ECEFEA 63%); background-size: 400% 100%; animation: rf-shimmer 1.3s ease infinite; }
+.loading::before { width: 70%; }
+.loading::after { width: 45%; }

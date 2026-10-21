@@ -307,7 +307,7 @@
     .cf-chip.on { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 700; }
     .trip-form label { display: block; }
   </style>
-  <link rel="stylesheet" href="lib/ui.css?v=20261020a">
+  <link rel="stylesheet" href="lib/ui.css?v=20261020b">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
   <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
 </head>
@@ -416,15 +416,15 @@
       <div id="remWrap">
       <details class="rem" id="remDue">
         <summary>客需：今天要聯絡<span class="badge" id="cntDue">…</span></summary>
-        <div class="rem-body" id="bodyDue"><div class="rem-empty">讀取中…</div></div>
+        <div class="rem-body" id="bodyDue"><div class="rem-empty loading">讀取中…</div></div>
       </details>
       <details class="rem" id="remStale">
         <summary>客需：超過 30 天沒追蹤<span class="badge" id="cntStale">…</span></summary>
-        <div class="rem-body" id="bodyStale"><div class="rem-empty">讀取中…</div></div>
+        <div class="rem-body" id="bodyStale"><div class="rem-empty loading">讀取中…</div></div>
       </details>
       <details class="rem" id="remContract">
         <summary>物件：合約 30 天內到期<span class="badge" id="cntContract">…</span></summary>
-        <div class="rem-body" id="bodyContract"><div class="rem-empty">讀取中…</div></div>
+        <div class="rem-body" id="bodyContract"><div class="rem-empty loading">讀取中…</div></div>
       </details>
       <details class="rem" id="remMatch" hidden>
         <summary>新物件符合你的客需（最近 <span id="matchDays">7</span> 天）<span class="badge" id="cntMatch">…</span></summary>
@@ -436,19 +436,19 @@
       </details>
       <details class="rem" id="remDup" hidden>
         <summary>物件：相同、需要確認或相似<span class="badge" id="cntDup">…</span></summary>
-        <div class="rem-body" id="bodyDup"><div class="rem-empty">讀取中…</div></div>
+        <div class="rem-body" id="bodyDup"><div class="rem-empty loading">讀取中…</div></div>
       </details>
       <details class="rem" id="remCcP" hidden>
         <summary>契變書待收件<span class="badge" id="cntCcP">…</span></summary>
-        <div class="rem-body" id="bodyCcP"><div class="rem-empty">讀取中…</div></div>
+        <div class="rem-body" id="bodyCcP"><div class="rem-empty loading">讀取中…</div></div>
       </details>
       <details class="rem" id="remDelP" hidden>
         <summary>刪除申請待審核<span class="badge" id="cntDelP">…</span></summary>
-        <div class="rem-body" id="bodyDelP"><div class="rem-empty">讀取中…</div></div>
+        <div class="rem-body" id="bodyDelP"><div class="rem-empty loading">讀取中…</div></div>
       </details>
       <details class="rem" id="remRegP" hidden>
         <summary>調謄本：待申請<span class="badge" id="cntRegP">…</span></summary>
-        <div class="rem-body" id="bodyRegP"><div class="rem-empty">讀取中…</div></div>
+        <div class="rem-body" id="bodyRegP"><div class="rem-empty loading">讀取中…</div></div>
       </details>
       </div>
       <div class="home-top no-ann" id="homeTop">
@@ -493,7 +493,7 @@
     </div>
   </div>
 
-<script src="lib/match.js?v=20261020h"></script>
+<script src="lib/match.js?v=20261020i"></script>
 <script>
 var GOOGLE_CLIENT_ID = '145144542151-spm8h66cenm8pdshn3rrf4p3964emp55.apps.googleusercontent.com';
 var OBJ_API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';      // 物件後端（登入、合約提醒）
@@ -898,7 +898,7 @@ function renderDupReminder() {
   box.hidden = !can;
   if (!can || !auth) return;
   var c = readJson(sessionStorage, 'ruihe_master_cache_v1');
-  if (!c || c.name !== auth.name || !c.tabs) { $('bodyDup').innerHTML = '<div class="rem-empty">讀取中…</div>'; $('cntDup').textContent = '…'; $('cntDup').className = 'badge'; return; }
+  if (!c || c.name !== auth.name || !c.tabs) { $('bodyDup').innerHTML = '<div class="rem-empty loading">讀取中…</div>'; $('cntDup').textContent = '…'; $('cntDup').className = 'badge'; return; }
   var items = [];
   c.tabs.forEach(function(t) {
     var ni = (t.columns || []).indexOf('案名');
@@ -1057,7 +1057,7 @@ $('scopeSeg').addEventListener('click', function(e) {
   scope = b.getAttribute('data-scope');
   [].forEach.call(document.querySelectorAll('#scopeSeg button'), function(x) { x.setAttribute('aria-pressed', String(x === b)); });
   state.client = null; state.contract = null; state.clientErr = ''; state.contractErr = '';
-  ['Due', 'Stale', 'Contract'].forEach(function(k) { $('body' + k).innerHTML = '<div class="rem-empty">讀取中…</div>'; $('cnt' + k).textContent = '…'; $('cnt' + k).className = 'badge'; });
+  ['Due', 'Stale', 'Contract'].forEach(function(k) { $('body' + k).innerHTML = '<div class="rem-empty loading">讀取中…</div>'; $('cnt' + k).textContent = '…'; $('cnt' + k).className = 'badge'; });
   $('remNote').textContent = scope === 'all' ? (role === '主管' ? '你那一組' : '全公司') : '只有你負責的';
   loadReminders(false);
 });
