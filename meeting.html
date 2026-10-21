@@ -147,8 +147,8 @@
     <div class="body"><div style="display:flex;flex-direction:column;min-height:0;"><div class="ph" id="sPh" style="flex:1;"></div><div class="thumbs" id="sThumbs"></div></div><div class="info" id="sInfo"></div></div>
     <div class="ctl"><button type="button" id="sPrev">← 上一件</button><button type="button" id="sNext">下一件 →</button></div>
   </div>
-<script src="lib/match.js?v=20261021a"></script>
-<script src="lib/dm.js?v=20261021a"></script>
+<script src="lib/match.js?v=20261021c"></script>
+<script src="lib/dm.js?v=20261021c"></script>
 <script>
 var API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 var auth = null; try { auth = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
@@ -204,7 +204,7 @@ $('prevW').addEventListener('click', function() { if (M) load(shift(M.date, -7))
 $('nextW').addEventListener('click', function() { if (M) load(shift(M.date, 7)); });
 // 加入物件／編輯
 function linkRows(links) {
-  links = (links && links.length ? links : [{ label: 'PPT', url: '' }]);
+  links = (links && links.length ? links : [{ label: '網址', url: '' }]);
   return links.map(function(k) { return '<div class="lrow"><input type="text" class="lLabel" value="' + esc(k.label) + '" style="max-width:8em;" list="lTypes"><input type="url" class="lUrl" placeholder="https://…" value="' + esc(k.url) + '"></div>'; }).join('');
 }
 function chipRow(group, list, cur) { return '<div class="chips" data-g="' + group + '">' + list.map(function(v) { return '<button type="button" class="chip' + (v === cur ? ' on' : '') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div>'; }
@@ -219,10 +219,36 @@ function itemForm(title, it, onSave, custom) {
     '<div><label class="f-label">建物坪數</label><input type="text" inputmode="decimal" id="cBld" class="full" style="height:38px;" value="' + esc(ex.bld || '') + '"></div></div>') : '';
   var dlg = RuiheMatch.showModal(title, cf +
     '<label class="f-label">補充說明</label><textarea class="full" id="fNote" rows="3" placeholder="例：屋主急售、可議價">' + esc((it && it.note) || '') + '</textarea>' +
-    '<label class="f-label">連結（PPT、PDF、Word、網址、雲端資料夾…）</label><datalist id="lTypes">' + TYPE_LINKS.map(function(t) { return '<option value="' + t + '">'; }).join('') + '</datalist>' +
+    '<label class="f-label">上傳檔案（PDF、PPT、Word、圖片，一個最大 20MB）</label>' +
+    '<label class="btn ghost" style="display:inline-flex;align-items:center;height:38px;cursor:pointer;">選擇檔案<input type="file" id="fFiles" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*" style="display:none;"></label>' +
+    '<div id="fUpMsg" style="font-size:13px;color:var(--muted);margin-top:4px;"></div>' +
+    '<label class="f-label">網址（雲端硬碟、網站…）</label><datalist id="lTypes">' + TYPE_LINKS.map(function(t) { return '<option value="' + t + '">'; }).join('') + '</datalist>' +
     '<div id="fLinks">' + linkRows(it && it.links) + '</div><button type="button" class="btn ghost" id="fMore" style="height:34px;margin-top:6px;">＋ 再加一個連結</button>' +
     '<div style="margin-top:14px;"><button type="button" class="btn" id="fSave" style="width:100%;">儲存</button></div>');
   var b = dlg.body;
+  // 上傳檔案：一個一個傳到雲端硬碟，傳好的放進下面的連結列表（標籤是檔名）
+  b.querySelector('#fFiles').addEventListener('change', function() {
+    var files = [].slice.call(this.files || []), msg = b.querySelector('#fUpMsg'), save = b.querySelector('#fSave'); this.value = '';
+    if (!files.length) return;
+    save.disabled = true;
+    var next = function(i) {
+      if (i >= files.length) { msg.textContent = '上傳完成 ' + files.length + ' 個檔案。'; save.disabled = false; return; }
+      var f = files[i];
+      if (f.size > 20 * 1024 * 1024) { alert('「' + f.name + '」超過 20MB，請改放雲端硬碟再貼網址。'); next(i + 1); return; }
+      msg.textContent = '上傳中（' + (i + 1) + '/' + files.length + '）：' + f.name + '…';
+      var rd = new FileReader();
+      rd.onload = function() {
+        post('meetingUpload', [auth.name, auth.code, M.date, f.name, f.type, String(rd.result).split(',')[1]]).then(function(link) {
+          var box = b.querySelector('#fLinks'), first = box.querySelector('.lrow');
+          if (first && !first.querySelector('.lUrl').value.trim()) first.remove();
+          box.insertAdjacentHTML('beforeend', linkRows([link]));
+          next(i + 1);
+        }).catch(function(err) { alert('「' + f.name + '」上傳失敗：' + err.message); next(i + 1); });
+      };
+      rd.readAsDataURL(f);
+    };
+    next(0);
+  });
   b.addEventListener('click', function(e) { var c = e.target.closest('.chip'); if (!c || !c.parentNode.getAttribute('data-g')) return; var on = !c.classList.contains('on'); [].forEach.call(c.parentNode.querySelectorAll('.chip'), function(x) { x.classList.remove('on'); }); if (on) c.classList.add('on'); });
   b.querySelector('#fMore').addEventListener('click', function() { b.querySelector('#fLinks').insertAdjacentHTML('beforeend', linkRows([{ label: '網址', url: '' }])); });
   b.querySelector('#fSave').addEventListener('click', function() {
@@ -240,13 +266,13 @@ function itemForm(title, it, onSave, custom) {
 $('addBtn').addEventListener('click', function() {
   var sec = auth.role === '秘書' || auth.role === '管理員';
   var inWeek = {}; (M ? M.items : []).forEach(function(i) { inWeek[i.key] = 1; });
-  var mine = listings.filter(function(l) { return l.key && !inWeek[l.key] && (sec || String(l.agents || '').split(/[、,，\s]+/).indexOf(auth.name) !== -1); });
+  var mine = listings.filter(function(l) { return l.key && !/^RESIDENTIAL_/.test(l.key) && !inWeek[l.key] && (sec || String(l.agents || '').split(/[、,，\s]+/).indexOf(auth.name) !== -1); });
   var dlg = RuiheMatch.showModal('選要介紹的物件', '<button type="button" class="btn ghost" id="pkCustom" style="width:100%;margin-bottom:10px;">✎ 自己填（系統裡沒有、或資料還在整理的物件）</button><input type="text" id="pkQ" placeholder="搜尋案名、地區" style="width:100%;box-sizing:border-box;height:38px;border-radius:8px;border:1px solid var(--line);padding:0 10px;font:inherit;margin-bottom:8px;"><div id="pkList"></div>');
   var draw = function() {
     var q = dlg.body.querySelector('#pkQ').value.trim();
     var list = mine.filter(function(l) { return !q || (l.name + l.placeText).indexOf(q) !== -1; });
     dlg.body.querySelector('#pkList').innerHTML = list.length ? list.slice(0, 80).map(function(l) { return '<div class="pick" data-k="' + esc(l.key) + '"><div><b>' + esc(l.name) + '</b><div style="color:var(--muted);font-size:13px;">' + esc([l.typesText, l.placeText].filter(Boolean).join('・')) + '</div></div><span style="color:var(--brand);font-weight:700;">選這件</span></div>'; }).join('')
-      : '<div class="empty">' + (listings.length ? '沒有可以加的物件（只列銷售中、你負責的物件）。' : '讀取物件中…') + '</div>';
+      : '<div class="empty">' + (listings.length ? '沒有可以加的物件（只列銷售中、你負責的物件，不含住商物件）。可以按上面的「自己填」。' : '讀取物件中…') + '</div>';
   };
   draw();
   dlg.body.querySelector('#pkQ').addEventListener('input', draw);

@@ -223,7 +223,14 @@
       color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
     .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
     .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
-</style>
+    /* 115/10/21：版面緊湊一點、同一排輸入框底部對齊 */
+    .field { margin-bottom: 10px; }
+    .card { padding: 16px 18px; }
+    .hint { margin-top: 2px; margin-bottom: 4px; }
+    .field > label { margin-bottom: 4px; }
+    .card, .type-block { align-items: end; }
+    .type-block > .field.full, .card > .field.full { align-self: start; }
+  </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261021a">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
   <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
@@ -247,7 +254,7 @@
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script src="lib/formui.js?v=20261016a"></script>
-<script src="lib/match.js?v=20261021a"></script>
+<script src="lib/match.js?v=20261021c"></script>
 <script>
   (function() {
     var page = location.pathname.split('/').pop();
@@ -418,7 +425,12 @@
 
     <div class="field">
       <label class="required">需求類型</label>
-      <select id="demandTypeSelect">
+      <div class="checkbox-group" id="demandTypeRadios">
+        <label><input type="radio" name="demandTypeR" value="購買"> 購買</label>
+        <label><input type="radio" name="demandTypeR" value="承租"> 承租</label>
+        <label><input type="radio" name="demandTypeR" value="皆可"> 皆可</label>
+      </div>
+      <select id="demandTypeSelect" hidden>
         <option value="">請選擇</option>
         <option>購買</option><option>承租</option><option>皆可</option>
       </select>
@@ -457,7 +469,7 @@
       </div>
       <div class="field">
         <label>需求土地分區</label>
-        <input type="text" id="factoryLandZoning" placeholder="例：乙種工業區、丁種建築用地">
+        <div class="zone-checks" data-for="factoryLandZoning"></div><input type="text" id="factoryLandZoning" hidden>
       </div>
       <div class="field">
         <label>廠房淨高需求（公尺）</label>
@@ -522,7 +534,7 @@
       </div>
       <div class="field">
         <label>需求土地分區</label>
-        <input type="text" id="landZoning" placeholder="例：乙種工業區、丁種建築用地">
+        <div class="zone-checks" data-for="landZoning"></div><input type="text" id="landZoning" hidden>
       </div>
       <div class="field">
         <label>土地其他需求</label>
@@ -1997,6 +2009,65 @@ RuiheFormUI.init({
   findField: function(name) { return findFieldByLabel_(name); },
   watch: [document.getElementById('editCaseView'), document.getElementById('editListView'), document.getElementById('editLoginView')]
 });
+</script>
+
+<script>
+// 115/10/21：需求類型改成直接點的單選；需求土地分區改成複選＋其他（原本的欄位保留、隱藏，點了自動填進去）
+(function() {
+  var sel = document.getElementById('demandTypeSelect');
+  document.getElementById('demandTypeRadios').addEventListener('change', function(e) {
+    if (e.target.name !== 'demandTypeR') return; sel.value = e.target.value; sel.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  var ZONES = ['都市計畫－乙種工業區', '都市計畫－甲種工業區', '都市計畫－零星工業區', '都市計畫－特定專用區', '非都市－丁種建築用地', '非都市－工業區', '非都市－特定目的事業用地'];
+  [].forEach.call(document.querySelectorAll('.zone-checks'), function(box) {
+    var inp = document.getElementById(box.getAttribute('data-for'));
+    box.className = 'checkbox-group zone-checks';
+    box.innerHTML = ZONES.map(function(z) { return '<label><input type="checkbox" value="' + z + '"> ' + z + '</label>'; }).join('') +
+      '<label><input type="checkbox" value="其他" class="zoneOther"> 其他</label><input type="text" class="zoneOtherText" placeholder="請填寫" style="display:none;max-width:260px;">';
+    var compose = function() {
+      var vals = [].filter.call(box.querySelectorAll('input[type=checkbox]:checked'), function(c) { return c.value !== '其他'; }).map(function(c) { return c.value; });
+      var o = box.querySelector('.zoneOther'), ot = box.querySelector('.zoneOtherText');
+      ot.style.display = o.checked ? '' : 'none';
+      if (o.checked && ot.value.trim()) vals.push(ot.value.trim());
+      inp.value = vals.join('、'); box.__last = inp.value;
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    box.addEventListener('change', compose); box.addEventListener('input', function(e) { if (e.target.classList.contains('zoneOtherText')) compose(); });
+    box.__last = '';
+    // 修改舊客需、草稿帶入：把文字對回勾選（不在選項裡的放「其他」）
+    setInterval(function() {
+      if (inp.value === box.__last) return;
+      var parts = inp.value.split(/[、,，]/).map(function(x) { return x.trim(); }).filter(Boolean), other = [];
+      [].forEach.call(box.querySelectorAll('input[type=checkbox]'), function(c) { if (c.value !== '其他') c.checked = false; });
+      parts.forEach(function(v) {
+        var c = [].filter.call(box.querySelectorAll('input[type=checkbox]'), function(c) { return c.value === v || c.value.replace(/^.*－/, '') === v; })[0];
+        if (c) c.checked = true; else other.push(v);
+      });
+      box.querySelector('.zoneOther').checked = other.length > 0; box.querySelector('.zoneOtherText').value = other.join('、');
+      box.querySelector('.zoneOtherText').style.display = other.length ? '' : 'none';
+      box.__last = inp.value;
+    }, 700);
+  });
+  // 需求類型：修改舊客需帶入時，把單選對回去
+  setInterval(function() { var v = sel.value; [].forEach.call(document.querySelectorAll('input[name=demandTypeR]'), function(r) { if (r.checked !== (r.value === v)) r.checked = r.value === v; }); }, 700);
+})();
+</script>
+
+<script>
+// 115/10/21：「例：…」「如：…」這種範例說明改成輸入框裡的提示字（少一行，格子不會高高低低）
+(function() {
+  function fold(root) {
+    [].forEach.call((root || document).querySelectorAll('.field > .hint'), function(h) {
+      var t = h.textContent.trim();
+      if (!/^(例|如)[：:]/.test(t) || t.length > 40 || h.__folded) return;
+      var f = h.parentNode, inps = f.querySelectorAll('input[type=text], input:not([type]), textarea');
+      if (inps.length !== 1 || inps[0].placeholder) return;
+      inps[0].placeholder = t; h.__folded = 1; h.style.display = 'none';
+    });
+  }
+  fold();
+  new MutationObserver(function() { clearTimeout(window.__foldT); window.__foldT = setTimeout(fold, 120); }).observe(document.body, { childList: true, subtree: true });
+})();
 </script>
 </body>
 </html>

@@ -379,7 +379,21 @@
     .cc-form .field { margin-bottom: 10px; }
     .cc-form .sub { display: none; margin: 4px 0 8px; }
     .cc-form .sub.on { display: block; }
-</style>
+    /* 115/10/21：版面緊湊一點、同一排輸入框底部對齊 */
+    .field { margin-bottom: 10px; }
+    .card { padding: 16px 18px; }
+    .hint { margin-top: 2px; margin-bottom: 4px; }
+    .field > label { margin-bottom: 4px; }
+    #typeFields, .card.two-col, .row2, .row3 { align-items: end; }
+    /* 長說明先只顯示第一行，點一下展開（115/10/21） */
+    .hint.clip { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; position: relative; padding-right: 7.5em; }
+    .hint.clip::after { content: "…看完整說明"; position: absolute; right: 0; top: 0; color: var(--brand); font-weight: 700; background: inherit; padding-left: 4px; }
+    .hint.clip.open { display: block; -webkit-line-clamp: unset; padding-right: 0; }
+    .hint.clip.open::after { content: none; }
+    /* 謄本可以帶入的欄位：淺藍色 */
+    .field.deed-able input:not([type=checkbox]):not([type=radio]), .field.deed-able select, .field.deed-able textarea { background: #EAF4FF; border-color: #BCD8F5; }
+    .field.deed-able .checkbox-group { background: #EAF4FF; border-radius: 8px; padding: 4px 6px; }
+  </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261021a">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
   <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
@@ -402,7 +416,7 @@
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
-  <script src="lib/match.js?v=20261021a"></script>
+  <script src="lib/match.js?v=20261021c"></script>
 <script>
   (function() {
     var page = location.pathname.split('/').pop();
@@ -585,6 +599,14 @@
           <div class="hint">請填寫委託書上的編號</div>
           <input type="text" data-label="契約編號">
         </div>
+        <div class="field" id="entrustKindField" style="display:none; grid-column: 1 / -1;">
+          <label class="required">委託類別</label>
+          <div class="checkbox-group" id="entrustKindGroup">
+            <label><input type="radio" name="entrustKind" value="一般"> 一般委託</label>
+            <label><input type="radio" name="entrustKind" value="專簽"> 專任委託（專簽）</label>
+          </div>
+          <input type="hidden" data-label="委託類別" id="entrustKindValue">
+        </div>
         <div class="field">
           <label class="required">委託種類</label>
           <select data-label="委託種類">
@@ -655,7 +677,7 @@
       <!-- 謄本自動帶入（選填） -->
       <div class="card" id="deedCard">
         <h2>謄本自動帶入（選填）</h2>
-        <div class="hint">上傳土地謄本、建物謄本的 PDF（電子謄本或電傳資料都可以，可以一次選好幾份），預覽確認後可帶入下面「三、物件資訊」的欄位。只支援文字型 PDF。</div>
+        <div class="hint">上傳土地謄本、建物謄本的 PDF（電子謄本或電傳資料，可以一次選好幾份）。下面<span style="background:#EAF4FF;border:1px solid #BCD8F5;border-radius:4px;padding:0 6px;">淺藍色</span>的欄位都可以用謄本帶入。</div>
         <div class="hint warn-hint">❗ 掃描檔或翻拍的照片讀不出來。帶入後請核對內容。</div>
         <input type="file" id="deedInput" accept="application/pdf" multiple>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;margin:8px 0 0;cursor:pointer;"><input type="checkbox" id="deedAddToUploads" checked style="width:auto;"> 同時把這些謄本加入「上傳照片／文件」（保留原檔）</label>
@@ -1149,7 +1171,23 @@ function updateContractUi_() {
   var c = contractCfg_();
   var noField = document.getElementById('contractNoField');
   if (noField) noField.style.display = (c && c.hasNumberField) ? '' : 'none';
+  // 委託類別（一般／專簽）：契約類型是「委託」才出現（115/10/21）
+  var ek = document.getElementById('entrustKindField');
+  if (ek) {
+    var isEntrust = selectedContractType_() === '委託';
+    ek.style.display = isEntrust ? '' : 'none';
+    if (!isEntrust) { document.getElementById('entrustKindValue').value = ''; document.querySelectorAll('input[name="entrustKind"]').forEach(function(r) { r.checked = false; }); }
+  }
 }
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.name === 'entrustKind') { var h = document.getElementById('entrustKindValue'); h.value = e.target.value; h.dispatchEvent(new Event('change', { bubbles: true })); }
+});
+// 修改、草稿帶入值之後，把單選鈕對回去
+function syncEntrustKindRadios_() {
+  var h = document.getElementById('entrustKindValue'); if (!h) return;
+  document.querySelectorAll('input[name="entrustKind"]').forEach(function(r) { r.checked = r.value === h.value; });
+}
+setInterval(function() { var h = document.getElementById('entrustKindValue'); if (h && h.value && !document.querySelector('input[name="entrustKind"]:checked')) syncEntrustKindRadios_(); }, 1000);
 function updateClientRequiredMarks_() {
   var optional = clientInfoOptional_();
   document.querySelectorAll('.client-info-label').forEach(function(l) {
@@ -3735,6 +3773,7 @@ function listingCheck_() {
   var contractTypeNow_ = selectedContractType_();
   if (!contractTypeNow_) missingLabels.push('契約類型');
   else if (CONTRACT_TYPES[contractTypeNow_].numberRequired && !String(fieldValues['契約編號'] || '').trim()) missingLabels.push('契約編號');
+  if (contractTypeNow_ === '委託' && !String(fieldValues['委託類別'] || '').trim()) missingLabels.push('委託類別');
   STATIC_REQUIRED_LABELS.forEach(function(label) {
     if (clientInfoOptional_() && CLIENT_LABELS_OPTIONAL_IF_ORAL.indexOf(label) !== -1) return;
     if (!fieldValues[label] || !String(fieldValues[label]).trim()) missingLabels.push(label);
@@ -6654,6 +6693,57 @@ document.getElementById('listingForm').addEventListener('change', function(e) {
     if (cb.value === cfg.noneExclusive ? true : x.value === cfg.noneExclusive) { x.checked = false; x.dispatchEvent(new Event('change', { bubbles: true })); }
   });
 });
+</script>
+
+<script>
+// 115/10/21：「例：…」「如：…」這種範例說明改成輸入框裡的提示字（少一行，格子不會高高低低）
+(function() {
+  function fold(root) {
+    [].forEach.call((root || document).querySelectorAll('.field > .hint'), function(h) {
+      var t = h.textContent.trim();
+      if (!/^(例|如)[：:]/.test(t) || t.length > 40 || h.__folded) return;
+      var f = h.parentNode, inps = f.querySelectorAll('input[type=text], input:not([type]), textarea');
+      if (inps.length !== 1 || inps[0].placeholder) return;
+      inps[0].placeholder = t; h.__folded = 1; h.style.display = 'none';
+    });
+  }
+  fold();
+  new MutationObserver(function() { clearTimeout(window.__foldT); window.__foldT = setTimeout(fold, 120); }).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+
+<script>
+// 謄本可以自動帶入的欄位標淺藍色（115/10/21）
+(function() {
+  var DEED_LABELS = ['主建物面積(m²)', '主要建材', '他項權利', '使用分區', '全筆主建物面積(m²)', '全筆土地面積(m²)', '共同使用面積(m²)', '取得原因', '取得年月',
+    '土地面積(m²)', '地上樓層', '地下樓層', '屋主是否一年內取得', '建物類別', '建築完成日', '所在樓別', '所有權人及持分', '持分比例', '產權範圍', '詳細地址', '都市或非都市計畫', '附屬建物面積(m²)'];
+  function mark() {
+    [].forEach.call(document.querySelectorAll('#typeFields .field'), function(f) {
+      var lab = f.querySelector('label'); if (!lab) return;
+      var t = lab.textContent.replace(/[*＊\s]/g, '');
+      var hit = DEED_LABELS.some(function(l) { return t.indexOf(l) === 0; }) || /地號|建號/.test(t);
+      f.classList.toggle('deed-able', hit);
+    });
+  }
+  mark();
+  new MutationObserver(function() { clearTimeout(window.__deedT); window.__deedT = setTimeout(mark, 150); }).observe(document.getElementById('typeFields'), { childList: true, subtree: false });
+})();
+</script>
+
+<script>
+// 超過兩行的長說明先只顯示第一行，點一下展開（115/10/21）
+(function() {
+  function clip() {
+    [].forEach.call(document.querySelectorAll('#listingForm .field > .hint'), function(h) {
+      if (h.__clipped || h.style.display === 'none' || !h.offsetParent) return;
+      var lh = parseFloat(getComputedStyle(h).lineHeight) || 20;
+      if (h.scrollHeight > lh * 2.6 && !h.querySelector('input,select,button')) { h.classList.add('clip'); h.__clipped = 1; }
+    });
+  }
+  document.addEventListener('click', function(e) { var h = e.target.closest && e.target.closest('.hint.clip'); if (h && e.target.tagName !== 'A') h.classList.toggle('open'); });
+  setTimeout(clip, 300);
+  new MutationObserver(function() { clearTimeout(window.__clipT); window.__clipT = setTimeout(clip, 200); }).observe(document.getElementById('listingForm'), { childList: true, subtree: true });
+})();
 </script>
 </body>
 </html>
