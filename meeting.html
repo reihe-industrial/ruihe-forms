@@ -23,6 +23,8 @@
     .item { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 4px 14px; }
     .item .no { grid-row: span 3; width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; }
     .item .ttl { font-size: 17px; font-weight: 800; }
+    .ktag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 1px 8px; margin-right: 6px; vertical-align: 2px; }
+    .ktag.k物件 { background: #E6F0E9; color: #1E4A32; } .ktag.k宣導 { background: #FDECEA; color: #B3261E; } .ktag.k上課 { background: #E8F0FB; color: #1F4E8C; } .ktag.k其他 { background: #F1EFE8; color: #5D6B62; }
     .item .meta { color: var(--muted); font-size: 13.5px; }
     .item .acts { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
     .item .acts button { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font: inherit; font-size: 13px; cursor: pointer; }
@@ -130,7 +132,7 @@
   })();
   </script>
     <h1>週會</h1>
-    <div class="subtitle">每週三週會要介紹的物件。業務先把要介紹的物件加進來（系統裡沒有的也可以自己填），週會時按「開始播放」。</div>
+    <div class="subtitle">每週三週會的議程：物件介紹、重要事項宣導、上課資料。先把要報告的加進來，週會時按「開始播放」。</div>
     <div class="bar">
       <button type="button" class="nav-btn" id="prevW" aria-label="上一週">‹</button>
       <span class="wk" id="wk">…</span>
@@ -138,14 +140,16 @@
       <span style="margin-left:6px;">主持人：</span><span id="hostBox">…</span>
       <span style="flex:1"></span>
       <button type="button" class="btn ghost" id="addBtn">＋ 加入物件</button>
+      <button type="button" class="btn ghost" id="addAgendaBtn">＋ 加入宣導／上課資料</button>
       <button type="button" class="btn" id="playBtn">▶ 開始播放</button>
     </div>
+    <div id="agendaSum" style="font-size:14px;color:var(--muted);margin:0 0 10px;"></div>
     <div id="list"><div class="loading">讀取中…</div></div>
   </div>
   <div id="show" role="dialog" aria-modal="true" aria-label="週會播放">
     <div class="top"><b id="sTitle"></b><span class="cnt" id="sCnt"></span><button type="button" id="sClose">結束播放</button></div>
     <div class="body"><div style="display:flex;flex-direction:column;min-height:0;"><div class="ph" id="sPh" style="flex:1;"></div><div class="thumbs" id="sThumbs"></div></div><div class="info" id="sInfo"></div></div>
-    <div class="ctl"><button type="button" id="sPrev">← 上一件</button><button type="button" id="sNext">下一件 →</button></div>
+    <div class="ctl"><button type="button" id="sPrev">← 上一項</button><button type="button" id="sNext">下一項 →</button></div>
   </div>
 <script src="lib/match.js?v=20261021c"></script>
 <script src="lib/dm.js?v=20261021c"></script>
@@ -179,14 +183,26 @@ function render() {
   $('hostBox').innerHTML = M.canSetHost ? '<select id="hostSel" aria-label="主持人"><option value="">（還沒選）</option>' + M.people.map(function(p) { return '<option' + (p === M.host ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' : '<b>' + esc(M.host || '還沒選') + '</b>';
   if ($('hostSel')) $('hostSel').addEventListener('change', function() { post('meetingSetHost', [auth.name, auth.code, M.date, this.value]).then(function(r) { M = r; render(); toast('已設定主持人'); }).catch(function(e) { alert(e.message); }); });
   $('playBtn').disabled = !M.items.length;
-  if (!M.items.length) { $('list').innerHTML = '<div class="empty">這一週還沒有人加物件。按「＋ 加入物件」把要介紹的物件加進來。</div>'; return; }
+  var cnt = { '宣導': 0, '物件': 0, '上課': 0, '其他': 0 }; M.items.forEach(function(x) { cnt[x.itemKind || '物件']++; });
+  $('agendaSum').textContent = M.items.length ? '本週議程：' + [cnt['宣導'] ? '宣導 ' + cnt['宣導'] + ' 項' : '', cnt['物件'] ? '物件 ' + cnt['物件'] + ' 件' : '', cnt['上課'] ? '上課 ' + cnt['上課'] + ' 堂' : '', cnt['其他'] ? '其他 ' + cnt['其他'] + ' 項' : ''].filter(Boolean).join('、') : '';
+  if (!M.items.length) { $('list').innerHTML = '<div class="empty">這一週還沒有議程。按「＋ 加入物件」或「＋ 加入宣導／上課資料」。</div>'; return; }
   $('list').innerHTML = M.items.map(function(it, i) {
     var l = L(it), mine = it.agent === auth.name, can = M.canManage;
-    var ex = it.extra || {};
+    var ex = it.extra || {}, kind = it.itemKind || '物件';
+    if (kind !== '物件') {
+      return '<div class="item" data-id="' + esc(it.id) + '"><div class="no">' + (i + 1) + '</div>' +
+        '<div><div class="ttl"><span class="ktag k' + kind + '">' + ({ '上課': '上課資料', '宣導': '宣導', '其他': '其他' })[kind] + '</span>' + esc(it.caseName) + '</div><div class="meta">' + esc(kind === '上課' && ex.teacher ? '講師 ' + ex.teacher : it.agent) + '</div></div>' +
+        '<div class="acts">' + (can ? '<button type="button" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button type="button" data-down="' + i + '"' + (i < M.items.length - 1 ? '' : ' disabled') + '>↓</button>' : '') +
+          (mine || can ? '<button type="button" data-edit="' + esc(it.id) + '">編輯</button><button type="button" class="del" data-del="' + esc(it.id) + '">移除</button>' : '') + '</div>' +
+        ((it.links || []).length ? '<div class="links">' + it.links.map(function(k) { return '<a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + (k.image ? '🖼 ' : '') + esc(k.label) + '</a>'; }).join('') + '</div>' : '') +
+        (it.note ? '<div class="note">' + esc(it.note) + '</div>' : '') +
+        (can ? '<div class="minutes"><div class="lbl">會議紀錄</div><textarea data-min="' + esc(it.id) + '">' + esc(it.minutes || '') + '</textarea></div>'
+             : (it.minutes ? '<div class="minutes"><div class="lbl">會議紀錄</div><div class="note" style="margin:0;">' + esc(it.minutes) + '</div></div>' : '')) + '</div>';
+    }
     var sum = !it.key ? [it.typeTab, ex.rs, ex.price, ex.place, ex.land ? '土地 ' + ex.land + ' 坪' : '', ex.bld ? '建物 ' + ex.bld + ' 坪' : ''].filter(Boolean).join('・') + '（自己填）'
       : l ? [l.typesText, l.rs === '租' ? '出租' : l.rs === '售' ? '出售' : '', l.priceText || '', l.placeText || ''].filter(Boolean).join('・') : (it.typeTab || '');
     return '<div class="item" data-id="' + esc(it.id) + '"><div class="no">' + (i + 1) + '</div>' +
-      '<div><div class="ttl">' + esc(it.caseName || (l && l.name) || '（案名）') + '</div><div class="meta">' + esc(it.agent) + '｜' + esc(sum) + '</div></div>' +
+      '<div><div class="ttl"><span class="ktag k物件">物件</span>' + esc(it.caseName || (l && l.name) || '（案名）') + '</div><div class="meta">' + esc(it.agent) + '｜' + esc(sum) + '</div></div>' +
       '<div class="acts">' + (can ? '<button type="button" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button type="button" data-down="' + i + '"' + (i < M.items.length - 1 ? '' : ' disabled') + '>↓</button>' : '') +
         (mine || can ? '<button type="button" data-edit="' + esc(it.id) + '">編輯</button><button type="button" class="del" data-del="' + esc(it.id) + '">移除</button>' : '') + '</div>' +
       '<div class="links">' + mapLinks(it).concat((it.links || []).map(function(k) { return '<a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.label) + '</a>'; })).join('') + '</div>' +
@@ -205,12 +221,33 @@ $('nextW').addEventListener('click', function() { if (M) load(shift(M.date, 7));
 // 加入物件／編輯
 function linkRows(links) {
   links = (links && links.length ? links : [{ label: '網址', url: '' }]);
-  return links.map(function(k) { return '<div class="lrow"><input type="text" class="lLabel" value="' + esc(k.label) + '" style="max-width:8em;" list="lTypes"><input type="url" class="lUrl" placeholder="https://…" value="' + esc(k.url) + '"></div>'; }).join('');
+  return links.map(function(k) { return '<div class="lrow"' + (k.image ? ' data-img="' + esc(k.id) + '"' : '') + '><input type="text" class="lLabel" value="' + esc(k.label) + '" style="max-width:8em;" list="lTypes"><input type="url" class="lUrl" placeholder="https://…" value="' + esc(k.url) + '">' + (k.image ? '<span title="圖片會直接顯示在播放畫面" style="align-self:center;font-size:12px;color:var(--brand);">🖼</span>' : '') + '</div>'; }).join('');
+}
+// 圖片上傳前先壓縮：長邊最多 1600 像素、JPEG（省雲端空間，投影看不出差別）；壓完沒有比較小就用原檔。其他檔案原樣上傳（115/10/21）
+function shrinkImage(f) {
+  var asIs = function() { return new Promise(function(res) { var rd = new FileReader(); rd.onload = function() { res({ name: f.name, type: f.type || 'application/octet-stream', size: f.size, b64: String(rd.result).split(',')[1] }); }; rd.readAsDataURL(f); }); };
+  if (!/^image\/(jpeg|png|webp|heic|heif|bmp)/i.test(f.type)) return asIs();
+  return new Promise(function(res) {
+    var url = URL.createObjectURL(f), im = new Image();
+    im.onload = function() {
+      var k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      var d = c.toDataURL('image/jpeg', 0.82), b64 = d.split(',')[1], size = Math.round(b64.length * 3 / 4);
+      if (size >= f.size) asIs().then(res); else res({ name: f.name.replace(/\.[^.]+$/, '') + '.jpg', type: 'image/jpeg', size: size, b64: b64 });
+    };
+    im.onerror = function() { URL.revokeObjectURL(url); asIs().then(res); };
+    im.src = url;
+  });
 }
 function chipRow(group, list, cur) { return '<div class="chips" data-g="' + group + '">' + list.map(function(v) { return '<button type="button" class="chip' + (v === cur ? ' on' : '') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div>'; }
 function itemForm(title, it, onSave, custom) {
   var ex = (it && it.extra) || {};
-  var cf = custom ? ('<label class="f-label">案名 <span style="color:#B3261E;">*</span></label><input type="text" id="cName" class="full" style="height:38px;" maxlength="80" value="' + esc((it && it.caseName) || '') + '">' +
+  var agenda = typeof custom === 'string' && custom !== '物件';
+  var cf = agenda ? ('<label class="f-label">標題 <span style="color:#B3261E;">*</span></label><input type="text" id="cName" class="full" style="height:38px;" maxlength="80" value="' + esc((it && it.caseName) || '') + '">' +
+      (custom === '上課' ? '<label class="f-label">講師</label><input type="text" id="cTeacher" class="full" style="height:38px;" value="' + esc(ex.teacher || (it ? '' : auth.name)) + '">' : '')) :
+    custom ? ('<label class="f-label">案名 <span style="color:#B3261E;">*</span></label><input type="text" id="cName" class="full" style="height:38px;" maxlength="80" value="' + esc((it && it.caseName) || '') + '">' +
     '<label class="f-label">類型</label>' + chipRow('type', ['廠房', '土地', '房屋', '其他'], (it && it.typeTab) || '') +
     '<label class="f-label">租／售</label>' + chipRow('rs', ['出售', '出租'], ex.rs || '') +
     '<label class="f-label">地點</label><input type="text" id="cPlace" class="full" style="height:38px;" placeholder="例：台中市神岡區中山路" value="' + esc(ex.place || '') + '">' +
@@ -218,8 +255,8 @@ function itemForm(title, it, onSave, custom) {
     '<div><label class="f-label">土地坪數</label><input type="text" inputmode="decimal" id="cLand" class="full" style="height:38px;" value="' + esc(ex.land || '') + '"></div>' +
     '<div><label class="f-label">建物坪數</label><input type="text" inputmode="decimal" id="cBld" class="full" style="height:38px;" value="' + esc(ex.bld || '') + '"></div></div>') : '';
   var dlg = RuiheMatch.showModal(title, cf +
-    '<label class="f-label">補充說明</label><textarea class="full" id="fNote" rows="3" placeholder="例：屋主急售、可議價">' + esc((it && it.note) || '') + '</textarea>' +
-    '<label class="f-label">上傳檔案（PDF、PPT、Word、圖片，一個最大 20MB）</label>' +
+    '<label class="f-label">' + (agenda ? '內容' : '補充說明') + '</label><textarea class="full" id="fNote" rows="' + (agenda ? 6 : 3) + '" placeholder="' + (agenda ? '' : '例：屋主急售、可議價') + '">' + esc((it && it.note) || '') + '</textarea>' +
+    '<label class="f-label">上傳檔案（PDF、PPT、Word、圖片；圖片會自動壓縮，其他檔案一個最大 10MB）</label>' +
     '<label class="btn ghost" style="display:inline-flex;align-items:center;height:38px;cursor:pointer;">選擇檔案<input type="file" id="fFiles" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*" style="display:none;"></label>' +
     '<div id="fUpMsg" style="font-size:13px;color:var(--muted);margin-top:4px;"></div>' +
     '<label class="f-label">網址（雲端硬碟、網站…）</label><datalist id="lTypes">' + TYPE_LINKS.map(function(t) { return '<option value="' + t + '">'; }).join('') + '</datalist>' +
@@ -234,27 +271,29 @@ function itemForm(title, it, onSave, custom) {
     var next = function(i) {
       if (i >= files.length) { msg.textContent = '上傳完成 ' + files.length + ' 個檔案。'; save.disabled = false; return; }
       var f = files[i];
-      if (f.size > 20 * 1024 * 1024) { alert('「' + f.name + '」超過 20MB，請改放雲端硬碟再貼網址。'); next(i + 1); return; }
-      msg.textContent = '上傳中（' + (i + 1) + '/' + files.length + '）：' + f.name + '…';
-      var rd = new FileReader();
-      rd.onload = function() {
-        post('meetingUpload', [auth.name, auth.code, M.date, f.name, f.type, String(rd.result).split(',')[1]]).then(function(link) {
+      msg.textContent = '處理中（' + (i + 1) + '/' + files.length + '）：' + f.name + '…';
+      shrinkImage(f).then(function(up) {
+        if (up.size > 10 * 1024 * 1024) { alert('「' + f.name + '」超過 10MB，請放在自己的雲端硬碟再貼網址。'); next(i + 1); return; }
+        msg.textContent = '上傳中（' + (i + 1) + '/' + files.length + '）：' + f.name + '…';
+        post('meetingUpload', [auth.name, auth.code, M.date, up.name, up.type, up.b64]).then(function(link) {
           var box = b.querySelector('#fLinks'), first = box.querySelector('.lrow');
           if (first && !first.querySelector('.lUrl').value.trim()) first.remove();
           box.insertAdjacentHTML('beforeend', linkRows([link]));
           next(i + 1);
         }).catch(function(err) { alert('「' + f.name + '」上傳失敗：' + err.message); next(i + 1); });
-      };
-      rd.readAsDataURL(f);
+      });
     };
     next(0);
   });
   b.addEventListener('click', function(e) { var c = e.target.closest('.chip'); if (!c || !c.parentNode.getAttribute('data-g')) return; var on = !c.classList.contains('on'); [].forEach.call(c.parentNode.querySelectorAll('.chip'), function(x) { x.classList.remove('on'); }); if (on) c.classList.add('on'); });
   b.querySelector('#fMore').addEventListener('click', function() { b.querySelector('#fLinks').insertAdjacentHTML('beforeend', linkRows([{ label: '網址', url: '' }])); });
   b.querySelector('#fSave').addEventListener('click', function() {
-    var btn = this, links = [].map.call(b.querySelectorAll('.lrow'), function(r) { return { label: r.querySelector('.lLabel').value.trim() || '連結', url: r.querySelector('.lUrl').value.trim() }; }).filter(function(x) { return x.url; });
+    var btn = this, links = [].map.call(b.querySelectorAll('.lrow'), function(r) { var o = { label: r.querySelector('.lLabel').value.trim() || '連結', url: r.querySelector('.lUrl').value.trim() }; if (r.getAttribute('data-img')) { o.image = true; o.id = r.getAttribute('data-img'); } return o; }).filter(function(x) { return x.url; });
     var cust = null;
-    if (custom) {
+    if (agenda) {
+      cust = { itemKind: custom, caseName: b.querySelector('#cName').value.trim(), teacher: b.querySelector('#cTeacher') ? b.querySelector('#cTeacher').value.trim() : '' };
+      if (!cust.caseName) { alert('請填標題'); return; }
+    } else if (custom) {
       var pick = function(g) { var c = b.querySelector('[data-g="' + g + '"] .chip.on'); return c ? c.getAttribute('data-v') : ''; };
       cust = { caseName: b.querySelector('#cName').value.trim(), typeTab: pick('type'), rs: pick('rs'), place: b.querySelector('#cPlace').value, price: b.querySelector('#cPrice').value, land: b.querySelector('#cLand').value, bld: b.querySelector('#cBld').value };
       if (!cust.caseName) { alert('請填案名'); return; }
@@ -286,6 +325,18 @@ $('addBtn').addEventListener('click', function() {
     itemForm('「' + (l ? l.name : '') + '」加入週會', null, function(note, links) { return post('meetingAddItem', [auth.name, auth.code, M.date, k, note, links]); });
   });
 });
+$('addAgendaBtn').addEventListener('click', function() {
+  var sec = auth.role === '秘書' || auth.role === '管理員';
+  var kinds = [['物件', '物件介紹'], ['上課', '上課資料']].concat(sec ? [['宣導', '重要事項宣導']] : []).concat(M && M.canManage ? [['其他', '其他']] : []);
+  var dlg = RuiheMatch.showModal('要加入哪一種？', kinds.map(function(k) { return '<button type="button" class="btn ghost" data-kind="' + k[0] + '" style="width:100%;margin-bottom:8px;height:46px;font-size:16px;">' + k[1] + '</button>'; }).join('') +
+    (sec ? '' : '<div style="color:var(--muted);font-size:13px;">重要事項宣導由秘書、管理員加入。</div>'));
+  dlg.body.addEventListener('click', function(e) {
+    var bt = e.target.closest('[data-kind]'); if (!bt) return;
+    var k = bt.getAttribute('data-kind'); dlg.close();
+    if (k === '物件') { $('addBtn').click(); return; }
+    itemForm('加入' + ({ '上課': '上課資料', '宣導': '重要事項宣導', '其他': '其他' })[k], null, function(note, links, cust) { return post('meetingAddItem', [auth.name, auth.code, M.date, '', note, links, cust]); }, k);
+  });
+});
 $('list').addEventListener('click', function(e) {
   var t = e.target;
   var up = t.closest('[data-up]'), down = t.closest('[data-down]'), ed = t.closest('[data-edit]'), del = t.closest('[data-del]');
@@ -295,7 +346,7 @@ $('list').addEventListener('click', function(e) {
     post('meetingReorder', [auth.name, auth.code, M.date, ids]).then(function(r) { M = r; render(); }).catch(function(e2) { alert(e2.message); });
   } else if (ed) {
     var it = M.items.filter(function(x) { return x.id === ed.getAttribute('data-edit'); })[0];
-    itemForm('編輯「' + it.caseName + '」', it, function(note, links, cust) { return post('meetingUpdateItem', [auth.name, auth.code, it.id, note, links, cust]); }, !it.key);
+    itemForm('編輯「' + it.caseName + '」', it, function(note, links, cust) { return post('meetingUpdateItem', [auth.name, auth.code, it.id, note, links, cust]); }, it.itemKind && it.itemKind !== '物件' ? it.itemKind : !it.key);
   } else if (del) {
     if (!confirm('從這一週的週會移除？')) return;
     post('meetingRemoveItem', [auth.name, auth.code, del.getAttribute('data-del')]).then(function(r) { M = r; render(); toast('已移除'); }).catch(function(e2) { alert(e2.message); });
@@ -324,6 +375,19 @@ function showSlide() {
       (it.note ? '<div class="ft" style="margin-top:12px;border-left:3px solid #9FD3B1;padding-left:10px;">' + esc(it.note) + '</div>' : '') +
       '<div class="lk" style="margin-top:12px;">' + mapLinks(it).concat((it.links || []).map(function(k) { return '<a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.label) + '</a>'; })).join('') + '</div>';
   };
+  var kind = it.itemKind || '物件';
+  if (kind !== '物件') { // 宣導、上課、其他：上傳的圖片直接顯示，其他附件放連結
+    var ex2 = it.extra || {}, imgs = (it.links || []).filter(function(k) { return k.image && k.id; });
+    S.ph = Math.min(S.ph, Math.max(imgs.length - 1, 0));
+    var src = function(k) { return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(k.id) + '&sz=w1600'; };
+    $('sPh').innerHTML = imgs.length ? '<img src="' + src(imgs[S.ph]) + '" alt="">' : '<div style="font-size:64px;opacity:.5;">' + ({ '宣導': '📢', '上課': '📘', '其他': '📝' })[kind] + '</div>';
+    $('sThumbs').innerHTML = imgs.length > 1 ? imgs.map(function(k, j) { return '<img src="https://drive.google.com/thumbnail?id=' + encodeURIComponent(k.id) + '&sz=w200" data-ph="' + j + '" class="' + (j === S.ph ? 'on' : '') + '" alt="">'; }).join('') : '';
+    $('sInfo').innerHTML = '<div class="tg" style="font-weight:700;">' + ({ '宣導': '重要事項宣導', '上課': '上課資料', '其他': '其他' })[kind] + '</div><h2>' + esc(it.caseName) + '</h2>' +
+      '<div class="tg">' + esc(kind === '上課' && ex2.teacher ? '講師：' + ex2.teacher : it.agent) + '</div>' +
+      (it.note ? '<div class="ft" style="font-size:19px;margin-top:14px;">' + esc(it.note) + '</div>' : '') +
+      '<div class="lk" style="margin-top:14px;">' + (it.links || []).filter(function(k) { return !k.image; }).map(function(k) { return '<a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.label) + '</a>'; }).join('') + '</div>';
+    return;
+  }
   if (!it.key) { // 自己填的物件：沒有系統資料、沒有照片
     var ex = it.extra || {};
     var dd = { photos: [] }; S.dm['_' + it.id] = dd;

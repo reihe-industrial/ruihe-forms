@@ -385,11 +385,6 @@
     .hint { margin-top: 2px; margin-bottom: 4px; }
     .field > label { margin-bottom: 4px; }
     #typeFields, .card.two-col, .row2, .row3 { align-items: end; }
-    /* 長說明先只顯示第一行，點一下展開（115/10/21） */
-    .hint.clip { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; position: relative; padding-right: 7.5em; }
-    .hint.clip::after { content: "…看完整說明"; position: absolute; right: 0; top: 0; color: var(--brand); font-weight: 700; background: inherit; padding-left: 4px; }
-    .hint.clip.open { display: block; -webkit-line-clamp: unset; padding-right: 0; }
-    .hint.clip.open::after { content: none; }
     /* 謄本可以帶入的欄位：淺藍色 */
     .field.deed-able input:not([type=checkbox]):not([type=radio]), .field.deed-able select, .field.deed-able textarea { background: #EAF4FF; border-color: #BCD8F5; }
     .field.deed-able .checkbox-group { background: #EAF4FF; border-radius: 8px; padding: 4px 6px; }
@@ -463,6 +458,7 @@
     <h1>委託物件資料輸入</h1>
     <div class="subtitle" id="pageSubtitle">請依實際委託內容填寫</div>
     <div class="notice" id="deedTip" style="display:block;background:#FFF8E1;border:1px solid #E8D48A;border-radius:10px;padding:10px 14px;margin:0 0 14px;font-size:14.5px;">填寫物件前請先調謄本，可以加快物件填寫的速度。<a href="land-registry.html" style="font-weight:700;margin-left:6px;">去調謄本 →</a></div>
+    <div id="deedLegend" style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);margin:0 0 14px;"><span style="display:inline-block;width:42px;height:22px;background:#EAF4FF;border:1px solid #BCD8F5;border-radius:6px;"></span>藍底的欄位是謄本可以帶入的資料（在「謄本自動帶入」上傳謄本 PDF）。</div>
     <div class="mode-link" id="modeLink"></div>
     <div class="msg" id="msgBox" role="status"></div>
 
@@ -6730,20 +6726,5 @@ document.getElementById('listingForm').addEventListener('change', function(e) {
 })();
 </script>
 
-<script>
-// 超過兩行的長說明先只顯示第一行，點一下展開（115/10/21）
-(function() {
-  function clip() {
-    [].forEach.call(document.querySelectorAll('#listingForm .field > .hint'), function(h) {
-      if (h.__clipped || h.style.display === 'none' || !h.offsetParent) return;
-      var lh = parseFloat(getComputedStyle(h).lineHeight) || 20;
-      if (h.scrollHeight > lh * 2.6 && !h.querySelector('input,select,button')) { h.classList.add('clip'); h.__clipped = 1; }
-    });
-  }
-  document.addEventListener('click', function(e) { var h = e.target.closest && e.target.closest('.hint.clip'); if (h && e.target.tagName !== 'A') h.classList.toggle('open'); });
-  setTimeout(clip, 300);
-  new MutationObserver(function() { clearTimeout(window.__clipT); window.__clipT = setTimeout(clip, 200); }).observe(document.getElementById('listingForm'), { childList: true, subtree: true });
-})();
-</script>
 </body>
 </html>
