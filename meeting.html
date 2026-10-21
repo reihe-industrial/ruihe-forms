@@ -66,7 +66,7 @@
     #show .ctl { display: flex; justify-content: center; gap: 10px; padding: 10px; }
     @media (max-width: 800px) { #show .body { grid-template-columns: 1fr; overflow-y: auto; } .item { grid-template-columns: 36px minmax(0,1fr); } .item .acts { grid-column: 2; justify-content: flex-start; } }
   </style>
-  <link rel="stylesheet" href="lib/ui.css?v=20261020b">
+  <link rel="stylesheet" href="lib/ui.css?v=20261021a">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
   <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
 </head>
@@ -130,14 +130,14 @@
   })();
   </script>
     <h1>週會</h1>
-    <div class="subtitle">每週三週會要介紹的物件。業務先把自己的物件加進來，週會時按「開始播放」。</div>
+    <div class="subtitle">每週三週會要介紹的物件。業務先把要介紹的物件加進來（系統裡沒有的也可以自己填），週會時按「開始播放」。</div>
     <div class="bar">
       <button type="button" class="nav-btn" id="prevW" aria-label="上一週">‹</button>
       <span class="wk" id="wk">…</span>
       <button type="button" class="nav-btn" id="nextW" aria-label="下一週">›</button>
       <span style="margin-left:6px;">主持人：</span><span id="hostBox">…</span>
       <span style="flex:1"></span>
-      <button type="button" class="btn ghost" id="addBtn">＋ 加入我的物件</button>
+      <button type="button" class="btn ghost" id="addBtn">＋ 加入物件</button>
       <button type="button" class="btn" id="playBtn">▶ 開始播放</button>
     </div>
     <div id="list"><div class="loading">讀取中…</div></div>
@@ -168,6 +168,7 @@ function shift(dateIso, days) { var d = new Date(dateIso + 'T12:00:00'); d.setDa
 function wkText(dt) { var d = new Date(dt + 'T12:00:00'); return (d.getFullYear() - 1911) + ' 年 ' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日（三）'; }
 function L(it) { return byKey[it.key] || null; }
 function mapLinks(it) {
+  if (!it.key) { var pl = it.extra && it.extra.place; return pl ? ['<a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(pl) + '" target="_blank" rel="noopener">Google 地圖</a>'] : []; }
   var l = L(it), out = [];
   if (l && l.coord) out.push('<a href="https://www.google.com/maps?q=' + l.coord[0] + ',' + l.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a>');
   out.push('<a href="map.html?k=' + encodeURIComponent(it.key) + '" target="_blank" rel="noopener">物件地圖（國土測繪）</a>');
@@ -178,10 +179,12 @@ function render() {
   $('hostBox').innerHTML = M.canSetHost ? '<select id="hostSel" aria-label="主持人"><option value="">（還沒選）</option>' + M.people.map(function(p) { return '<option' + (p === M.host ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' : '<b>' + esc(M.host || '還沒選') + '</b>';
   if ($('hostSel')) $('hostSel').addEventListener('change', function() { post('meetingSetHost', [auth.name, auth.code, M.date, this.value]).then(function(r) { M = r; render(); toast('已設定主持人'); }).catch(function(e) { alert(e.message); }); });
   $('playBtn').disabled = !M.items.length;
-  if (!M.items.length) { $('list').innerHTML = '<div class="empty">這一週還沒有人加物件。按「＋ 加入我的物件」把要介紹的物件加進來。</div>'; return; }
+  if (!M.items.length) { $('list').innerHTML = '<div class="empty">這一週還沒有人加物件。按「＋ 加入物件」把要介紹的物件加進來。</div>'; return; }
   $('list').innerHTML = M.items.map(function(it, i) {
     var l = L(it), mine = it.agent === auth.name, can = M.canManage;
-    var sum = l ? [l.typesText, l.rs === '租' ? '出租' : l.rs === '售' ? '出售' : '', l.priceText || '', l.placeText || ''].filter(Boolean).join('・') : (it.typeTab || '');
+    var ex = it.extra || {};
+    var sum = !it.key ? [it.typeTab, ex.rs, ex.price, ex.place, ex.land ? '土地 ' + ex.land + ' 坪' : '', ex.bld ? '建物 ' + ex.bld + ' 坪' : ''].filter(Boolean).join('・') + '（自己填）'
+      : l ? [l.typesText, l.rs === '租' ? '出租' : l.rs === '售' ? '出售' : '', l.priceText || '', l.placeText || ''].filter(Boolean).join('・') : (it.typeTab || '');
     return '<div class="item" data-id="' + esc(it.id) + '"><div class="no">' + (i + 1) + '</div>' +
       '<div><div class="ttl">' + esc(it.caseName || (l && l.name) || '（案名）') + '</div><div class="meta">' + esc(it.agent) + '｜' + esc(sum) + '</div></div>' +
       '<div class="acts">' + (can ? '<button type="button" data-up="' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button type="button" data-down="' + i + '"' + (i < M.items.length - 1 ? '' : ' disabled') + '>↓</button>' : '') +
@@ -204,25 +207,41 @@ function linkRows(links) {
   links = (links && links.length ? links : [{ label: 'PPT', url: '' }]);
   return links.map(function(k) { return '<div class="lrow"><input type="text" class="lLabel" value="' + esc(k.label) + '" style="max-width:8em;" list="lTypes"><input type="url" class="lUrl" placeholder="https://…" value="' + esc(k.url) + '"></div>'; }).join('');
 }
-function itemForm(title, it, onSave) {
-  var dlg = RuiheMatch.showModal(title,
+function chipRow(group, list, cur) { return '<div class="chips" data-g="' + group + '">' + list.map(function(v) { return '<button type="button" class="chip' + (v === cur ? ' on' : '') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div>'; }
+function itemForm(title, it, onSave, custom) {
+  var ex = (it && it.extra) || {};
+  var cf = custom ? ('<label class="f-label">案名 <span style="color:#B3261E;">*</span></label><input type="text" id="cName" class="full" style="height:38px;" maxlength="80" value="' + esc((it && it.caseName) || '') + '">' +
+    '<label class="f-label">類型</label>' + chipRow('type', ['廠房', '土地', '房屋', '其他'], (it && it.typeTab) || '') +
+    '<label class="f-label">租／售</label>' + chipRow('rs', ['出售', '出租'], ex.rs || '') +
+    '<label class="f-label">地點</label><input type="text" id="cPlace" class="full" style="height:38px;" placeholder="例：台中市神岡區中山路" value="' + esc(ex.place || '') + '">' +
+    '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;"><div><label class="f-label">價格</label><input type="text" id="cPrice" class="full" style="height:38px;" placeholder="例：5000萬" value="' + esc(ex.price || '') + '"></div>' +
+    '<div><label class="f-label">土地坪數</label><input type="text" inputmode="decimal" id="cLand" class="full" style="height:38px;" value="' + esc(ex.land || '') + '"></div>' +
+    '<div><label class="f-label">建物坪數</label><input type="text" inputmode="decimal" id="cBld" class="full" style="height:38px;" value="' + esc(ex.bld || '') + '"></div></div>') : '';
+  var dlg = RuiheMatch.showModal(title, cf +
     '<label class="f-label">補充說明</label><textarea class="full" id="fNote" rows="3" placeholder="例：屋主急售、可議價">' + esc((it && it.note) || '') + '</textarea>' +
     '<label class="f-label">連結（PPT、PDF、Word、網址、雲端資料夾…）</label><datalist id="lTypes">' + TYPE_LINKS.map(function(t) { return '<option value="' + t + '">'; }).join('') + '</datalist>' +
     '<div id="fLinks">' + linkRows(it && it.links) + '</div><button type="button" class="btn ghost" id="fMore" style="height:34px;margin-top:6px;">＋ 再加一個連結</button>' +
     '<div style="margin-top:14px;"><button type="button" class="btn" id="fSave" style="width:100%;">儲存</button></div>');
   var b = dlg.body;
+  b.addEventListener('click', function(e) { var c = e.target.closest('.chip'); if (!c || !c.parentNode.getAttribute('data-g')) return; var on = !c.classList.contains('on'); [].forEach.call(c.parentNode.querySelectorAll('.chip'), function(x) { x.classList.remove('on'); }); if (on) c.classList.add('on'); });
   b.querySelector('#fMore').addEventListener('click', function() { b.querySelector('#fLinks').insertAdjacentHTML('beforeend', linkRows([{ label: '網址', url: '' }])); });
   b.querySelector('#fSave').addEventListener('click', function() {
     var btn = this, links = [].map.call(b.querySelectorAll('.lrow'), function(r) { return { label: r.querySelector('.lLabel').value.trim() || '連結', url: r.querySelector('.lUrl').value.trim() }; }).filter(function(x) { return x.url; });
+    var cust = null;
+    if (custom) {
+      var pick = function(g) { var c = b.querySelector('[data-g="' + g + '"] .chip.on'); return c ? c.getAttribute('data-v') : ''; };
+      cust = { caseName: b.querySelector('#cName').value.trim(), typeTab: pick('type'), rs: pick('rs'), place: b.querySelector('#cPlace').value, price: b.querySelector('#cPrice').value, land: b.querySelector('#cLand').value, bld: b.querySelector('#cBld').value };
+      if (!cust.caseName) { alert('請填案名'); return; }
+    }
     btn.disabled = true; btn.textContent = '儲存中…';
-    onSave(b.querySelector('#fNote').value, links).then(function(r) { M = r; render(); dlg.close(); toast('已儲存'); }).catch(function(e) { alert(e.message); btn.disabled = false; btn.textContent = '儲存'; });
+    onSave(b.querySelector('#fNote').value, links, cust).then(function(r) { M = r; render(); dlg.close(); toast('已儲存'); }).catch(function(e) { alert(e.message); btn.disabled = false; btn.textContent = '儲存'; });
   });
 }
 $('addBtn').addEventListener('click', function() {
   var sec = auth.role === '秘書' || auth.role === '管理員';
   var inWeek = {}; (M ? M.items : []).forEach(function(i) { inWeek[i.key] = 1; });
   var mine = listings.filter(function(l) { return l.key && !inWeek[l.key] && (sec || String(l.agents || '').split(/[、,，\s]+/).indexOf(auth.name) !== -1); });
-  var dlg = RuiheMatch.showModal('選要介紹的物件', '<input type="text" id="pkQ" placeholder="搜尋案名、地區" style="width:100%;box-sizing:border-box;height:38px;border-radius:8px;border:1px solid var(--line);padding:0 10px;font:inherit;margin-bottom:8px;"><div id="pkList"></div>');
+  var dlg = RuiheMatch.showModal('選要介紹的物件', '<button type="button" class="btn ghost" id="pkCustom" style="width:100%;margin-bottom:10px;">✎ 自己填（系統裡沒有、或資料還在整理的物件）</button><input type="text" id="pkQ" placeholder="搜尋案名、地區" style="width:100%;box-sizing:border-box;height:38px;border-radius:8px;border:1px solid var(--line);padding:0 10px;font:inherit;margin-bottom:8px;"><div id="pkList"></div>');
   var draw = function() {
     var q = dlg.body.querySelector('#pkQ').value.trim();
     var list = mine.filter(function(l) { return !q || (l.name + l.placeText).indexOf(q) !== -1; });
@@ -231,6 +250,10 @@ $('addBtn').addEventListener('click', function() {
   };
   draw();
   dlg.body.querySelector('#pkQ').addEventListener('input', draw);
+  dlg.body.querySelector('#pkCustom').addEventListener('click', function() {
+    dlg.close();
+    itemForm('自己填一件物件', null, function(note, links, cust) { return post('meetingAddItem', [auth.name, auth.code, M.date, '', note, links, cust]); }, true);
+  });
   dlg.body.addEventListener('click', function(e) {
     var p = e.target.closest('[data-k]'); if (!p) return;
     var k = p.getAttribute('data-k'), l = byKey[k]; dlg.close();
@@ -246,7 +269,7 @@ $('list').addEventListener('click', function(e) {
     post('meetingReorder', [auth.name, auth.code, M.date, ids]).then(function(r) { M = r; render(); }).catch(function(e2) { alert(e2.message); });
   } else if (ed) {
     var it = M.items.filter(function(x) { return x.id === ed.getAttribute('data-edit'); })[0];
-    itemForm('編輯「' + it.caseName + '」', it, function(note, links) { return post('meetingUpdateItem', [auth.name, auth.code, it.id, note, links]); });
+    itemForm('編輯「' + it.caseName + '」', it, function(note, links, cust) { return post('meetingUpdateItem', [auth.name, auth.code, it.id, note, links, cust]); }, !it.key);
   } else if (del) {
     if (!confirm('從這一週的週會移除？')) return;
     post('meetingRemoveItem', [auth.name, auth.code, del.getAttribute('data-del')]).then(function(r) { M = r; render(); toast('已移除'); }).catch(function(e2) { alert(e2.message); });
@@ -275,6 +298,18 @@ function showSlide() {
       (it.note ? '<div class="ft" style="margin-top:12px;border-left:3px solid #9FD3B1;padding-left:10px;">' + esc(it.note) + '</div>' : '') +
       '<div class="lk" style="margin-top:12px;">' + mapLinks(it).concat((it.links || []).map(function(k) { return '<a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.label) + '</a>'; })).join('') + '</div>';
   };
+  if (!it.key) { // 自己填的物件：沒有系統資料、沒有照片
+    var ex = it.extra || {};
+    var dd = { photos: [] }; S.dm['_' + it.id] = dd;
+    var d0 = { name: it.caseName, tags: [it.typeTab, ex.rs].filter(Boolean).join('・'), price: ex.price || '', unit: '', feature: '',
+      specs: [['位置', ex.place], ['土地面積', ex.land ? ex.land + ' 坪' : ''], ['建物面積', ex.bld ? ex.bld + ' 坪' : '']].filter(function(x) { return x[1]; }) };
+    $('sPh').innerHTML = '<div style="opacity:.6;">沒有照片</div>'; $('sThumbs').innerHTML = '';
+    $('sInfo').innerHTML = '<h2>' + esc(d0.name) + '</h2><div class="tg">' + esc(d0.tags) + '</div>' + (d0.price ? '<div class="pr">' + esc(d0.price) + '</div>' : '') +
+      '<dl>' + d0.specs.map(function(s2) { return '<dt>' + esc(s2[0]) + '</dt><dd style="margin:0;">' + esc(s2[1]) + '</dd>'; }).join('') + '</dl>' +
+      (it.note ? '<div class="ft" style="margin-top:12px;border-left:3px solid #9FD3B1;padding-left:10px;">' + esc(it.note) + '</div>' : '') +
+      '<div class="lk" style="margin-top:12px;">' + mapLinks(it).concat((it.links || []).map(function(k) { return '<a href="' + esc(k.url) + '" target="_blank" rel="noopener">' + esc(k.label) + '</a>'; })).join('') + '</div>';
+    return;
+  }
   var cached = S.dm[it.key];
   paint(cached);
   if (!cached) post('dmGetData', [auth.name, auth.code, it.key]).then(function(dm) { S.dm[it.key] = dm; if (M.items[S.i] && M.items[S.i].key === it.key) paint(dm); }).catch(function() { S.dm[it.key] = { photos: [] }; if (M.items[S.i] && M.items[S.i].key === it.key) paint(S.dm[it.key]); });

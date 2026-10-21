@@ -72,3 +72,12 @@ body {
   background: linear-gradient(90deg, #ECEFEA 25%, #F7F9F6 37%, #ECEFEA 63%); background-size: 400% 100%; animation: rf-shimmer 1.3s ease infinite; }
 .loading::before { width: 70%; }
 .loading::after { width: 45%; }
+
+/* ---------- 選單不要左右捲：放不下就換到第二行，字和間距縮小一點（115/10/21） ---------- */
+.site-nav { flex-wrap: wrap; overflow: visible; row-gap: 0; padding: 0 6px; }
+.site-nav a { padding: 12px 9px 10px; font-size: 14px; }
+.site-nav::before { padding-right: 10px; }
+@media (max-width: 640px) {
+  .site-nav { margin-left: 0; margin-right: 0; border-radius: 12px; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+  .site-nav a { padding: 10px 8px 8px; font-size: 13.5px; }
+}
