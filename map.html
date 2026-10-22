@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>物件地圖｜瑞禾不動產</title>
+  <title>物件地圖｜瑞禾業務系統</title>
   <link rel="stylesheet" href="lib/leaflet.css">
   <style>
     * { box-sizing: border-box; }
@@ -543,6 +543,20 @@ function mainType(types) {
   return '其他';
 }
 function typeClass(t) { return t === '廠房' ? 't-factory' : t === '土地' ? 't-land' : (t === '房屋' || HOUSE_KINDS.indexOf(t) !== -1) ? 't-house' : ''; }
+// 廠房出售：土地均價＝總價÷土地坪數、建物均價＝總價÷建物坪數；其他照原本的單價（115/10/22）
+function mapUnitHtml_(r) {
+  var num = function(v) { var m = String(v || '').replace(/,/g, '').match(/\d+(?:\.\d+)?/); return m ? parseFloat(m[0]) : null; };
+  var t = String(cell(r, '總價')).replace(/,/g, ''), m = t.match(/(\d+(?:\.\d+)?)\s*(億|萬)?/), total = m ? parseFloat(m[1]) * (m[2] === '億' ? 10000 : 1) : null;
+  var f2 = function(n) { return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); };
+  var sp = function(x) { return '<span class="muted" style="font-weight:400;font-size:13px;">　' + x + '</span>'; };
+  if (/廠房/.test(cell(r, '類型')) && !/租/.test(cell(r, '租/售')) && !/月/.test(t) && total) {
+    var L = num(cell(r, '土地面積(坪)')), B = num(cell(r, '建物面積(坪)')), out = '';
+    if (L > 0) out += sp('土地均價 ' + f2(total / L) + ' 萬/坪');
+    if (B > 0) out += sp('建物均價 ' + f2(total / B) + ' 萬/坪');
+    if (out) return out;
+  }
+  return cell(r, '單價') ? sp('單價 ' + esc(cell(r, '單價'))) : '';
+}
 function cell(row, label) { var i = colIndex[label]; return i === undefined ? '' : (row[i] || ''); }
 
 var FOCUS_KEY = (/[?&]k=([^&#]+)/.exec(location.search) || [0, ''])[1], focusMarker = null;
@@ -666,7 +680,7 @@ function popupHtml(it) {
   var place = [cell(r, '坐落'), cell(r, '地段')].filter(Boolean).join('　');
   return '<div class="pop"><b>' + esc(cell(r, '案件名稱') || '（未填案名）') + '</b>' +
     '<div class="tags">' + tags + '</div>' +
-    '<div class="price">' + esc(cell(r, '總價') || '總價未填') + (cell(r, '單價') ? '<span class="muted" style="font-weight:400;font-size:13px;">　單價 ' + esc(cell(r, '單價')) + '</span>' : '') + '</div>' +
+    '<div class="price">' + esc(cell(r, '總價') || '總價未填') + mapUnitHtml_(r) + '</div>' +
     (place ? '<div>' + esc(place) + '</div>' : '') +
     (area.length ? '<div>' + area.join('｜') + '</div>' : '') +
     (cell(r, '業務人員') ? '<div class="muted">業務：' + esc(cell(r, '業務人員')) + '</div>' : '') +

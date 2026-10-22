@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>物件簡表｜瑞禾不動產</title>
+  <title>物件簡表｜瑞禾業務系統</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -363,7 +363,7 @@
   </div>
 
 <script src="lib/match.js?v=20261021c"></script>
-<script src="lib/dm.js?v=20261022a"></script>
+<script src="lib/dm.js?v=20261022b"></script>
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 
@@ -794,6 +794,7 @@ function tableHtml(list) {
       if (c === C.type) return '<td>' + typeTagHtml(r) + '</td>';
       if (c === C.name) return '<td class="name">' + esc(v) + '</td>';
       if (c === C.contract) return '<td>' + contractTagHtml(v) + '</td>';
+      if (c === C.unit) { var u = unitHtml_(r, cell(r, C.land), cell(r, C.bld)); return '<td class="num">' + (/均價/.test(u) ? u.replace(/<span>/g, '<div style="white-space:nowrap;">').replace(/<\/span>/g, '</div>') : esc(v)) + '</td>'; }
       if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(v) + '</td>';
       return '<td>' + esc(v) + '</td>';
     }).join('');
@@ -810,6 +811,18 @@ document.addEventListener('click', function(e) {
   var b = e.target.closest('[data-more]'); if (!b) return;
   var k = b.getAttribute('data-more'); openMore[k] = !openMore[k]; applyAndRender();
 });
+// 廠房出售：土地均價＝總價÷土地坪數、建物均價＝總價÷建物坪數；其他照原本的單價（115/10/22）
+function unitHtml_(r, land, bld) {
+  var total = toWan(cell(r, C.total)), rs = String(cell(r, C.rs)), L = firstNumber(land), B = firstNumber(bld);
+  var f2 = function(n) { return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); };
+  if (/廠房/.test(cell(r, C.type)) && !/租/.test(rs) && !/月/.test(cell(r, C.total)) && total) {
+    var out = [];
+    if (L > 0) out.push('<span>土地均價 ' + f2(total / L) + ' 萬/坪</span>');
+    if (B > 0) out.push('<span>建物均價 ' + f2(total / B) + ' 萬/坪</span>');
+    if (out.length) return out.join('');
+  }
+  return cell(r, C.unit) ? '<span>單價 ' + esc(cell(r, C.unit)) + '</span>' : '';
+}
 function cardsHtml(list) {
   var others = data.columns.filter(function(c) { return CARD_LABELS.indexOf(c) === -1; });
   return '<div class="cards">' + list.map(function(it) {
@@ -826,7 +839,7 @@ function cardsHtml(list) {
       '<div class="item-top"><span class="item-name">' + esc(cell(r, C.name) || '（未填案名）') + '</span>' +
         typeTagHtml(r) + (rs ? '<span class="tag rs">' + esc(rs) + '</span>' : '') + contractTagHtml(cell(r, C.contract)) + '</div>' +
       '<div class="item-price"><b>' + esc(cell(r, C.total) || '總價未填') + '</b>' +
-        (cell(r, C.unit) ? '<span>單價 ' + esc(cell(r, C.unit)) + '</span>' : '') + '</div>' +
+        unitHtml_(r, land, bld) + '</div>' +
       (cell(r, C.place) ? '<div class="item-meta">' + esc(cell(r, C.place)) + '</div>' : '') +
       (area.length ? '<div class="item-meta">' + area.join('｜') + '</div>' : '') +
       (cell(r, C.agent) ? '<div class="item-meta muted">業務：' + esc(cell(r, C.agent)) + '</div>' : '') +
