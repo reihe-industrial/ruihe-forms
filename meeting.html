@@ -139,8 +139,8 @@
       <button type="button" class="nav-btn" id="nextW" aria-label="下一週">›</button>
       <span style="margin-left:6px;">主持人：</span><span id="hostBox">…</span>
       <span style="flex:1"></span>
-      <button type="button" class="btn ghost" id="addBtn">＋ 加入物件</button>
-      <button type="button" class="btn ghost" id="addAgendaBtn">＋ 加入宣導／上課資料</button>
+      <button type="button" id="addBtn" hidden></button>
+      <button type="button" class="btn ghost" id="addAgendaBtn">＋ 加入物件／宣導／上課</button>
       <button type="button" class="btn" id="playBtn">▶ 開始播放</button>
     </div>
     <div id="agendaSum" style="font-size:14px;color:var(--muted);margin:0 0 10px;"></div>
@@ -185,7 +185,7 @@ function render() {
   $('playBtn').disabled = !M.items.length;
   var cnt = { '宣導': 0, '物件': 0, '上課': 0, '其他': 0 }; M.items.forEach(function(x) { cnt[x.itemKind || '物件']++; });
   $('agendaSum').textContent = M.items.length ? '本週議程：' + [cnt['宣導'] ? '宣導 ' + cnt['宣導'] + ' 項' : '', cnt['物件'] ? '物件 ' + cnt['物件'] + ' 件' : '', cnt['上課'] ? '上課 ' + cnt['上課'] + ' 堂' : '', cnt['其他'] ? '其他 ' + cnt['其他'] + ' 項' : ''].filter(Boolean).join('、') : '';
-  if (!M.items.length) { $('list').innerHTML = '<div class="empty">這一週還沒有議程。按「＋ 加入物件」或「＋ 加入宣導／上課資料」。</div>'; return; }
+  if (!M.items.length) { $('list').innerHTML = '<div class="empty">這一週還沒有議程。按「＋ 加入物件／宣導／上課」。</div>'; return; }
   $('list').innerHTML = M.items.map(function(it, i) {
     var l = L(it), mine = it.agent === auth.name, can = M.canManage;
     var ex = it.extra || {}, kind = it.itemKind || '物件';
