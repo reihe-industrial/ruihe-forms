@@ -1272,6 +1272,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
       msgBox.className = 'msg success';
       msgBox.textContent = result.message || '送出成功！';
       showToast(result.message || '送出成功！', 'success');
+      bigNotice_('success', '客需已送出', (result.message || '送出成功！') + '\n可以到「修改物件／客需」的「客需」分頁查看或修改。');
       clearDraft_();
       document.querySelectorAll('input[type=text], input[type=number], textarea').forEach(function(el) { el.value = ''; });
       document.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
@@ -1291,6 +1292,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
       msgBox.className = 'msg error';
       msgBox.textContent = (result && result.message) || '送出失敗，請稍後再試。';
       showToast((result && result.message) || '送出失敗，請稍後再試。', 'error');
+      bigNotice_('error', '沒有送出', (result && result.message) || '送出失敗，請稍後再試。');
     }
     window.scrollTo(0, 0);
   }).catch(function(err) {
@@ -1299,6 +1301,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     msgBox.className = 'msg error';
     msgBox.textContent = '送出失敗：' + (err && err.message ? err.message : err);
     showToast('送出失敗：' + (err && err.message ? err.message : err), 'error');
+    bigNotice_('error', '沒有送出', '送出失敗：' + (err && err.message ? err.message : err) + '\n請檢查網路後再按一次「送出」。');
     window.scrollTo(0, 0);
   });
   }
@@ -2068,6 +2071,34 @@ RuiheFormUI.init({
   fold();
   new MutationObserver(function() { clearTimeout(window.__foldT); window.__foldT = setTimeout(fold, 120); }).observe(document.body, { childList: true, subtree: true });
 })();
+</script>
+<script>
+// 送出結果的大彈窗（115/10/22）：畫面正中間、不會自動消失，要按「知道了」才關；送出中也會顯示「處理中」
+function bigNotice_(kind, title, text, btnText) {
+  var ov = document.getElementById('bigNoticeOv');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'bigNoticeOv';
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-labelledby', 'bigNoticeTitle');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(20,32,24,.55);display:none;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:480px;width:100%;padding:30px 26px 24px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.25);">' +
+      '<div id="bigNoticeIcon" style="width:76px;height:76px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800;color:#fff;"></div>' +
+      '<div id="bigNoticeTitle" style="font-size:26px;font-weight:800;margin-bottom:10px;"></div>' +
+      '<div id="bigNoticeText" style="font-size:17px;line-height:1.7;color:#333;white-space:pre-line;margin-bottom:22px;"></div>' +
+      '<button type="button" id="bigNoticeBtn" style="width:100%;height:54px;border:none;border-radius:12px;font-size:19px;font-weight:800;color:#fff;cursor:pointer;">知道了</button></div>';
+    document.body.appendChild(ov);
+    document.getElementById('bigNoticeBtn').addEventListener('click', function() { ov.style.display = 'none'; });
+    document.addEventListener('keydown', function(e) { if (ov.style.display === 'flex' && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); ov.style.display = 'none'; } });
+  }
+  var C = { success: ['#2f6f4e', '✓'], error: ['#B3261E', '!'], wait: ['#8a6d1d', '…'] }[kind] || ['#2f6f4e', '✓'];
+  var ic = document.getElementById('bigNoticeIcon'); ic.style.background = C[0]; ic.textContent = C[1];
+  document.getElementById('bigNoticeTitle').style.color = C[0];
+  document.getElementById('bigNoticeTitle').textContent = title;
+  document.getElementById('bigNoticeText').textContent = text || '';
+  var b = document.getElementById('bigNoticeBtn'); b.style.background = C[0];
+  b.textContent = btnText || (kind === 'wait' ? '先關掉（處理完會再通知）' : '知道了');
+  ov.style.display = 'flex';
+  setTimeout(function() { try { b.focus(); } catch (e) {} }, 30);
+}
 </script>
 </body>
 </html>
