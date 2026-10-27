@@ -620,6 +620,7 @@
           <label class="required">契約編號</label>
           <div class="hint">請填寫委託書上的編號</div>
           <input type="text" data-label="契約編號">
+          <div class="hint" id="contractNoNote" style="display:none;"></div>
         </div>
         <div class="field" id="entrustKindField" style="display:none; grid-column: 1 / -1;">
           <label class="required">委託類別</label>
@@ -1213,6 +1214,40 @@ function syncEntrustKindRadios_() {
   document.querySelectorAll('input[name="entrustKind"]').forEach(function(r) { r.checked = r.value === h.value; });
 }
 setInterval(function() { var h = document.getElementById('entrustKindValue'); if (h && h.value && !document.querySelector('input[name="entrustKind"]:checked')) syncEntrustKindRadios_(); }, 1000);
+// 契約編號第一個字代表的契約（115/10/22；目前是住商的，換品牌時在秘書專區「系統設定」的「契約編號字首」改）：
+// 認得的字首在編號下面顯示契約名稱；是委託契約就自動選好委託類別、委託種類（業務自己選過就不動）；不是委託契約的編號提醒確認
+var CONTRACT_PREFIX_DEF_ = 'A｜專任委託銷售契約書｜專任｜買賣\nB｜專任委託出租契約書｜專任｜租賃\nD｜不動產租賃契約書（非住宅使用）｜｜租賃\nE｜買賣定金收款憑證｜｜買賣\nH｜租賃定金收款憑證｜｜租賃\nI｜承租要約書｜｜租賃\nJ｜住宅用租賃契約書｜｜租賃\nM｜買賣議價委託書｜｜買賣\nP｜土地專任委託銷售契約書｜專任｜買賣\nR｜土地一般委託銷售契約書｜一般｜買賣\nT｜一般委託出租契約書｜一般｜租賃\nV｜委託銷售/出租契變同意書｜｜\nW｜(預售版)一般委託銷售契約書｜一般｜買賣\nX｜(預售版)專任委託銷售契約書｜專任｜買賣\nZ｜一般委託銷售契約書｜一般｜買賣';
+function contractPrefixMap_() {
+  var txt = '';
+  try { txt = ((JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values || {}).contractPrefixes || ''; } catch (e) {}
+  var map = {};
+  String(txt || CONTRACT_PREFIX_DEF_).split(/\n/).forEach(function(line) {
+    var p = line.split(/[｜|]/).map(function(x) { return x.trim(); });
+    var k = (p[0] || '').replace(/[=＝:：].*$/, '').toUpperCase();
+    if (k) map[k] = { name: p[1] || '', kind: /專任/.test(p[2] || '') ? '專簽' : (/一般/.test(p[2] || '') ? '一般' : ''), rs: /租/.test(p[3] || '') ? '租賃' : (/買|售/.test(p[3] || '') ? '買賣' : '') };
+  });
+  return map;
+}
+var entrustKindByUser_ = false;
+document.addEventListener('change', function(e) { if (e.target && e.target.name === 'entrustKind' && e.isTrusted) entrustKindByUser_ = true; });
+function contractNoCheck_() {
+  var inp = document.querySelector('[data-label="契約編號"]'), note = document.getElementById('contractNoNote');
+  if (!inp || !note) return;
+  var v = inp.value.trim(), m = v ? contractPrefixMap_()[v.charAt(0).toUpperCase()] : null;
+  if (!m) { note.style.display = 'none'; note.textContent = ''; note.classList.remove('warn-hint'); return; }
+  var isEntrust = selectedContractType_() === '委託';
+  note.style.display = '';
+  note.classList.toggle('warn-hint', isEntrust && !m.kind);
+  note.textContent = v.charAt(0).toUpperCase() + '：' + m.name + (isEntrust && !m.kind ? '　❗ 這不是委託契約的編號，請確認' : '');
+  if (isEntrust && m.kind && !entrustKindByUser_ && !EDIT_MODE) {
+    var h = document.getElementById('entrustKindValue');
+    if (h && h.value !== m.kind) { h.value = m.kind; syncEntrustKindRadios_(); h.dispatchEvent(new Event('change', { bubbles: true })); }
+    var rsSel = document.querySelector('select[data-label="委託種類"]');
+    if (rsSel && m.rs && rsSel.value !== m.rs) { rsSel.value = m.rs; rsSel.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+}
+document.addEventListener('input', function(e) { if (e.target && e.target.matches && e.target.matches('[data-label="契約編號"]')) contractNoCheck_(); });
+document.addEventListener('change', function(e) { if (e.target && e.target.name === 'contractType') contractNoCheck_(); });
 function updateClientRequiredMarks_() {
   var optional = clientInfoOptional_();
   document.querySelectorAll('.client-info-label').forEach(function(l) {
