@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+  <script>
+  // 新增物件、新增客需、調謄本只給登入的同仁用（115/10/22）：這個分頁沒有登入、或太久沒動作，就帶到首頁登入，登入後回來
+  (function() {
+    var ok = false;
+    try {
+      var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
+      try { var st = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; if (st && isFinite(Number(st.idleMinutes))) lim = Number(st.idleMinutes); } catch (e2) {}
+      var t = parseInt(sessionStorage.getItem('ruihe_last_active_v1'), 10) || 0;
+      ok = !!(v && v.name && v.code) && !(t > 0 && Date.now() - t > lim * 60000);
+    } catch (e) {}
+    if (!ok) { try { sessionStorage.setItem('ruihe_login_msg', '請先登入'); } catch (e) {} location.replace('index.html?next=' + encodeURIComponent(location.pathname.split('/').pop() + location.search)); return; }
+    // 填表單時有動作就算「有在用」，其他頁面不會因為 30 分鐘沒動作而登出
+    var last = 0;
+    ['click', 'keydown', 'input', 'touchstart', 'scroll'].forEach(function(ev) {
+      window.addEventListener(ev, function() { var n = Date.now(); if (n - last < 15000) return; last = n; try { sessionStorage.setItem('ruihe_last_active_v1', String(n)); } catch (e) {} }, { passive: true, capture: true });
+    });
+  })();
+  </script>
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -220,11 +238,19 @@
     }
     .district-entry:last-child { border-bottom: none; margin-bottom: 4px; padding-bottom: 0; }
     .district-entry.no-building { grid-template-columns: 1fr 1fr 1fr auto; }
+    .district-entry.lot-entry { grid-template-columns: 1fr 1fr 1fr 1fr 1.7fr auto; }
+    .lotZoneOther { margin-top: 6px; }
+    #zoneFarmWarn { margin-top: 8px; }
     .district-entry .mini-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 600; }
     .district-entry select, .district-entry input { padding: 8px 10px; font-size: 13.5px; }
     @media (max-width: 480px) {
       .district-entry { grid-template-columns: 1fr 1fr; }
       .district-entry .remove-btn { grid-column: 1 / -1; }
+      .district-entry.lot-entry .lot-zone-wrap { grid-column: 1 / -1; }
+    }
+    @media (max-width: 900px) and (min-width: 481px) {
+      .district-entry.lot-entry { grid-template-columns: 1fr 1fr 1fr 1fr auto; }
+      .district-entry.lot-entry .lot-zone-wrap { grid-column: 1 / -2; }
     }
 
     .remove-btn {
@@ -398,9 +424,9 @@
   <div class="container">
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="index.html" data-key="home" data-home="1">登入</a>
-    <a href="listing.html" data-key="listing">新增物件</a>
-    <a href="client-needs.html" data-key="needs">新增客需</a>
-    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <a href="listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
+    <a href="client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
+    <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
@@ -654,8 +680,11 @@
           <div class="field">
             <label class="required">地號</label>
             <div class="hint">同一段別的地號可以寫在同一格，用逗號分隔，例如：375,376,377
-不同段別請按「＋新增一筆地號」分開填寫</div>
+不同段別、或使用分區不同的地號，請按「＋新增一筆地號」分開填寫
+每一筆都要選使用分區（先選上面的「都市或非都市計畫」）：都市計畫依土地實際的都市計畫分區，非都市計畫選使用分區＋用地類別，其他分區選「其他」自己填
+★請記得申調使用分區證明!!</div>
             <div id="lotEntries"></div>
+            <div id="zoneFarmWarn" class="hint warn-hint" style="display:none;"></div>
             <button type="button" class="add-district-btn" id="addLotBtn">＋ 新增一筆地號</button>
           </div>
           <div class="field" id="buildingSection">
@@ -1498,6 +1527,7 @@ function sendListingSubmission_(fieldValues, submitBtn, msgBox) {
     renderTypeFields(currentType);
     rebuildDistrictEntries();
     updateRatioRows();
+    preselectMe_();
     resetUploads_();
     clearDraft_();
     window.scrollTo(0, 0);
@@ -1723,6 +1753,18 @@ function renderPersonCheckboxes() {
   container.appendChild(otherNamesWrap);
 
   updateRatioRows();
+  preselectMe_();
+}
+// 新增物件：預設勾選登入的人，只有一位時比例先填 100（115/10/22）
+function preselectMe_() {
+  if (EDIT_MODE) return;
+  var me = (sharedLoginGet_() || {}).name;
+  if (!me || document.querySelector('.businessPersonCheckbox:checked')) return;
+  var cb = Array.prototype.filter.call(document.querySelectorAll('.businessPersonCheckbox'), function(c) { return !c.classList.contains('businessPersonOtherCheckbox') && c.value === me; })[0];
+  if (!cb) return;
+  cb.checked = true; updateRatioRows();
+  var inp = document.querySelector('#businessRatioRows .ratio-row[data-name="' + me.replace(/"/g, '') + '"] input');
+  if (inp && !inp.value) inp.value = '100';
 }
 
 // 目前勾選的業務姓名清單（DOM 順序），「其他」勾選時改用文字框裡填的姓名
@@ -1824,6 +1866,7 @@ document.querySelectorAll('input[name="typeTab"]').forEach(function(radio) {
     document.getElementById('typeLabel-' + currentType).classList.add('active');
     renderTypeFields(currentType);
     rebuildDistrictEntries();
+    refreshLotZoneOptions_();
   });
 });
 document.getElementById('typeLabel-廠房').classList.add('active');
@@ -2151,6 +2194,7 @@ function renderTypeFields(typeTab) {
         urbanPlanSelectRef = el;
         el.addEventListener('change', function() {
           if (landUseRebuildFn) landUseRebuildFn(el.value);
+          refreshLotZoneOptions_();
         });
       }
     } else if (f.type === 'select-other') {
@@ -2494,6 +2538,8 @@ function renderTypeFields(typeTab) {
 
       wrap.appendChild(groupWrap);
       wrap.appendChild(otherWrapEl);
+      // 115/10/22：使用分區改在「地號」每一筆後面選，這一欄藏起來，自動勾成各筆的合集
+      if (f.label === '使用分區') { wrap.style.display = 'none'; wrap.classList.add('zone-merged'); }
       container.appendChild(wrap);
       return;
     } else if (f.type === 'textarea') {
@@ -2844,15 +2890,98 @@ function createLocationRow(kind, isFirstLot, prefill) {
   row.appendChild(townWrap);
   row.appendChild(districtWrap);
   row.appendChild(valueWrap);
+  if (kind !== 'building') { // 每一筆地號各自的使用分區（115/10/22）
+    row.classList.add('lot-entry');
+    var zoneWrap = document.createElement('div');
+    zoneWrap.className = 'lot-zone-wrap';
+    zoneWrap.innerHTML = '<div class="mini-label">使用分區</div>';
+    var zoneSel = document.createElement('select'); zoneSel.className = 'lotZoneSelect';
+    var zoneOther = document.createElement('input'); zoneOther.type = 'text'; zoneOther.className = 'lotZoneOther'; zoneOther.placeholder = '請填寫使用分區'; zoneOther.style.display = 'none';
+    zoneWrap.appendChild(zoneSel); zoneWrap.appendChild(zoneOther);
+    row.appendChild(zoneWrap);
+    fillLotZoneSelect_(zoneSel);
+    zoneSel.addEventListener('change', function() { zoneOther.style.display = zoneSel.value === '其他' ? '' : 'none'; syncZoneFromLots_(); });
+    zoneOther.addEventListener('input', syncZoneFromLots_);
+    valueInput.addEventListener('input', updateFarmWarn_);
+    districtSelect.addEventListener('change', updateFarmWarn_);
+  }
 
   var removeBtn = document.createElement('button');
   removeBtn.type = 'button';
   removeBtn.className = 'remove-btn';
   removeBtn.textContent = '刪除';
-  removeBtn.addEventListener('click', function() { row.remove(); });
+  removeBtn.addEventListener('click', function() { row.remove(); if (kind !== 'building') syncZoneFromLots_(); });
   row.appendChild(removeBtn);
 
   return row;
+}
+
+// ---- 每一筆地號各自的使用分區（115/10/22）----
+// 選項跟著「都市或非都市計畫」；原本的「使用分區」欄藏起來，自動勾成各筆的合集（送出、DM、配對都照舊用那一欄）
+function zoneOptions_() {
+  var f = (FIELD_CONFIG[currentType] || []).filter(function(x) { return x.label === '使用分區'; })[0];
+  var ps = document.querySelector('#typeFields [data-label="都市或非都市計畫"]'), plan = ps ? ps.value : '';
+  return (f && f.optionsByPlan && f.optionsByPlan[plan]) || null;
+}
+function fillLotZoneSelect_(sel) {
+  var keep = sel.value, opts = zoneOptions_();
+  sel.innerHTML = '';
+  var o0 = document.createElement('option'); o0.value = ''; o0.textContent = opts ? '請選擇' : '先選都市或非都市計畫'; sel.appendChild(o0);
+  (opts ? opts.concat(['其他']) : []).forEach(function(v) { var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+  sel.value = (opts && (keep === '其他' || opts.indexOf(keep) !== -1)) ? keep : '';
+  var other = sel.parentNode && sel.parentNode.querySelector('.lotZoneOther');
+  if (other) other.style.display = sel.value === '其他' ? '' : 'none';
+  var row = sel.closest && sel.closest('.district-entry');
+  if (row && row.dataset.pendingZone && opts) { var z = row.dataset.pendingZone; delete row.dataset.pendingZone; setLotZone_(row, z); }
+}
+function refreshLotZoneOptions_() {
+  document.querySelectorAll('#lotEntries .lotZoneSelect').forEach(fillLotZoneSelect_);
+  syncZoneFromLots_();
+}
+function lotZoneOf_(row) {
+  var sel = row.querySelector('.lotZoneSelect'); if (!sel || !sel.value) return '';
+  return sel.value === '其他' ? (row.querySelector('.lotZoneOther').value || '').trim() : sel.value;
+}
+function setLotZone_(row, zone) {
+  var sel = row.querySelector('.lotZoneSelect'); if (!sel || !zone) return;
+  if (!zoneOptions_()) { row.dataset.pendingZone = zone; return; } // 還沒選都市或非都市計畫：等選了再帶
+  delete row.dataset.pendingZone;
+  if (sel.options.length <= 1) fillLotZoneSelect_(sel);
+  var has = Array.prototype.some.call(sel.options, function(o) { return o.value === zone && zone !== '其他'; });
+  if (has) sel.value = zone;
+  else if (sel.options.length > 1) { sel.value = '其他'; row.querySelector('.lotZoneOther').value = zone; }
+  row.querySelector('.lotZoneOther').style.display = sel.value === '其他' ? '' : 'none';
+}
+function syncZoneFromLots_() {
+  var picked = [], others = [], any = false;
+  document.querySelectorAll('#lotEntries .district-entry').forEach(function(r) {
+    var sel = r.querySelector('.lotZoneSelect'); if (!sel || !sel.value) return;
+    any = true;
+    if (sel.value === '其他') { var t = (r.querySelector('.lotZoneOther').value || '').trim(); if (t && others.indexOf(t) === -1) others.push(t); }
+    else if (picked.indexOf(sel.value) === -1) picked.push(sel.value);
+  });
+  var grp = document.querySelector('#typeFields [data-checkbox-label="使用分區"]');
+  if (any && grp) {
+    grp.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = cb.classList.contains('otherCheckbox') ? others.length > 0 : picked.indexOf(cb.value) !== -1; });
+    var oi = grp.parentNode.querySelector('.other-input');
+    if (oi) { oi.value = others.join('、'); oi.style.display = others.length ? '' : 'none'; }
+  }
+  updateFarmWarn_();
+}
+// 廠房的土地含特定農業區／一般農業區農牧用地：提醒先調查清楚整體面積
+function updateFarmWarn_() {
+  var box = document.getElementById('zoneFarmWarn'); if (!box) return;
+  var hits = [];
+  if (currentType === '廠房') {
+    document.querySelectorAll('#lotEntries .district-entry').forEach(function(r) {
+      var z = lotZoneOf_(r); if (!/農牧用地/.test(z)) return;
+      var d = r.querySelector('.districtSelect') ? r.querySelector('.districtSelect').value : '';
+      var v = r.querySelector('.lotValueInput') ? r.querySelector('.lotValueInput').value.trim() : '';
+      hits.push(((d || '') + (v || '')) ? (d + v + '：' + z) : z);
+    });
+  }
+  box.style.display = hits.length ? '' : 'none';
+  box.textContent = hits.length ? '❗ 土地含有特定農業區／一般農業區農牧用地（' + hits.join('；') + '），請先調查清楚整體面積再進行物件資料輸入。' : '';
 }
 
 function getLastRowPrefill_(container) {
@@ -2977,6 +3106,8 @@ function collectDraft_() {
       town: row.querySelector('.townSelect').value,
       district: row.querySelector('.districtSelect').value,
       value: row.querySelector('.lotValueInput').value,
+      zone: row.querySelector('.lotZoneSelect') ? row.querySelector('.lotZoneSelect').value : '',
+      zoneOther: row.querySelector('.lotZoneOther') ? row.querySelector('.lotZoneOther').value : '',
     });
   });
   draft.noBuildingNumber = document.getElementById('noBuildingNumber').checked;
@@ -3041,6 +3172,7 @@ function restoreDraft_(draft) {
     row.querySelector('.townSelect').dispatchEvent(new Event('change'));
     row.querySelector('.districtSelect').value = entry.district || '';
     row.querySelector('.lotValueInput').value = entry.value || '';
+    if (entry.zone) setLotZone_(row, entry.zone === '其他' ? (entry.zoneOther || '其他') : entry.zone);
   });
 
   document.getElementById('buildingSection').style.display = (currentType === '土地') ? 'none' : '';
@@ -3123,6 +3255,18 @@ function restoreDraft_(draft) {
 
   document.querySelectorAll('.zone-region-select').forEach(function(sel) { if (sel.syncFromChecked) sel.syncFromChecked(); });
   updateFloorLoc_();
+  // 每一筆地號的使用分區：舊的草稿／舊案件沒有逐筆資料時，原本只有一種使用分區就每一筆都帶那一種
+  (function() {
+    var rows = document.querySelectorAll('#lotEntries .district-entry');
+    var anyZone = Array.prototype.some.call(rows, function(r) { return lotZoneOf_(r) || r.dataset.pendingZone; });
+    if (!anyZone) {
+      var grp = document.querySelector('#typeFields [data-checkbox-label="使用分區"]');
+      var vals = grp ? Array.prototype.filter.call(grp.querySelectorAll('input[type="checkbox"]:checked'), function(cb) { return true; }).map(function(cb) {
+        return cb.classList.contains('otherCheckbox') ? ((grp.parentNode.querySelector('.other-input') || {}).value || '').trim() : cb.value; }).filter(Boolean) : [];
+      if (vals.length === 1) rows.forEach(function(r) { setLotZone_(r, vals[0]); });
+    }
+    refreshLotZoneOptions_();
+  })();
   var restoredContract_ = draft.contractType || ((draft.fields && draft.fields['契約編號'] === '口約') ? '口約' : ((draft.fields && draft.fields['契約編號']) ? '委託' : ''));
   document.querySelectorAll('input[name="contractType"]').forEach(function(r) { r.checked = (r.value === restoredContract_); });
   onContractTypeChange_();
@@ -3175,6 +3319,8 @@ function restoreDraft_(draft) {
 
   // 6. 業務名單＋比例
   var otherNamesToRestore = [];
+  // 草稿有業務名單時以草稿為準（先清掉預設勾選的登入者）
+  if ((draft.businessEntries || []).length) document.querySelectorAll('.businessPersonCheckbox').forEach(function(cb) { cb.checked = false; });
   (draft.businessEntries || []).forEach(function(entry) {
     var found = false;
     document.querySelectorAll('.businessPersonCheckbox').forEach(function(cb) {
@@ -3802,6 +3948,7 @@ function listingCheck_() {
     }
     if (f.type === 'map-point' && EDIT_MODE && !(editCase_ && editCase_.hadCoords)) return; // 修改舊案件：原本沒有座標的不強制補
     if (!isRequired) return;
+    if (f.label === '使用分區' && document.querySelector('#lotEntries .lotZoneSelect')) return; // 改成每一筆地號各自檢查（下面）
     if (f.group) {
       var wrapEl = document.querySelector('#typeFields [data-group="' + f.group + '"]');
       if (wrapEl && wrapEl.style.display === 'none') return; // 目前被收起來，不強制檢查
@@ -3841,6 +3988,9 @@ function listingCheck_() {
   }
   if (entriesIncomplete_('#lotEntries .district-entry', '.lotValueInput')) {
     missingLabels.push('地號（每一筆都要選好縣市/鄉鎮/段並填寫地號）');
+  }
+  if (Array.prototype.some.call(document.querySelectorAll('#lotEntries .district-entry'), function(r) { return r.querySelector('.lotZoneSelect') && !lotZoneOf_(r); })) {
+    missingLabels.push('使用分區（地號每一筆都要選使用分區）');
   }
   if (currentType !== '土地' && !isPresale_()) {
     // 建號：完全空白的列不算；只填一半（只選段別沒填建號，或反過來）要補齊；
@@ -6015,24 +6165,28 @@ function applyDeed_() {
   if (!chosen.length) { out.innerHTML = ''; out.textContent = '沒有勾選任何資料'; return; }
 
   // 1. 地號、建號列（同一段別的號碼合併成一格）
-  function addGroup(map, c, t, d, num) {
-    var key = c + '|' + t + '|' + d;
-    if (!map[key]) map[key] = { county: c, town: t, district: d, nums: [] };
+  // 115/10/22：使用分區不同的地號分成不同列，每一列帶自己的使用分區（非都市計畫才有；都市計畫謄本沒寫）
+  function addGroup(map, c, t, d, num, zone) {
+    var key = c + '|' + t + '|' + d + '|' + (zone || '');
+    if (!map[key]) map[key] = { county: c, town: t, district: d, nums: [], zone: zone || '' };
     if (map[key].nums.indexOf(num) === -1) map[key].nums.push(num);
   }
+  function landZone_(l) { return (l.zoning || l.landCategory) ? '非都-' + (l.zoning || '') + (l.landCategory || '') : ''; }
+  var zoneByLot = {}; lands.forEach(function(l) { zoneByLot[l.district + '|' + l.number] = landZone_(l); });
   var lotGroups = {}, bldGroups = {};
-  lands.forEach(function(l) { addGroup(lotGroups, l.county, l.town, l.district, l.number); });
+  lands.forEach(function(l) { addGroup(lotGroups, l.county, l.town, l.district, l.number, landZone_(l)); });
   blds.forEach(function(b) {
     (b.lots || []).forEach(function(lt) {
       var seg = (districtData[b.county] && districtData[b.county][b.town]) ? deedFindSegment_(lt.segment, districtData[b.county][b.town]) : '';
-      addGroup(lotGroups, b.county, b.town, seg || lt.segment || b.district, lt.number);
+      var dd = seg || lt.segment || b.district;
+      addGroup(lotGroups, b.county, b.town, dd, lt.number, zoneByLot[dd + '|' + lt.number] || '');
     });
     addGroup(bldGroups, b.county, b.town, b.district, b.number);
   });
   var lotKeys = Object.keys(lotGroups), bldKeys = Object.keys(bldGroups);
   if (lotKeys.length) {
     deedClearBlankRows_('lotEntries', '.lotValueInput');
-    lotKeys.forEach(function(k) { addLotEntry(); var rows = document.querySelectorAll('#lotEntries .district-entry'); deedFillRow_(rows[rows.length - 1], lotGroups[k], '.lotValueInput', deedSortNums_(lotGroups[k].nums).join(',')); });
+    lotKeys.forEach(function(k) { addLotEntry(); var rows = document.querySelectorAll('#lotEntries .district-entry'); if (lotGroups[k].zone) rows[rows.length - 1].dataset.pendingZone = lotGroups[k].zone; deedFillRow_(rows[rows.length - 1], lotGroups[k], '.lotValueInput', deedSortNums_(lotGroups[k].nums).join(',')); });
     res.filled.push('地號');
   }
   if (bldKeys.length && currentType !== '土地') {
@@ -6098,6 +6252,12 @@ function applyDeed_() {
       if (planSel.value === plan && plan === '非都市計畫') deedCheckGroup_('使用分區', combos, [], res);
     }
     if (plan === '非都市計畫' && blankLands.length) res.notes.push('地號 ' + blankLands.join('、') + ' 的謄本沒有載明使用分區，這幾筆請手動確認');
+    refreshLotZoneOptions_(); // 帶入每一筆地號的使用分區（等「都市或非都市計畫」選好才帶）
+    if (currentType === '廠房') {
+      var farm = lands.filter(function(l) { return /農牧用地/.test(l.landCategory || '') && /(特定|一般)農業區/.test(l.zoning || ''); })
+        .map(function(l) { return l.district + l.number + '：' + l.zoning + l.landCategory; });
+      if (farm.length) res.notes.push('土地含有特定農業區／一般農業區農牧用地（' + farm.join('；') + '），請先調查清楚整體面積再進行物件資料輸入');
+    }
   } else if (blds.length) {
     res.notes.push('沒有上傳土地謄本，土地面積、使用分區沒有帶入');
   }

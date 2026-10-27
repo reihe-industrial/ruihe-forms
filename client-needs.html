@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+  <script>
+  // 新增物件、新增客需、調謄本只給登入的同仁用（115/10/22）：這個分頁沒有登入、或太久沒動作，就帶到首頁登入，登入後回來
+  (function() {
+    var ok = false;
+    try {
+      var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
+      try { var st = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; if (st && isFinite(Number(st.idleMinutes))) lim = Number(st.idleMinutes); } catch (e2) {}
+      ok = !!(v && v.name && v.code) && !(t > 0 && Date.now() - t > lim * 60000);
+    } catch (e) {}
+    if (!ok) { try { sessionStorage.setItem('ruihe_login_msg', '請先登入'); } catch (e) {} location.replace('index.html?next=' + encodeURIComponent(location.pathname.split('/').pop() + location.search)); return; }
+    // 填表單時有動作就算「有在用」，其他頁面不會因為 30 分鐘沒動作而登出
+    var last = 0;
+    ['click', 'keydown', 'input', 'touchstart', 'scroll'].forEach(function(ev) {
+      window.addEventListener(ev, function() { var n = Date.now(); if (n - last < 15000) return; last = n; try { sessionStorage.setItem('ruihe_last_active_v1', String(n)); } catch (e) {} }, { passive: true, capture: true });
+    });
+  })();
+  </script>
   <base target="_top">
   <meta charset="utf-8">
   <title>客需資料填寫表｜瑞禾業務系統</title>
@@ -240,9 +257,9 @@
 <div class="container">
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="index.html" data-key="home" data-home="1">登入</a>
-    <a href="listing.html" data-key="listing">新增物件</a>
-    <a href="client-needs.html" data-key="needs">新增客需</a>
-    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <a href="listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
+    <a href="client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
+    <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
@@ -761,6 +778,14 @@ function buildBusinessChecklist() {
       });
     }
   });
+  preselectMe_();
+}
+// 新增客需：預設勾選登入的人（115/10/22）
+function preselectMe_() {
+  if (typeof EDIT_MODE !== 'undefined' && EDIT_MODE) return;
+  var me = (sharedLoginGet_() || {}).name;
+  if (!me || document.querySelector('.businessCheckbox:checked')) return;
+  document.querySelectorAll('.businessCheckbox').forEach(function(cb) { if (cb.value === me && cb.value !== '其他') cb.checked = true; });
 }
 
 function getBusinessList() {
@@ -1277,6 +1302,7 @@ document.getElementById('submitBtn').addEventListener('click', function() {
       document.querySelectorAll('input[type=text], input[type=number], textarea').forEach(function(el) { el.value = ''; });
       document.querySelectorAll('select').forEach(function(el) { el.selectedIndex = 0; });
       document.querySelectorAll('input[type=checkbox]').forEach(function(el) { el.checked = false; });
+      preselectMe_();
       updatePropertyTypeBlocks();
       updateDemandTypeFields();
       document.getElementById('craneTonBlock').style.display = 'none';

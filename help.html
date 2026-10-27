@@ -46,9 +46,9 @@
   <div class="container">
   <nav class="site-nav" id="siteNav" aria-label="表單選單">
     <a href="index.html" data-key="home" data-home="1">登入</a>
-    <a href="listing.html" data-key="listing">新增物件</a>
-    <a href="client-needs.html" data-key="needs">新增客需</a>
-    <a href="land-registry.html" data-key="registry">調謄本</a>
+    <a href="listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
+    <a href="client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
+    <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
     <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
@@ -111,7 +111,7 @@
 <li><b>使用 Google 帳戶登入</b>：管理員在「人員管理」幫你設定好 Gmail 後就能用，按一下就登入。</li>
 <li><b>使用通關碼登入</b>：選自己的名字，輸入通關碼。忘記通關碼請找管理員。</li>
 </ul>
-<p>同一個瀏覽器分頁登入一次，其他功能頁都不用再登入。<b>30 分鐘沒有動作會自動登出</b>。</p>
+<p>所有功能（包括新增物件、新增客需、調謄本）都要先登入；沒登入時打開會先帶到首頁，登入後回到原本那一頁。同一個瀏覽器分頁登入一次，其他功能頁都不用再登入。<b>30 分鐘沒有動作會自動登出</b>。</p>
 <div class="tip">在共用電腦上用完，一定要按右上角的「登出」。</div>
 </section><section id="home" class="hs"><h2>首頁<span class="who">所有人</span></h2>
 <p>登入後的首頁由上而下分成三個區塊：</p>
@@ -141,6 +141,8 @@
 <li>電腦版左邊的<b>目錄</b>顯示每一段還缺幾項，點了直接跳過去。</li>
 <li>最下面的送出列會顯示「還有 N 項必填沒填」，按「<b>跳到第一項</b>」可以直接跳到沒填的欄位。</li>
 <li>契約類型選「委託」時，要再選<b>委託類別</b>：一般委託或專任委託（專簽）。</li>
+<li><b>地號</b>：每一筆地號後面選它的<b>使用分區</b>（先選「都市或非都市計畫」）。同一段的地號，使用分區不同的要分成不同筆。用謄本帶入時會自動分好、選好。</li>
+<li><b>廠房</b>的土地含有特定農業區或一般農業區的<b>農牧用地</b>時，地號下面會跳出紅字提醒：請先調查清楚整體面積再進行物件資料輸入。</li>
 <li>嫌惡設施：可以複選；附近沒有就勾「無」，清單裡沒有的勾「其他」自己填。</li>
 <li>照片：可以一次選好幾張。權狀、謄本、使用執照、合約這類要看清楚小字的，請在檔案旁勾「保留原圖」。</li>
 <li>按「<b>送出</b>」，看到成功訊息就完成了。</li>
