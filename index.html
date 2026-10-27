@@ -251,7 +251,8 @@
     .cal-body { display: block; }
     @container (min-width: 660px) {
       .cal-body { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 14px; align-items: start; }
-      .cal-day { margin-top: 0 !important; border-top: none !important; padding-top: 0 !important; border-left: 1px solid var(--line); padding-left: 14px; max-height: 470px; overflow-y: auto; }
+      .cal-side { border-left: 1px solid var(--line); padding-left: 14px; }
+      .cal-day { margin-top: 0 !important; border-top: none !important; padding-top: 0 !important; max-height: 300px; overflow-y: auto; }
     }
     .cal-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
     .cal-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -270,6 +271,21 @@
     .cal-chip.co { background: #E6F0E9; color: #1E4A32; }
     .cal-chip.me { background: #FDEBD3; color: #8A4B08; }
     .cal-more { font-size: 11px; color: var(--muted); }
+    /* 值班（115/10/22） */
+    .cal-chip.duty { background: #E3EEF8; color: #1F4E79; }
+    .cal-off { font-size: 11px; color: #B3261E; font-weight: 700; }
+    .cal-duty { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+    .cal-duty h3 { font-size: 15px; margin: 0 0 6px; display: flex; align-items: center; gap: 6px; }
+    .cal-duty h3 .btn { margin-left: auto; height: 28px; padding: 0 10px; font-size: 12.5px; }
+    .duty-today { background: #E3EEF8; color: #1F4E79; border-radius: 8px; padding: 6px 10px; font-weight: 700; margin-bottom: 6px; }
+    .duty-list { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13.5px; }
+    .duty-list .d { color: var(--muted); white-space: nowrap; }
+    .duty-list .sel { font-weight: 700; color: var(--ink); }
+    .duty-line { font-size: 13.5px; color: #1F4E79; font-weight: 700; margin: -2px 0 6px; }
+    .duty-edit { max-height: 60vh; overflow-y: auto; display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin: 8px 0; }
+    .duty-edit .d { white-space: nowrap; font-size: 14px; }
+    .duty-edit .d.sun { color: #B3261E; }
+    .duty-edit select { height: 36px; }
     .cal-legend { font-size: 12.5px; color: var(--muted); margin: 8px 2px 0; }
     .cal-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
     .dot.co { background: #CFE3D6; } .dot.me { background: #F7D3A6; }
@@ -475,7 +491,10 @@
                 <div class="cal-grid" id="calGrid"></div>
                 <div class="cal-legend"><span class="dot co"></span>公司活動　<span class="dot me"></span><span id="calLegendMe">我的行程</span></div>
               </div>
-              <div class="cal-day" id="calDay"></div>
+              <div class="cal-side">
+                <div class="cal-day" id="calDay"></div>
+                <div class="cal-duty" id="calDuty"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1128,17 +1147,95 @@ function calRender() {
     var hol = HOLIDAYS[iso];
     h += '<button type="button" class="cal-cell' + (d.getMonth() !== cal.month.getMonth() ? ' out' : '') + (iso === today ? ' today' : '') + (iso === cal.sel ? ' sel' : '') + (hol ? ' hol' : '') + '" data-day="' + iso + '" aria-label="' + iso + (hol ? '，' + hol[0] : '') + '，' + evs.length + ' 個活動">' +
       '<span class="dn">' + d.getDate() + (hol ? '<span class="hn">' + esc(hol[0]) + '</span>' : '') + '</span>' +
+      calDutyCell(iso, d) +
       evs.slice(0, 3).map(function(e) { return '<span class="cal-chip ' + (e.kind === '公司' ? 'co' : 'me') + '">' + esc(calLabel(e)) + '</span>'; }).join('') +
       (evs.length > 3 ? '<span class="cal-more">還有 ' + (evs.length - 3) + ' 個</span>' : '') + '</button>';
   }
   $('calGrid').innerHTML = h;
   calRenderDay();
+  calRenderDuty();
+}
+// ===== 值班人員（115/10/22）：每一格顯示當天值班，右下角看這一週、秘書和管理員可以編輯整個月 =====
+function calDutyOf(iso) { return ((cal.data && cal.data.duties) || {})[iso] || ''; }
+function calDutyCell(iso, d) {
+  var n = calDutyOf(iso);
+  if (n) return '<span class="cal-chip duty">值班 ' + esc(n) + '</span>';
+  return (d.getDay() === 0 && d.getMonth() === cal.month.getMonth()) ? '<span class="cal-off">公休</span>' : '';
+}
+function calRenderDuty() {
+  var box = $('calDuty'); if (!box) return;
+  var today = calIso(new Date()), inMonth = function(iso) { var x = new Date(iso + 'T00:00:00'); return x.getFullYear() === cal.month.getFullYear() && x.getMonth() === cal.month.getMonth(); };
+  // 看哪一週：選的那天在這個月就用它，不然用今天（也在這個月的話），再不然用這個月 1 日
+  var base = (cal.sel && inMonth(cal.sel)) ? cal.sel : (inMonth(today) ? today : calIso(cal.month));
+  var sel = new Date(base + 'T00:00:00');
+  var mon = new Date(sel); mon.setDate(sel.getDate() - ((sel.getDay() + 6) % 7)); // 這一週的星期一
+  var rows = '';
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(mon); d.setDate(mon.getDate() + i);
+    var iso = calIso(d), n = calDutyOf(iso);
+    var cls = iso === cal.sel ? ' sel' : '';
+    rows += '<span class="d' + cls + '">' + (d.getMonth() + 1) + '/' + d.getDate() + '（' + '日一二三四五六'[d.getDay()] + '）</span><span class="' + cls.trim() + '"' + (!n && d.getDay() === 0 ? ' style="color:#B3261E;"' : '') + '>' + esc(n || (d.getDay() === 0 ? '公休' : '—')) + '</span>';
+  }
+  var tn = calDutyOf(today);
+  box.innerHTML = '<h3>值班人員' + (calIsSec() ? '<button type="button" class="btn ghost" id="dutyEditBtn">編輯 ' + (cal.month.getMonth() + 1) + ' 月</button>' : '') + '</h3>' +
+    (tn ? '<div class="duty-today">今天值班：' + esc(tn) + '</div>' : '') +
+    '<div class="duty-list">' + rows + '</div>';
+  var b = $('dutyEditBtn'); if (b) b.addEventListener('click', calDutyEdit);
+}
+var dutyPeople_ = null;
+function calDutyEdit() {
+  var y = cal.month.getFullYear(), m = cal.month.getMonth(), days = new Date(y, m + 1, 0).getDate();
+  var month = y + '-' + String(m + 1).padStart(2, '0');
+  var dlg = RuiheMatch.showModal('編輯 ' + (y - 1911) + ' 年 ' + (m + 1) + ' 月值班', '<div class="note">讀取業務名單中…</div>');
+  var ready = dutyPeople_ ? Promise.resolve(dutyPeople_) : post(OBJ_API, 'getListingFormPersons', []).then(function(res) { dutyPeople_ = (res && res.personList) || []; return dutyPeople_; });
+  ready.catch(function() { return []; }).then(function(people) {
+    var list = (people || []).slice();
+    Object.keys((cal.data && cal.data.duties) || {}).forEach(function(k) { var n = cal.data.duties[k]; if (n && list.indexOf(n) === -1) list.push(n); });
+    var opts = function(cur) { return '<option value="">（沒人值班）</option>' + list.map(function(n) { return '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join(''); };
+    var h = '<div class="note">每一天選值班的人，星期日公休不用選。可以先用下面的「照順序排」一次排好，再逐日修改。</div>' +
+      '<details style="margin:8px 0;"><summary style="cursor:pointer;font-weight:700;">照順序排</summary>' +
+      '<div class="note" style="margin:6px 0;">依序填值班的人，用「、」分開；從第幾日開始排，星期日跳過。</div>' +
+      '<textarea id="dutyOrder" rows="3" style="width:100%;">' + esc(list.join('、')) + '</textarea>' +
+      '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;">從 <input type="number" id="dutyFrom" min="1" max="' + days + '" value="1" style="width:70px;height:34px;"> 日開始 <button type="button" class="btn ghost" id="dutyFill" style="height:34px;">排進去</button></div></details>' +
+      '<div class="duty-edit">';
+    for (var i = 1; i <= days; i++) {
+      var d = new Date(y, m, i), iso = calIso(d), hol = HOLIDAYS[iso];
+      h += '<span class="d' + (d.getDay() === 0 || hol ? ' sun' : '') + '">' + (m + 1) + '/' + i + '（' + '日一二三四五六'[d.getDay()] + '）' + (hol ? esc(hol[0]) : '') + '</span>' +
+        '<select data-duty="' + iso + '">' + opts(calDutyOf(iso)) + '</select>';
+    }
+    h += '</div><div class="notice" id="dutyMsg" style="display:none;margin-top:8px;"></div>' +
+      '<button type="button" class="btn" id="dutySave" style="width:100%;margin-top:6px;">儲存 ' + (m + 1) + ' 月值班</button>';
+    dlg.body.innerHTML = h;
+    var b = dlg.body;
+    b.querySelector('#dutyFill').addEventListener('click', function() {
+      var names = b.querySelector('#dutyOrder').value.split(/[、,，\s]+/).map(function(x) { return x.trim(); }).filter(Boolean);
+      if (!names.length) return;
+      names.forEach(function(n) { if (list.indexOf(n) === -1) { list.push(n); b.querySelectorAll('select[data-duty]').forEach(function(sel) { var o = document.createElement('option'); o.textContent = n; sel.appendChild(o); }); } });
+      var from = Math.max(1, Math.min(days, parseInt(b.querySelector('#dutyFrom').value, 10) || 1)), k = 0;
+      for (var i = from; i <= days; i++) {
+        var d = new Date(y, m, i); if (d.getDay() === 0) continue;
+        b.querySelector('select[data-duty="' + calIso(d) + '"]').value = names[k % names.length]; k++;
+      }
+    });
+    b.querySelector('#dutySave').addEventListener('click', function() {
+      var btn = this, duties = {};
+      b.querySelectorAll('select[data-duty]').forEach(function(sel) { if (sel.value) duties[sel.getAttribute('data-duty')] = sel.value; });
+      btn.disabled = true; btn.textContent = '儲存中…';
+      var r = calRange();
+      post(OBJ_API, 'calendarSetDuty', [auth.name, auth.code, month, duties, r.from, r.to]).then(function(res) {
+        cal.data = res; try { sessionStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {}
+        calRender(); dlg.close(); toast('值班表已儲存');
+      }).catch(function(err) { var mm = b.querySelector('#dutyMsg'); mm.textContent = err.message || '儲存失敗'; mm.style.display = 'block'; btn.disabled = false; btn.textContent = '儲存 ' + (m + 1) + ' 月值班'; });
+    });
+  });
 }
 function calRenderDay() {
   var iso = cal.sel || calIso(new Date()), evs = calEventsOn(iso);
   var d = new Date(iso + 'T00:00:00');
   var hol = HOLIDAYS[iso];
+  var dutyNow = calDutyOf(iso);
   $('calDay').innerHTML = '<h3>' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日（' + '日一二三四五六'[d.getDay()] + '）' + (hol ? '<span class="hol-tag">' + esc(hol[0]) + '</span>' : '') + '</h3>' +
+    (dutyNow ? '<div class="duty-line">值班：' + esc(dutyNow) + '</div>' : (d.getDay() === 0 ? '<div class="duty-line" style="color:#B3261E;">公休</div>' : '')) +
     (evs.length ? evs.map(function(e) {
       var info = e.kind === '行程' ? [e.place ? '地點：' + e.place : '', e.target ? '對象：' + e.target : '', e.amount ? '預期效益 ' + e.amount + ' 萬' : ''].filter(Boolean).join('｜') : '';
       return '<div class="cal-ev" data-ev="' + esc(e.id) + '"><span class="k ' + (e.kind === '公司' ? 'co' : 'me') + '">' + (e.kind === '公司' ? '公司' : esc((calIsSec() && e.owner !== auth.name ? e.owner + '・' : '') + (e.type || '行程'))) + '</span>' +
