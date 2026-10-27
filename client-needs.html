@@ -8,6 +8,7 @@
     try {
       var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
       try { var st = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; if (st && isFinite(Number(st.idleMinutes))) lim = Number(st.idleMinutes); } catch (e2) {}
+      var t = parseInt(sessionStorage.getItem('ruihe_last_active_v1'), 10) || 0;
       ok = !!(v && v.name && v.code) && !(t > 0 && Date.now() - t > lim * 60000);
     } catch (e) {}
     if (!ok) { try { sessionStorage.setItem('ruihe_login_msg', '請先登入'); } catch (e) {} location.replace('index.html?next=' + encodeURIComponent(location.pathname.split('/').pop() + location.search)); return; }
