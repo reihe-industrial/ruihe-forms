@@ -272,7 +272,8 @@
     .cal-chip.me { background: #FDEBD3; color: #8A4B08; }
     .cal-more { font-size: 11px; color: var(--muted); }
     /* 值班（115/10/22） */
-    .cal-chip.duty { background: #E3EEF8; color: #1F4E79; }
+    .cal-chip.duty { background: #E3EEF8; color: #1F4E79; font-weight: 700; }
+    .cal-legend .dot.duty { background: #E3EEF8; border: 1px solid #9DBBD8; }
     .cal-off { font-size: 11px; color: #B3261E; font-weight: 700; }
     .cal-duty { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
     .cal-duty h3 { font-size: 15px; margin: 0 0 6px; display: flex; align-items: center; gap: 6px; }
@@ -489,7 +490,7 @@
             <div class="cal-body">
               <div class="cal-main">
                 <div class="cal-grid" id="calGrid"></div>
-                <div class="cal-legend"><span class="dot co"></span>公司活動　<span class="dot me"></span><span id="calLegendMe">我的行程</span></div>
+                <div class="cal-legend"><span class="dot duty"></span>值班　<span class="dot co"></span>公司活動　<span class="dot me"></span><span id="calLegendMe">我的行程</span></div>
               </div>
               <div class="cal-side">
                 <div class="cal-day" id="calDay"></div>
@@ -1159,7 +1160,7 @@ function calRender() {
 function calDutyOf(iso) { return ((cal.data && cal.data.duties) || {})[iso] || ''; }
 function calDutyCell(iso, d) {
   var n = calDutyOf(iso);
-  if (n) return '<span class="cal-chip duty">值班 ' + esc(n) + '</span>';
+  if (n) return '<span class="cal-chip duty" title="值班：' + esc(n) + '">' + esc(n) + '</span>';
   return (d.getDay() === 0 && d.getMonth() === cal.month.getMonth()) ? '<span class="cal-off">公休</span>' : '';
 }
 function calRenderDuty() {
@@ -1168,6 +1169,7 @@ function calRenderDuty() {
   // 看哪一週：選的那天在這個月就用它，不然用今天（也在這個月的話），再不然用這個月 1 日
   var base = (cal.sel && inMonth(cal.sel)) ? cal.sel : (inMonth(today) ? today : calIso(cal.month));
   var sel = new Date(base + 'T00:00:00');
+  if (base === calIso(cal.month) && sel.getDay() === 0) sel.setDate(2); // 1 日是星期日：看下一週（這個月的第一週）
   var mon = new Date(sel); mon.setDate(sel.getDate() - ((sel.getDay() + 6) % 7)); // 這一週的星期一
   var rows = '';
   for (var i = 0; i < 7; i++) {
