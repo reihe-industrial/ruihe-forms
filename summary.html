@@ -581,6 +581,27 @@ function typeClass(t) { return t === '廠房' ? 't-factory' : (t === '土地' ||
 function splitTypes(v) { return String(v || '').split(/[、,，]/).map(function(x) { return normType(x); }).filter(Boolean); }
 
 function cell(row, label) { var i = colIndex[label]; return i === undefined ? '' : (row[i] || ''); }
+// 三大類（115/10/27）：篩選和地圖一律分廠房／土地／房屋；細項：土地＝農地、建地、工業地、其他；房屋＝建物類別（住商的住宅、店面…照原本的寫法）
+var LAND_SUBS_ = ['農地', '建地', '工業地', '其他'];
+function mainOf_(types) {
+  if (types.indexOf('廠房') !== -1) return '廠房';
+  if (types[0] === '土地' || types.some(function(t) { return ['農地', '建地', '工業地', '工業用地'].indexOf(t) !== -1; })) return '土地';
+  return '房屋';
+}
+function subsOf_(types, main, zoning) {
+  if (main === '廠房') return [];
+  if (main === '土地') {
+    var s = types.filter(function(t) { return ['農地', '建地', '工業地'].indexOf(t) !== -1; });
+    if (!s.length && types.indexOf('工業用地') !== -1) s = ['工業地'];
+    if (!s.length) { // 住商的土地沒有土地類型：從使用分區判斷
+      var z = String(zoning || '');
+      s = [/工業|丁種/.test(z) ? '工業地' : /農牧|農業區/.test(z) ? '農地' : /住宅|商業|建築用地/.test(z) ? '建地' : '其他'];
+    }
+    return s;
+  }
+  var h = types.filter(function(t) { return t !== '房屋'; });
+  return h.length ? h : ['其他'];
+}
 
 function buildItems() {
   colIndex = {};
@@ -591,6 +612,7 @@ function buildItems() {
       row: row, order: i,
       type: normType(cell(row, C.type)),
       types: splitTypes(cell(row, C.type)),
+      main: '', subs: [],
       agents: String(cell(row, C.agent)).split(/[、,，\/\s]+/).map(function(x) { return x.trim(); }).filter(Boolean),
       rs: String(cell(row, C.rs)).trim(),
       contract: String(cell(row, C.contract)).trim(),
@@ -605,6 +627,7 @@ function buildItems() {
       var v = cell(row, l);
       it.num[l] = (l === C.unit || l === C.total) ? toWan(v) : firstNumber(v);
     });
+    it.main = mainOf_(it.types); it.subs = subsOf_(it.types, it.main, cell(row, '使用分區'));
     return it;
   });
   buildFilterOptions();
@@ -612,7 +635,7 @@ function buildItems() {
 
 // ---------------- 篩選 ----------------
 function emptyFilters() {
-  return { type: '', rs: '', contract: '', county: '', town: '', keyword: '', agent: '',
+  return { type: '', sub: '', rs: '', contract: '', county: '', town: '', keyword: '', agent: '',
     totalMin: '', totalMax: '', landMin: '', landMax: '', bldMin: '', bldMax: '' };
 }
 function countBy(list, key) {
@@ -638,16 +661,30 @@ function renderChips(boxId, values, current, key) {
     var b = e.target.closest('button');
     if (!b) return;
     filters[key] = b.getAttribute('data-v');
+    if (key === 'type') filters.sub = '';
     renderChips(boxId, values, filters[key], key);
+    if (key === 'type') renderSubChips_();
     applyAndRender();
   };
 }
+// 細項：選了土地或房屋才出現
+function renderSubChips_() {
+  var box = $('subChips');
+  if (!box) { box = document.createElement('div'); box.id = 'subChips'; box.className = 'chips'; box.style.marginTop = '6px'; $('typeChips').parentNode.insertBefore(box, $('typeChips').nextSibling); }
+  if (filters.type !== '土地' && filters.type !== '房屋') { box.style.display = 'none'; box.innerHTML = ''; filters.sub = ''; return; }
+  var cnt = {}; items.forEach(function(it) { if (it.main === filters.type) it.subs.forEach(function(x) { cnt[x] = (cnt[x] || 0) + 1; }); });
+  var order = filters.type === '土地' ? LAND_SUBS_ : HOUSE_KINDS.concat(['住宅', '住辦', '店面', '辦公']);
+  var subs = sortedKeys(cnt, order);
+  if (filters.type === '房屋') subs = subs.filter(function(x) { return x !== '其他'; }).concat(cnt['其他'] ? ['其他'] : []);
+  if (filters.sub && subs.indexOf(filters.sub) === -1) filters.sub = '';
+  box.style.display = '';
+  renderChips('subChips', subs, filters.sub || '', 'sub');
+}
 function buildFilterOptions() {
-  var typeCounts = {};
-  items.forEach(function(it) { it.types.forEach(function(t) { typeCounts[t] = (typeCounts[t] || 0) + 1; }); });
-  var types = sortedKeys(typeCounts, TYPE_ORDER.concat(HOUSE_KINDS));
+  var types = TYPE_ORDER.filter(function(t) { return items.some(function(it) { return it.main === t; }); });
   if (filters.type && types.indexOf(filters.type) === -1) filters.type = '';
   renderChips('typeChips', types, filters.type, 'type');
+  renderSubChips_();
   var rs = sortedKeys(countBy(items, 'rs'), ['售', '租']);
   if (filters.rs && rs.indexOf(filters.rs) === -1) filters.rs = '';
   renderChips('rsChips', rs, filters.rs, 'rs');
@@ -708,7 +745,8 @@ function activeFilterCount() {
 function filtered() {
   var words = filters.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return items.filter(function(it) {
-    if (filters.type && it.types.indexOf(filters.type) === -1) return false;
+    if (filters.type && it.main !== filters.type) return false;
+    if (filters.sub && it.subs.indexOf(filters.sub) === -1) return false;
     if (filters.agent && it.agents.indexOf(filters.agent) === -1) return false;
     if (filters.contract && it.contract !== filters.contract) return false;
     if (filters.rs && it.rs !== filters.rs) return false;

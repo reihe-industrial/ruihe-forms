@@ -482,7 +482,7 @@ var CACHE_KEY = 'ruihe_map_cache_v1';
 var POLL_MS = 5 * 60 * 1000;
 var TYPE_ORDER = ['廠房', '土地', '房屋'];
 var HOUSE_KINDS = ['無電梯公寓', '華廈(10樓含以下)', '大樓(11樓以上)', '透天', '別墅', '一般套房', '商務套房', '學生套房', '樓中樓', '農舍'];
-var COLORS = { '廠房': '#3d5a80', '土地': '#d98e00', '房屋': '#b5395f', '其他': '#6b7a70' };
+var COLORS = { '廠房': '#3d5a80', '土地': '#d98e00', '房屋': '#b5395f' };
 var MAP_NLSC_ = 'https://wmts.nlsc.gov.tw/wmts/';
 var MAP_BASES_ = [
   { id: 'emap', name: '電子地圖', url: MAP_NLSC_ + 'EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}', attr: '© 內政部國土測繪中心' },
@@ -507,7 +507,7 @@ function setSect(on) {
 }
 
 var auth = null, data = null, items = [], colIndex = {};
-var filters = { type: '', rs: '', agent: '', keyword: '', bldMin: '', bldMax: '', totalMin: '', totalMax: '', landMin: '', landMax: '' };
+var filters = { type: '', sub: '', rs: '', agent: '', keyword: '', bldMin: '', bldMax: '', totalMin: '', totalMax: '', landMin: '', landMax: '' };
 var map = null, baseLayer = null, markerLayer = null, firstFit = true;
 var pollTimer = null, busy = false, lastCheckFailed = false;
 
@@ -536,12 +536,28 @@ function pad2(n) { return (n < 10 ? '0' : '') + n; }
 function timeText(ms) { var d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
 function normType(v) { return String(v || '').trim().replace(/^[A-Za-z]\./, ''); }
 function splitTypes(v) { return String(v || '').split(/[、,，]/).map(normType).filter(Boolean); }
-function mainType(types) {
-  var t = types[0] || '';
-  if (t === '廠房' || t === '土地') return t;
-  if (t === '房屋' || HOUSE_KINDS.indexOf(t) !== -1) return '房屋';
-  return '其他';
+// 三大類（115/10/27）：篩選和地圖一律分廠房／土地／房屋；細項：土地＝農地、建地、工業地、其他；房屋＝建物類別（住商的住宅、店面…照原本的寫法）
+var LAND_SUBS_ = ['農地', '建地', '工業地', '其他'];
+function mainOf_(types) {
+  if (types.indexOf('廠房') !== -1) return '廠房';
+  if (types[0] === '土地' || types.some(function(t) { return ['農地', '建地', '工業地', '工業用地'].indexOf(t) !== -1; })) return '土地';
+  return '房屋';
 }
+function subsOf_(types, main, zoning) {
+  if (main === '廠房') return [];
+  if (main === '土地') {
+    var s = types.filter(function(t) { return ['農地', '建地', '工業地'].indexOf(t) !== -1; });
+    if (!s.length && types.indexOf('工業用地') !== -1) s = ['工業地'];
+    if (!s.length) { // 住商的土地沒有土地類型：從使用分區判斷
+      var z = String(zoning || '');
+      s = [/工業|丁種/.test(z) ? '工業地' : /農牧|農業區/.test(z) ? '農地' : /住宅|商業|建築用地/.test(z) ? '建地' : '其他'];
+    }
+    return s;
+  }
+  var h = types.filter(function(t) { return t !== '房屋'; });
+  return h.length ? h : ['其他'];
+}
+function mainType(types) { return mainOf_(types); }
 function typeClass(t) { return t === '廠房' ? 't-factory' : t === '土地' ? 't-land' : (t === '房屋' || HOUSE_KINDS.indexOf(t) !== -1) ? 't-house' : ''; }
 // 廠房出售：土地均價＝總價÷土地坪數、建物均價＝總價÷建物坪數；其他照原本的單價（115/10/22）
 function mapUnitHtml_(r) {
@@ -570,7 +586,7 @@ function buildItems() {
     var c = data.coords && data.coords[i];
     var it = {
       idx: i, key: (data.keys || [])[i] || '',
-      row: row, types: types, main: mainType(types), coord: (c && isFinite(c[0]) && isFinite(c[1])) ? c : null,
+      row: row, types: types, main: mainType(types), subs: subsOf_(types, mainType(types), cell(row, '使用分區')), coord: (c && isFinite(c[0]) && isFinite(c[1])) ? c : null,
       rs: String(cell(row, '租/售')).trim(),
       agents: String(cell(row, '業務人員')).split(/[、,，\/\s]+/).map(function(x) { return x.trim(); }).filter(Boolean),
       search: [cell(row, '案件名稱'), cell(row, '地段'), cell(row, '坐落'), cell(row, '業務人員')].join(' ').toLowerCase()
@@ -602,14 +618,29 @@ function renderChips(boxId, values, current, key) {
   box.onclick = function(e) {
     var b = e.target.closest('button'); if (!b) return;
     filters[key] = b.getAttribute('data-v');
+    if (key === 'type') filters.sub = '';
     renderChips(boxId, values, filters[key], key);
+    if (key === 'type') renderSubChips_();
     render(true);
   };
 }
+function renderSubChips_() {
+  var box = $('subChips');
+  if (!box) { box = document.createElement('div'); box.id = 'subChips'; box.className = 'chips'; box.style.marginTop = '6px'; $('typeChips').parentNode.insertBefore(box, $('typeChips').nextSibling); }
+  if (filters.type !== '土地' && filters.type !== '房屋') { box.style.display = 'none'; box.innerHTML = ''; filters.sub = ''; return; }
+  var cnt = {}; items.forEach(function(it) { if (it.main === filters.type) (it.subs || []).forEach(function(x) { cnt[x] = (cnt[x] || 0) + 1; }); });
+  var order = filters.type === '土地' ? LAND_SUBS_ : HOUSE_KINDS.concat(['住宅', '住辦', '店面', '辦公']);
+  var subs = sortedKeys(cnt, order);
+  if (filters.type === '房屋') subs = subs.filter(function(x) { return x !== '其他'; }).concat(cnt['其他'] ? ['其他'] : []);
+  if (filters.sub && subs.indexOf(filters.sub) === -1) filters.sub = '';
+  box.style.display = '';
+  renderChips('subChips', subs, filters.sub || '', 'sub');
+}
 function buildFilterOptions() {
-  var types = sortedKeys(countBy(items, function(it) { return it.types; }), TYPE_ORDER.concat(HOUSE_KINDS));
+  var types = TYPE_ORDER.filter(function(t) { return items.some(function(it) { return it.main === t; }); });
   if (filters.type && types.indexOf(filters.type) === -1) filters.type = '';
   renderChips('typeChips', types, filters.type, 'type');
+  renderSubChips_();
   var rs = sortedKeys(countBy(items, function(it) { return [it.rs]; }), ['售', '租']);
   if (filters.rs && rs.indexOf(filters.rs) === -1) filters.rs = '';
   renderChips('rsChips', rs, filters.rs, 'rs');
@@ -622,7 +653,8 @@ function buildFilterOptions() {
 function filtered() {
   var words = filters.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return items.filter(function(it) {
-    if (filters.type && it.types.indexOf(filters.type) === -1) return false;
+    if (filters.type && it.main !== filters.type) return false;
+    if (filters.sub && (it.subs || []).indexOf(filters.sub) === -1) return false;
     if (filters.rs && it.rs !== filters.rs) return false;
     if (filters.agent && it.agents.indexOf(filters.agent) === -1) return false;
     for (var i = 0; i < words.length; i++) if (it.search.indexOf(words[i]) === -1) return false;
@@ -698,7 +730,7 @@ function render(fit) {
   $('countText').innerHTML = '共 ' + list.length + ' 件' + (list.length !== items.length ? '<small>全部 ' + items.length + ' 件</small>' : '') +
     '<small>地圖上 ' + withCoord.length + ' 件</small>';
   var present = {}; list.forEach(function(it) { present[it.main] = true; });
-  $('legend').innerHTML = ['廠房', '土地', '房屋', '其他'].filter(function(t) { return present[t]; }).map(function(t) {
+  $('legend').innerHTML = ['廠房', '土地', '房屋'].filter(function(t) { return present[t]; }).map(function(t) {
     return '<span><i style="background:' + COLORS[t] + ';"></i>' + t + '</span>';
   }).join('');
   markerLayer.clearLayers();

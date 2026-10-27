@@ -194,6 +194,10 @@
     .more-wrap button { height: 42px; padding: 0 20px; border-radius: 10px; border: 1px solid var(--brand); background: #fff; color: var(--brand); font: inherit; font-weight: 700; cursor: pointer; }
       /* 精簡表格：一頁看得完；「更多」展開其他欄位（115/10/16） */
     .table-wrap.compact { overflow-x: visible; }
+    .view-switch { margin: 6px 0 10px; }
+    #cResults .table-wrap { max-height: 70vh; overflow: auto; }
+    #cResults th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+    #cResults td { white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
     .table-wrap.compact table { width: 100%; }
     .table-wrap.compact th, .table-wrap.compact td { white-space: normal; word-break: break-word; vertical-align: top; max-width: none; }
     .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
@@ -310,6 +314,26 @@
       </div>
       <div class="role-note" id="roleNote"></div>
 
+      <div class="chips view-switch" id="viewSwitch" role="group" aria-label="總表">
+        <button type="button" data-v="obj" aria-pressed="true">物件總表</button>
+        <button type="button" data-v="client" aria-pressed="false">客需總表</button>
+      </div>
+
+      <!-- 客需總表（115/10/27）：秘書、管理員看全部欄位；主管只看同組，看不到客戶名稱和聯絡資料 -->
+      <div id="clientView" hidden>
+        <div class="role-note" id="clientNote"></div>
+        <div class="card filters" style="padding:12px 14px;">
+          <div class="filter-grid">
+            <div><label for="cAgent">業務</label><select id="cAgent"><option value="">全部業務</option></select></div>
+            <div><label for="cType">物件類型</label><select id="cType"><option value="">全部</option><option>廠房</option><option>土地</option><option>房屋</option></select></div>
+            <div><label for="cKeyword">關鍵字</label><input type="search" id="cKeyword" placeholder="區域、產業、需求…" autocomplete="off"></div>
+          </div>
+        </div>
+        <div class="resultbar"><div class="count" id="cCount" aria-live="polite"></div></div>
+        <div id="cResults"><div class="loading">讀取中…</div></div>
+      </div>
+
+      <div id="objView">
       <div class="type-tabs" role="tablist" id="typeTabs"></div>
 
       <div class="card filters" id="filterCard">
@@ -346,6 +370,7 @@
           <button type="button" class="btn" id="editSave" hidden disabled>儲存變更</button>
         </span></div>
       <div id="results"><div class="loading">讀取中…</div></div>
+      </div>
     </div>
   </div>
 
@@ -490,6 +515,52 @@ function esc(v) {
   return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
+}
+// ---- 客需總表（115/10/27）----
+var CLIENT_API_URL = 'https://script.google.com/macros/s/AKfycbz6EXnxZb40rln8q9xTaD_TiABT5leWT-R20P5DAQmgLwhiyLvVsI8mqC4Df4wT01zP/exec';
+var cData = null, cView = /[?&]view=client/.test(location.search) ? 'client' : 'obj';
+function clientServer(fnName) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return fetch(CLIENT_API_URL, { method: 'POST', body: JSON.stringify({ fn: fnName, args: args }) }).then(function(r) { return r.json(); })
+    .then(function(res) { if (!res.ok) { var e = new Error(res.message || '系統發生錯誤'); e.fromServer = true; throw e; } return res.result; });
+}
+function setView(v) {
+  cView = v;
+  Array.prototype.forEach.call(document.querySelectorAll('#viewSwitch button'), function(b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === v)); });
+  $('clientView').hidden = v !== 'client'; $('objView').hidden = v === 'client';
+  document.querySelector('h1').textContent = v === 'client' ? '客需總表' : '物件總表';
+  try { var u = new URL(location.href); if (v === 'client') u.searchParams.set('view', 'client'); else u.searchParams.delete('view'); history.replaceState(null, '', u); } catch (e) {}
+  if (v === 'client' && auth && !cData) cLoad();
+}
+function cLoad() {
+  $('cResults').innerHTML = '<div class="loading">讀取中…</div>';
+  clientServer('clientMasterGet', auth.name, auth.code).then(function(res) {
+    cData = res;
+    $('clientNote').textContent = res.masked ? '主管：只顯示同組業務的客需，不顯示客戶名稱和聯絡資料（看得到客戶身份）' : (res.role + '：顯示全部客需、全部欄位');
+    var ai = res.columns.indexOf('負責業務'), names = {};
+    res.rows.forEach(function(r) { String(r[ai] || '').split(/[、,，\/\s]+/).forEach(function(n) { if (n) names[n] = 1; }); });
+    var cur = $('cAgent').value;
+    $('cAgent').innerHTML = '<option value="">全部業務</option>' + Object.keys(names).sort().map(function(n) { return '<option>' + esc(n) + '</option>'; }).join('');
+    $('cAgent').value = names[cur] ? cur : '';
+    cRender();
+  }).catch(function(err) { $('cResults').innerHTML = '<div class="empty">讀不到客需總表：' + esc(err.message || '') + '（客需後端要部署新版本）</div>'; });
+}
+function cRender() {
+  if (!cData) return;
+  var cols = cData.columns, ai = cols.indexOf('負責業務'), ti = cols.indexOf('物件類型');
+  var ag = $('cAgent').value, ty = $('cType').value, kw = $('cKeyword').value.trim().toLowerCase();
+  var rows = cData.rows.filter(function(r) {
+    if (ag && String(r[ai] || '').split(/[、,，\/\s]+/).indexOf(ag) === -1) return false;
+    if (ty && String(r[ti] || '').indexOf(ty) === -1) return false;
+    if (kw && r.join(' ').toLowerCase().indexOf(kw) === -1) return false;
+    return true;
+  });
+  // 整欄都是空的欄位不顯示（例如只要廠房時，土地、房屋的欄位）
+  var show = cols.map(function(c, i) { return rows.some(function(r) { return String(r[i] || '').trim(); }); });
+  $('cCount').textContent = '共 ' + rows.length + ' 筆' + (rows.length !== cData.rows.length ? '（全部 ' + cData.rows.length + ' 筆）' : '');
+  if (!rows.length) { $('cResults').innerHTML = '<div class="empty">沒有符合的客需。</div>'; return; }
+  $('cResults').innerHTML = '<div class="table-wrap"><table><thead><tr>' + cols.map(function(c, i) { return show[i] ? '<th>' + esc(c) + '</th>' : ''; }).join('') + '</tr></thead><tbody>' +
+    rows.map(function(r) { return '<tr>' + r.map(function(v, i) { return show[i] ? '<td>' + esc(v) + '</td>' : ''; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
 }
 function runServer(fnName) {
   var args = Array.prototype.slice.call(arguments, 1);
@@ -748,7 +819,7 @@ function login(auto) {
     role = mc.role || ''; data = { version: mc.version, tabs: mc.tabs }; checkedAt = Date.now();
     setRoleNote_(); renderFilters();
     $('whoName').textContent = name; $('loginView').hidden = true; $('mainView').hidden = false;
-    render(); updateStatus(); startPolling();
+    render(); updateStatus(); startPolling(); setView(cView);
     btn.disabled = false; btn.textContent = '登入';
     check(false).catch(function() {});
     return;
@@ -758,7 +829,7 @@ function login(auto) {
     $('loginCode').value = '';
     $('whoName').textContent = name;
     $('loginView').hidden = true; $('mainView').hidden = false;
-    render(); updateStatus(); startPolling();
+    render(); updateStatus(); startPolling(); setView(cView);
   }).catch(function(err) {
     auth = null; data = null;
     if (isAuthError(err)) { sharedLoginClear_(); ruiheGoHome_(err.message); return; }
@@ -769,7 +840,7 @@ function login(auto) {
 function logout(reason) { logoutLocal_(reason); ruiheGoHome_(reason); }
 function logoutLocal_(reason) {
   sharedLoginClear_();
-  auth = null; data = null; role = ''; openKeys = {};
+  auth = null; data = null; role = ''; openKeys = {}; cData = null;
   stopPolling();
   $('mainView').hidden = true; $('loginView').hidden = false;
   $('results').innerHTML = '<div class="loading">讀取中…</div>';
@@ -778,7 +849,10 @@ function logoutLocal_(reason) {
 
 $('loginBtn').addEventListener('click', function() { login(); });
 $('loginCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
-$('refreshBtn').addEventListener('click', function() { check(true).catch(function() {}); });
+$('refreshBtn').addEventListener('click', function() { if (cView === 'client') { cLoad(); return; } check(true).catch(function() {}); });
+$('viewSwitch').addEventListener('click', function(e) { var b = e.target.closest('button[data-v]'); if (b) setView(b.getAttribute('data-v')); });
+['cAgent', 'cType'].forEach(function(id) { $(id).addEventListener('change', cRender); });
+$('cKeyword').addEventListener('input', cRender);
 $('logoutBtn').addEventListener('click', function() { logout(); });
 $('typeTabs').addEventListener('click', function(e) {
   var b = e.target.closest('button[data-type]');

@@ -238,21 +238,29 @@
     #loginView.card.narrow { margin-left: auto; margin-right: auto; }
       /* 首頁上方：公告（窄）＋行事曆（寬）（115/10/19） */
     .home-top { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 14px 0 8px; }
-    @media (min-width: 980px) { .home-top { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: stretch; } }
+    /* 115/10/27：公告改成橫排在上面（一則一張卡片），行事曆整排放大 */
     .home-top.no-ann { grid-template-columns: 1fr; }
     .home-top.no-ann .home-ann { display: none; }
     .home-ann, .home-cal { display: flex; flex-direction: column; min-width: 0; }
-    .home-ann .ann-card { flex: 1 1 0; min-height: 200px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
-    .home-ann .ann-card #annBox > * { margin-bottom: 10px; }
-    .home-ann .ann-card #annBox > *:last-child { margin-bottom: 0; }
+    .home-ann .ann-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+    .home-ann .ann-card #annBox { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; max-height: 340px; overflow-y: auto; }
+    .home-ann .ann-card #annBox[hidden] { display: none; }
+    .home-ann .ann-card #annBox > * { margin: 0; }
     .home-cal .cal-card { flex: 1 1 auto; }
-    @media (max-width: 979px) { .home-ann .ann-card { max-height: 420px; flex: none; } }
+
     .cal-card { container-type: inline-size; }
     .cal-body { display: block; }
     @container (min-width: 660px) {
       .cal-body { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 14px; align-items: start; }
       .cal-side { border-left: 1px solid var(--line); padding-left: 14px; }
       .cal-day { margin-top: 0 !important; border-top: none !important; padding-top: 0 !important; max-height: 300px; overflow-y: auto; }
+    }
+    @container (min-width: 1000px) {
+      .cal-body { grid-template-columns: minmax(0, 1fr) 280px; gap: 18px; }
+      .cal-card .cal-grid .cal-cell { min-height: 96px; padding: 5px 6px; }
+      .cal-card .cal-grid .cal-cell .dn { font-size: 14px; }
+      .cal-card .cal-grid .cal-chip { font-size: 12.5px; padding: 2px 6px; }
+      .cal-card .cal-side .cal-day { max-height: 420px; }
     }
     .cal-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
     .cal-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }

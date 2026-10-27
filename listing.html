@@ -239,6 +239,13 @@
     .district-entry:last-child { border-bottom: none; margin-bottom: 4px; padding-bottom: 0; }
     .district-entry.no-building { grid-template-columns: 1fr 1fr 1fr auto; }
     .district-entry.lot-entry { grid-template-columns: 1fr 1fr 1fr 1fr 1.7fr auto; }
+    #agentBlock { grid-column: 1 / -1; }
+    .agent-box { border: 1px dashed var(--line); border-radius: 8px; padding: 12px; background: #fbfaf6; margin-top: 8px; }
+    .agent-title { font-weight: 700; color: var(--brand-dark); margin-bottom: 8px; display: flex; align-items: center; }
+    .agent-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; }
+    .agent-grid label { font-size: 13px; font-weight: 700; display: block; margin-bottom: 3px; }
+    .agent-grid .agent-wide { grid-column: 1 / -1; }
+    @media (max-width: 700px) { .agent-grid { grid-template-columns: 1fr 1fr; } }
     .lotZoneOther { margin-top: 6px; }
     #zoneFarmWarn { margin-top: 8px; }
     .district-entry .mini-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 600; }
@@ -668,6 +675,36 @@
             <select id="clientAddrTown"></select>
           </div>
           <input type="text" id="clientAddrDetail" placeholder="請輸入詳細地址（路名、巷弄門牌號等）" style="margin-top:8px;">
+        </div>
+        <!-- 簽約人身分（115/10/27）：委託書由代理人簽的選「代理人」，再填代理人資料（最多兩位） -->
+        <div class="field">
+          <label class="required">簽約人身分</label>
+          <div class="hint">委託書是代理人簽的選「代理人」；上面委託人的資料照樣要填</div>
+          <select data-label="簽約人身分" id="signerType"><option value="委託人本人">委託人本人</option><option value="代理人">代理人</option></select>
+        </div>
+        <div class="field field-wide" id="agentBlock" style="display:none;">
+          <div class="hint warn-hint">❗ 請把授權書（委託人授權代理人的文件）跟委託書一起上傳</div>
+          <div class="agent-box" data-agent="1">
+            <div class="agent-title">代理人</div>
+            <div class="agent-grid">
+              <div><label class="required">姓名</label><input type="text" data-label="代理人姓名"></div>
+              <div><label class="required">身分證字號</label><input type="text" data-label="代理人身分證字號"></div>
+              <div><label class="required">電話</label><input type="text" data-label="代理人電話"></div>
+              <div><label class="required">與委託人的關係</label><input type="text" data-label="代理人與委託人關係" placeholder="例如：配偶、子女、公司員工"></div>
+              <div class="agent-wide"><label>地址</label><input type="text" data-label="代理人地址"></div>
+            </div>
+          </div>
+          <div class="agent-box" data-agent="2" id="agent2Box" style="display:none;">
+            <div class="agent-title">第二位代理人 <button type="button" class="remove-btn" id="agent2Remove" style="margin-left:8px;">刪除</button></div>
+            <div class="agent-grid">
+              <div><label class="required">姓名</label><input type="text" data-label="代理人2姓名"></div>
+              <div><label class="required">身分證字號</label><input type="text" data-label="代理人2身分證字號"></div>
+              <div><label class="required">電話</label><input type="text" data-label="代理人2電話"></div>
+              <div><label class="required">與委託人的關係</label><input type="text" data-label="代理人2與委託人關係"></div>
+              <div class="agent-wide"><label>地址</label><input type="text" data-label="代理人2地址"></div>
+            </div>
+          </div>
+          <button type="button" class="add-district-btn" id="agent2Add" style="margin-top:8px;">＋ 新增第二位代理人</button>
         </div>
       </div>
 
@@ -1214,6 +1251,25 @@ function syncEntrustKindRadios_() {
   document.querySelectorAll('input[name="entrustKind"]').forEach(function(r) { r.checked = r.value === h.value; });
 }
 setInterval(function() { var h = document.getElementById('entrustKindValue'); if (h && h.value && !document.querySelector('input[name="entrustKind"]:checked')) syncEntrustKindRadios_(); }, 1000);
+// 簽約人身分：選「代理人」才出現代理人資料（115/10/27）
+function updateAgentBlock_() {
+  var sel = document.getElementById('signerType'), blk = document.getElementById('agentBlock'); if (!sel || !blk) return;
+  var on = sel.value === '代理人';
+  blk.style.display = on ? '' : 'none';
+  var has2 = ['代理人2姓名', '代理人2身分證字號', '代理人2電話', '代理人2與委託人關係', '代理人2地址'].some(function(l) { var e = document.querySelector('[data-label="' + l + '"]'); return e && e.value.trim(); });
+  if (has2) document.getElementById('agent2Box').style.display = '';
+  document.getElementById('agent2Add').style.display = document.getElementById('agent2Box').style.display === 'none' ? '' : 'none';
+}
+document.addEventListener('change', function(e) { if (e.target && e.target.id === 'signerType') updateAgentBlock_(); });
+document.addEventListener('click', function(e) {
+  if (!e.target) return;
+  if (e.target.id === 'agent2Add') { document.getElementById('agent2Box').style.display = ''; updateAgentBlock_(); }
+  if (e.target.id === 'agent2Remove') {
+    document.querySelectorAll('#agent2Box [data-label]').forEach(function(x) { x.value = ''; });
+    document.getElementById('agent2Box').style.display = 'none'; updateAgentBlock_();
+  }
+});
+setTimeout(updateAgentBlock_, 0);
 // 契約編號第一個字代表的契約（115/10/22；目前是住商的，換品牌時在秘書專區「系統設定」的「契約編號字首」改）：
 // 認得的字首在編號下面顯示契約名稱；是委託契約就自動選好委託類別、委託種類（業務自己選過就不動）；不是委託契約的編號提醒確認
 var CONTRACT_PREFIX_DEF_ = 'A｜專任委託銷售契約書｜專任｜買賣\nB｜專任委託出租契約書｜專任｜租賃\nD｜不動產租賃契約書（非住宅使用）｜｜租賃\nE｜買賣定金收款憑證｜｜買賣\nH｜租賃定金收款憑證｜｜租賃\nI｜承租要約書｜｜租賃\nJ｜住宅用租賃契約書｜｜租賃\nM｜買賣議價委託書｜｜買賣\nP｜土地專任委託銷售契約書｜專任｜買賣\nR｜土地一般委託銷售契約書｜一般｜買賣\nT｜一般委託出租契約書｜一般｜租賃\nV｜委託銷售/出租契變同意書｜｜\nW｜(預售版)一般委託銷售契約書｜一般｜買賣\nX｜(預售版)專任委託銷售契約書｜專任｜買賣\nZ｜一般委託銷售契約書｜一般｜買賣';
@@ -1555,6 +1611,8 @@ function sendListingSubmission_(fieldValues, submitBtn, msgBox) {
     showToast(result.message || '送出成功！', 'success');
     bigNotice_('success', '物件已送出', (fieldValues['案名'] ? '「' + fieldValues['案名'] + '」\n' : '') + (result.message || '送出成功！') + '\n可以到「修改物件／客需」查看或修改。');
     document.getElementById('listingForm').reset();
+    if (document.getElementById('agent2Box')) document.getElementById('agent2Box').style.display = 'none';
+    setTimeout(updateAgentBlock_, 0);
     brokerParse_();
     onContractTypeChange_();
     updateClientRequiredMarks_();
@@ -3002,6 +3060,50 @@ function syncZoneFromLots_() {
     if (oi) { oi.value = others.join('、'); oi.style.display = others.length ? '' : 'none'; }
   }
   updateFarmWarn_();
+  if (!deedAreaFresh_) updateZoneAreaText_();
+}
+// ---- 各使用分區的面積寫進「其他備註說明」（115/10/27）----
+// 謄本讀到每一筆地號的面積（房屋依持分）；每一列地號選好使用分區後（都市計畫要業務選），有兩種以上分區就在其他備註說明最後寫一段，改分區會跟著更新
+var deedLotArea_ = {}, deedAreaFresh_ = false;
+function lotNorm_(n) {
+  var m = String(n || '').replace(/\s/g, '').match(/^0*(\d+)(?:-0*(\d+))?$/);
+  if (!m) return String(n || '').trim();
+  return m[2] && m[2] !== '0' ? m[1] + '-' + m[2] : m[1];
+}
+function lotKey_(seg, n) { return String(seg || '').trim() + '|' + lotNorm_(n); }
+function updateZoneAreaText_() {
+  if (!Object.keys(deedLotArea_).length) return '';
+  // 115/10/27：改寫在「其他備註說明」（舊版寫在特色說明的那一段會一併拿掉）
+  var ft = document.querySelector('#typeFields [data-label="其他備註說明"]'); if (!ft) return '';
+  var feat = document.querySelector('#typeFields [data-label="特色說明"]');
+  if (feat && /土地使用分區面積：/.test(feat.value)) { feat.value = feat.value.replace(/\n*土地使用分區面積：\n(・[^\n]*(\n|$))+/g, '').replace(/\s+$/, ''); feat.dispatchEvent(new Event('input', { bubbles: true })); }
+  var rows = [], seen = {}, dup = {};
+  document.querySelectorAll('#lotEntries .district-entry').forEach(function(r) {
+    var z = lotZoneOf_(r), d = r.querySelector('.districtSelect') ? r.querySelector('.districtSelect').value : '';
+    var nums = (r.querySelector('.lotValueInput') ? r.querySelector('.lotValueInput').value : '').split(/[,，、\s]+/).map(lotNorm_).filter(Boolean);
+    nums.forEach(function(n) { var k = lotKey_(d, n); if (seen[k]) dup[k] = true; seen[k] = true; });
+    rows.push({ zone: z, seg: d, nums: nums });
+  });
+  var area = {}, order = [], pending = {};
+  rows.forEach(function(r) {
+    if (!r.zone) return;
+    if (!(r.zone in area)) { area[r.zone] = 0; order.push(r.zone); }
+    r.nums.forEach(function(n) {
+      var k = lotKey_(r.seg, n);
+      if (dup[k] || !(k in deedLotArea_)) { pending[r.zone] = true; return; }
+      area[r.zone] += deedLotArea_[k];
+    });
+  });
+  var old = ft.value.replace(/\n*土地使用分區面積：\n(・[^\n]*(\n|$))+/g, '').replace(/\s+$/, '');
+  if (order.length < 2) { if (old !== ft.value) { ft.value = old; ft.dispatchEvent(new Event('input', { bubbles: true })); } return ''; }
+  var fmt = function(n) { return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); };
+  var block = '土地使用分區面積：\n' + order.map(function(z) {
+    return '・' + z.replace(/^(都計|非都)-/, '') + '：' + (area[z] > 0 ? fmt(area[z]) + '㎡（' + fmt(area[z] * 0.3025) + '坪）' : '') +
+      (pending[z] ? (area[z] > 0 ? '＋' : '') + '面積待補（請依使用分區證明填寫）' : '');
+  }).join('\n');
+  ft.value = (old ? old + '\n\n' : '') + block;
+  ft.dispatchEvent(new Event('input', { bubbles: true }));
+  return '土地有 ' + order.length + ' 種使用分區，已在「其他備註說明」最後寫上每一種的面積，請確認';
 }
 // 廠房的土地含特定農業區／一般農業區農牧用地：提醒先調查清楚整體面積
 function updateFarmWarn_() {
@@ -3290,6 +3392,7 @@ function restoreDraft_(draft) {
 
   document.querySelectorAll('.zone-region-select').forEach(function(sel) { if (sel.syncFromChecked) sel.syncFromChecked(); });
   updateFloorLoc_();
+  updateAgentBlock_();
   // 每一筆地號的使用分區：舊的草稿／舊案件沒有逐筆資料時，原本只有一種使用分區就每一筆都帶那一種
   (function() {
     var rows = document.querySelectorAll('#lotEntries .district-entry');
@@ -3911,6 +4014,8 @@ function collectFormValues_(implausibleDateLabels_) {
   if (lotParts.length > 0) fieldValues['地段+地號'] = lotParts.join('；');
   if (currentType !== '土地' && document.getElementById('noBuildingNumber').checked) buildingParts.push('未保存登記');
   if (buildingParts.length > 0) fieldValues['地段+建號'] = buildingParts.join('；');
+  // 委託人本人簽的：代理人欄位一律送空白（之前選過代理人又改回來的不會留下）
+  if (fieldValues['簽約人身分'] !== '代理人') Object.keys(fieldValues).forEach(function(k) { if (/^代理人/.test(k)) fieldValues[k] = ''; });
 
   return fieldValues;
 }
@@ -3973,6 +4078,11 @@ function listingCheck_() {
     if (clientInfoOptional_() && CLIENT_LABELS_OPTIONAL_IF_ORAL.indexOf(label) !== -1) return;
     if (!fieldValues[label] || !String(fieldValues[label]).trim()) missingLabels.push(label);
   });
+  if (fieldValues['簽約人身分'] === '代理人') { // 代理人資料（第二位有填任何一格才檢查）
+    ['代理人姓名', '代理人身分證字號', '代理人電話', '代理人與委託人關係'].forEach(function(l) { if (!String(fieldValues[l] || '').trim()) missingLabels.push(l); });
+    var a2 = ['代理人2姓名', '代理人2身分證字號', '代理人2電話', '代理人2與委託人關係'];
+    if (a2.concat(['代理人2地址']).some(function(l) { return String(fieldValues[l] || '').trim(); })) a2.forEach(function(l) { if (!String(fieldValues[l] || '').trim()) missingLabels.push(l.replace('代理人2', '第二位代理人')); });
+  }
   (FIELD_CONFIG[currentType] || []).forEach(function(f) {
     var isRequired = f.required;
     if (isPresale_() && (f.label === '建築完成日' || f.label === '是否有留鑰匙')) return; // 預售屋還沒蓋好
@@ -6241,16 +6351,16 @@ function applyDeed_() {
       blds.forEach(function(b) { ((b.ownership && b.ownership.entries) || []).forEach(function(e) { if (e.owner && e.owner.name) bldOwners[deedOwnerKey_(e)] = true; }); });
     }
     var sum = 0, landShareNotes = [];
+    deedLotArea_ = {};
     lands.forEach(function(l) {
       if (!l.areaM2) return;
       var f = currentType === '房屋' ? deedLandShareFraction_(l, bldOwners) : null;
-      if (f && f.ratio < 1) {
-        sum += l.areaM2 * f.ratio;
-        landShareNotes.push('地號 ' + l.number + '：' + l.areaM2 + '㎡ × ' + f.text);
-      } else {
-        sum += l.areaM2;
-      }
+      var a = (f && f.ratio < 1) ? l.areaM2 * f.ratio : l.areaM2;
+      if (f && f.ratio < 1) landShareNotes.push('地號 ' + l.number + '：' + l.areaM2 + '㎡ × ' + f.text);
+      sum += a;
+      deedLotArea_[lotKey_(l.district, l.number)] = (deedLotArea_[lotKey_(l.district, l.number)] || 0) + a;
     });
+    deedAreaFresh_ = true; // 下面帶好每一筆地號的分區後，再寫其他備註說明的分區面積
     // 之前帶入的值還沒被改過，就可以重新帶入（例如勾選賣方後再按一次「帶入表單」）
     deedSetAuto_('土地面積(m²)', String(Math.round(sum * 100) / 100), res);
     if (currentType === '房屋' && !landShareNotes.length && lands.some(function(l) { return ((l.ownership && l.ownership.entries) || []).length > 1; })) {
@@ -6288,6 +6398,7 @@ function applyDeed_() {
     }
     if (plan === '非都市計畫' && blankLands.length) res.notes.push('地號 ' + blankLands.join('、') + ' 的謄本沒有載明使用分區，這幾筆請手動確認');
     refreshLotZoneOptions_(); // 帶入每一筆地號的使用分區（等「都市或非都市計畫」選好才帶）
+    if (deedAreaFresh_) { deedAreaFresh_ = false; var zr = updateZoneAreaText_(); if (zr) res.notes.push(zr); }
     if (currentType === '廠房') {
       var farm = lands.filter(function(l) { return /農牧用地/.test(l.landCategory || '') && /(特定|一般)農業區/.test(l.zoning || ''); })
         .map(function(l) { return l.district + l.number + '：' + l.zoning + l.landCategory; });
