@@ -197,6 +197,10 @@
 
     /* 兩欄緊湊排版 */
     .card, .type-block { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+    /* 115/10/27：同一排的欄位輸入框對齊（說明文字長短不同時，輸入框一樣往下對齊，不會高高低低） */
+    .card > .field, .type-block > .field { display: flex; flex-direction: column; }
+    .card > .field > :not(label, .hint):not(:not(label, .hint) ~ *), .type-block > .field > :not(label, .hint):not(:not(label, .hint) ~ *) { margin-top: auto; }
+
     .card > *:not(.field) { grid-column: 1 / -1; }
     .type-block > .type-block-title { grid-column: 1 / -1; margin: 0; }
     .card h2 { margin-bottom: 4px; }
@@ -267,7 +271,7 @@
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>

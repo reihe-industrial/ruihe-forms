@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>物件總表｜瑞禾業務系統</title>
+  <title>物件／客需總表｜瑞禾業務系統</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -195,9 +195,7 @@
       /* 精簡表格：一頁看得完；「更多」展開其他欄位（115/10/16） */
     .table-wrap.compact { overflow-x: visible; }
     .view-switch { margin: 6px 0 10px; }
-    #cResults .table-wrap { max-height: 70vh; overflow: auto; }
-    #cResults th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
-    #cResults td { white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+
     .table-wrap.compact table { width: 100%; }
     .table-wrap.compact th, .table-wrap.compact td { white-space: normal; word-break: break-word; vertical-align: top; max-width: none; }
     .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
@@ -237,7 +235,7 @@
     <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件總表</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
     <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
@@ -529,6 +527,8 @@ function setView(v) {
   Array.prototype.forEach.call(document.querySelectorAll('#viewSwitch button'), function(b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === v)); });
   $('clientView').hidden = v !== 'client'; $('objView').hidden = v === 'client';
   document.querySelector('h1').textContent = v === 'client' ? '客需總表' : '物件總表';
+  var sub = document.querySelector('.subtitle'); if (sub) sub.textContent = v === 'client' ? '全公司的客需' : '全公司的物件';
+  $('roleNote').hidden = v === 'client';
   try { var u = new URL(location.href); if (v === 'client') u.searchParams.set('view', 'client'); else u.searchParams.delete('view'); history.replaceState(null, '', u); } catch (e) {}
   if (v === 'client' && auth && !cData) cLoad();
 }
@@ -545,23 +545,44 @@ function cLoad() {
     cRender();
   }).catch(function(err) { $('cResults').innerHTML = '<div class="empty">讀不到客需總表：' + esc(err.message || '') + '（客需後端要部署新版本）</div>'; });
 }
+var cOpen = {};
+var C_KEY_ = ['填表日期', '負責業務', '客戶身份', '公司／客戶名稱', '聯絡人與職稱', '聯絡電話', '物件類型', '需求類型', '目標區域', '客戶急迫程度'];
+var C_NEED_ = [['廠房需求坪數', '廠房', '坪'], ['廠房總價(萬元)', '廠房預算', '萬'], ['廠房需求坪數(承租)', '廠房承租', '坪'], ['廠房租金(元/坪/月)', '廠房租金', '元/坪/月'],
+  ['土地需求面積(坪)', '土地', '坪'], ['土地總價(萬元)', '土地預算', '萬'], ['土地需求面積(承租)(坪)', '土地承租', '坪'], ['土地租金(元/坪/月)', '土地租金', '元/坪/月'],
+  ['房屋需求坪數', '房屋', '坪'], ['房屋總價(萬元)', '房屋預算', '萬'], ['房屋需求坪數(承租)', '房屋承租', '坪'], ['房屋租金(元/月)', '房屋租金', '元/月']];
 function cRender() {
   if (!cData) return;
-  var cols = cData.columns, ai = cols.indexOf('負責業務'), ti = cols.indexOf('物件類型');
+  var cols = cData.columns, ci = function(l) { return cols.indexOf(l); }, ai = ci('負責業務'), ti = ci('物件類型');
   var ag = $('cAgent').value, ty = $('cType').value, kw = $('cKeyword').value.trim().toLowerCase();
-  var rows = cData.rows.filter(function(r) {
-    if (ag && String(r[ai] || '').split(/[、,，\/\s]+/).indexOf(ag) === -1) return false;
-    if (ty && String(r[ti] || '').indexOf(ty) === -1) return false;
-    if (kw && r.join(' ').toLowerCase().indexOf(kw) === -1) return false;
-    return true;
+  var list = [];
+  cData.rows.forEach(function(r, k) {
+    if (ag && String(r[ai] || '').split(/[、,，\/\s]+/).indexOf(ag) === -1) return;
+    if (ty && String(r[ti] || '').indexOf(ty) === -1) return;
+    if (kw && r.join(' ').toLowerCase().indexOf(kw) === -1) return;
+    list.push({ r: r, k: (cData.keys || [])[k] || String(k) });
   });
-  // 整欄都是空的欄位不顯示（例如只要廠房時，土地、房屋的欄位）
-  var show = cols.map(function(c, i) { return rows.some(function(r) { return String(r[i] || '').trim(); }); });
-  $('cCount').textContent = '共 ' + rows.length + ' 筆' + (rows.length !== cData.rows.length ? '（全部 ' + cData.rows.length + ' 筆）' : '');
-  if (!rows.length) { $('cResults').innerHTML = '<div class="empty">沒有符合的客需。</div>'; return; }
-  $('cResults').innerHTML = '<div class="table-wrap"><table><thead><tr>' + cols.map(function(c, i) { return show[i] ? '<th>' + esc(c) + '</th>' : ''; }).join('') + '</tr></thead><tbody>' +
-    rows.map(function(r) { return '<tr>' + r.map(function(v, i) { return show[i] ? '<td>' + esc(v) + '</td>' : ''; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+  $('cCount').textContent = '共 ' + list.length + ' 筆' + (list.length !== cData.rows.length ? '（全部 ' + cData.rows.length + ' 筆）' : '');
+  if (!list.length) { $('cResults').innerHTML = '<div class="empty">沒有符合的客需。</div>'; return; }
+  // 精簡表格（跟物件總表一樣不用左右捲）：重點欄位＋「需求」摘要；「更多」展開其他欄位
+  var keyIdx = C_KEY_.map(ci).filter(function(i) { return i !== -1; });
+  var needIdx = C_NEED_.map(function(n) { return ci(n[0]); });
+  var used = keyIdx.concat(needIdx.filter(function(i) { return i !== -1; }));
+  var head = keyIdx.map(function(i) { return '<th>' + esc(cols[i]) + '</th>'; }).join('') + '<th>需求</th><th></th>';
+  var body = list.map(function(x) {
+    var need = C_NEED_.map(function(n, j) { var v = needIdx[j] === -1 ? '' : String(x.r[needIdx[j]] || '').trim(); return v ? n[1] + ' ' + v + (/[坪萬元]/.test(v) ? '' : n[2]) : ''; }).filter(Boolean).join('、');
+    var open = !!cOpen[x.k];
+    var rest = cols.map(function(c, i) { return i; }).filter(function(i) { return used.indexOf(i) === -1 && String(x.r[i] || '').trim(); });
+    var row = '<tr>' + keyIdx.map(function(i) { return '<td' + (cols[i] === '公司／客戶名稱' ? ' class="name"' : '') + '>' + esc(x.r[i]) + '</td>'; }).join('') +
+      '<td>' + esc(need) + '</td><td class="acts">' + (rest.length ? '<button type="button" class="more-btn" data-copen="' + esc(x.k) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
+    if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 2) + '"><div class="kv">' + rest.map(function(i) { return '<div class="kv-item"><span class="k">' + esc(cols[i]) + '</span><span class="v">' + esc(x.r[i]) + '</span></div>'; }).join('') + '</div></td></tr>';
+    return row;
+  }).join('');
+  $('cResults').innerHTML = '<div class="table-wrap compact"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
 }
+$('cResults') && document.addEventListener('click', function(e) {
+  var b = e.target.closest && e.target.closest('[data-copen]'); if (!b) return;
+  var k = b.getAttribute('data-copen'); cOpen[k] = !cOpen[k]; cRender();
+});
 function runServer(fnName) {
   var args = Array.prototype.slice.call(arguments, 1);
   return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fnName, args: args }) })
