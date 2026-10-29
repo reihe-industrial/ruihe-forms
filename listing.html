@@ -570,7 +570,7 @@
         <h2 id="typeAskTitle">這次要新增哪一種物件？</h2>
         <div class="type-ask-hint">依委託書上的物件選，選了之後還可以在上方切換</div>
         <div class="type-ask-grid">
-          <button type="button" data-t="廠房"><b>廠房</b><span>廠房、廠辦、倉庫、農地工廠</span></button>
+          <button type="button" data-t="廠房"><b>廠房</b><span>廠房、廠辦、倉庫</span></button>
           <button type="button" data-t="土地"><b>土地</b><span>農地、建地、工業地，沒有要賣建物的土地</span></button>
           <button type="button" data-t="房屋"><b>房屋</b><span>透天、華廈、大樓、公寓、別墅、套房、農舍、店面</span></button>
         </div>
@@ -1417,7 +1417,7 @@ var FIELD_CONFIG = {
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總樓層數，例如：4；如果只提供其中一層樓，請填該樓層，例如：3F(僅提供3樓)；如果基地上有好幾棟不同樓層的建物，請簡短列出，例如：廠房2F、倉庫1F、宿舍3F' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)；如果好幾棟都有地下室，請簡短列出，例如：廠房B1、宿舍B1' },
     { label: '物件格局(廠房)', type: 'room-layout', required: true },
-    { label: '建物類別', type: 'checkbox-other', required: true, options: ['廠房','廠辦','農地工廠','倉庫'] },
+    { label: '建物類別', type: 'checkbox-other', required: true, options: ['廠房','廠辦','倉庫'] }, // 115/10/27 拿掉「農地工廠」（不一定合法）
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
     { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
