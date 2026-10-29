@@ -5971,6 +5971,10 @@ function parseDeedPages_(rawPages, districtData) {
           var sh = t.match(/^權利範圍\s*:?\s*(.+)$/);
           if (sh) {
             entry.shareText = sh[1].replace(/\*/g, '').replace(/\s+/g, '');
+            // 115/10/27：電子謄本右邊的印章圖案（例如「RE」）有時會被讀成同一行的文字，接在權利範圍後面；
+            // 只留「公同共有」「○分之○」「全部」這些權利範圍本身的字
+            var shClean = entry.shareText.match(/^(公同共有)?([\d,]+分之[\d,]+|全部)/);
+            if (shClean) entry.shareText = shClean[0];
             var fr = entry.shareText.match(/(\d+)分之(\d+)/);
             entry.whole = fr ? (fr[1] === fr[2]) : /全部/.test(entry.shareText);
             entry.joint = /公同共有/.test(entry.shareText); // 公同共有：同一組的人「一起」持有這個權利範圍
