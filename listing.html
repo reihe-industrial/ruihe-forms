@@ -576,7 +576,7 @@
         </div>
       </div>
     </div>
-    <div class="type-now" id="typeNow"></div>
+    <div class="type-now" id="typeNow" style="display:none;"></div>
     <div class="type-switch">
       <label id="typeLabel-廠房"><input type="radio" name="typeTab" value="廠房" checked><span>廠房</span></label>
       <label id="typeLabel-土地"><input type="radio" name="typeTab" value="土地"><span>土地</span></label>
@@ -2011,7 +2011,8 @@ document.getElementById('typeLabel-廠房').classList.add('active');
 // 目前填的是哪一種物件，寫在類型按鈕上面（115/10/27）
 function updateTypeNow_() {
   var el = document.getElementById('typeNow'); if (!el) return;
-  el.innerHTML = '正在填寫：<b>' + currentType + '</b>物件' + (EDIT_MODE ? '' : '　<span style="font-weight:400;color:var(--muted);font-size:13px;">選錯了可以按下面的按鈕切換</span>');
+  if (!EDIT_MODE) el.style.display = '';
+  el.innerHTML = (EDIT_MODE ? '正在修改：<b>' : '正在填寫：<b>') + currentType + '</b>物件' + (EDIT_MODE ? '' : '　<span style="font-weight:400;color:var(--muted);font-size:13px;">選錯了可以按下面的按鈕切換</span>');
 }
 function askTypeIfNeeded_() {
   if (EDIT_MODE || pendingDraft_) { updateTypeNow_(); return; } // 修改模式、有草稿要還原時不問
@@ -3135,14 +3136,12 @@ function lotNorm_(n) {
 }
 function lotKey_(seg, n) { return String(seg || '').trim() + '|' + lotNorm_(n); }
 function updateZoneAreaText_() {
-  // 115/10/27：都市計畫的地號一筆一筆分開列（不確定哪幾筆是同一個分區）；非都市計畫照分區加總
+  // 依每一列地號選的使用分區加總面積（115/10/27：都市計畫的地號一筆一列，選好分區後一樣依分區加總）
   if (!Object.keys(deedLotArea_).length) return '';
   var ft = document.querySelector('#typeFields [data-label="其他備註說明"]'); if (!ft) return '';
   var feat = document.querySelector('#typeFields [data-label="特色說明"]');
   if (feat && /土地使用分區面積：/.test(feat.value)) { feat.value = feat.value.replace(/\n*土地使用分區面積：\n(・[^\n]*(\n|$))+/g, '').replace(/\s+$/, ''); feat.dispatchEvent(new Event('input', { bubbles: true })); }
-  var ps = document.querySelector('#typeFields [data-label="都市或非都市計畫"]'), urban = ps && ps.value === '都市計畫';
   var fmt = function(n) { return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); };
-  var areaText = function(a) { return fmt(a) + '㎡（' + fmt(a * 0.3025) + '坪）'; };
   var rows = [], seen = {}, dup = {};
   document.querySelectorAll('#lotEntries .district-entry').forEach(function(r) {
     var z = lotZoneOf_(r), d = r.querySelector('.districtSelect') ? r.querySelector('.districtSelect').value : '';
@@ -3150,39 +3149,29 @@ function updateZoneAreaText_() {
     nums.forEach(function(n) { var k = lotKey_(d, n); if (seen[k]) dup[k] = true; seen[k] = true; });
     rows.push({ zone: z, seg: d, nums: nums });
   });
-  var lines = [], zoneCount = {};
-  if (urban) {
-    var done = {};
-    rows.forEach(function(r) {
-      r.nums.forEach(function(n) {
-        var k = lotKey_(r.seg, n), zn = r.zone ? r.zone.replace(/^(都計|非都)-/, '') : '';
-        if (zn) zoneCount[zn] = 1;
-        if (dup[k]) { if (!done[k + zn]) { done[k + zn] = 1; lines.push('・' + r.seg + n + '（' + (zn || '分區待確認') + '）：面積待補（跨分區，請依使用分區證明填寫）'); } return; }
-        lines.push('・' + r.seg + n + '（' + (zn || '分區待確認') + '）：' + (k in deedLotArea_ ? areaText(deedLotArea_[k]) : '面積待補'));
-      });
+  var WAIT = '（分區還沒選）';
+  var area = {}, order = [], pending = {}, picked = 0;
+  rows.forEach(function(r) {
+    if (!r.nums.length) return;
+    var z = r.zone || WAIT;
+    if (!(z in area)) { area[z] = 0; order.push(z); if (z !== WAIT) picked++; }
+    r.nums.forEach(function(n) {
+      var k = lotKey_(r.seg, n);
+      if (dup[k] || !(k in deedLotArea_)) { pending[z] = true; return; }
+      area[z] += deedLotArea_[k];
     });
-  } else {
-    var area = {}, order = [], pending = {};
-    rows.forEach(function(r) {
-      if (!r.zone) return;
-      if (!(r.zone in area)) { area[r.zone] = 0; order.push(r.zone); }
-      r.nums.forEach(function(n) {
-        var k = lotKey_(r.seg, n);
-        if (dup[k] || !(k in deedLotArea_)) { pending[r.zone] = true; return; }
-        area[r.zone] += deedLotArea_[k];
-      });
-    });
-    order.forEach(function(z) { zoneCount[z] = 1; });
-    if (order.length >= 2) lines = order.map(function(z) {
-      return '・' + z.replace(/^(都計|非都)-/, '') + '：' + (area[z] > 0 ? areaText(area[z]) : '') + (pending[z] ? (area[z] > 0 ? '＋' : '') + '面積待補（請依使用分區證明填寫）' : '');
-    });
-  }
+  });
+  order.sort(function(a, b) { return (a === WAIT) - (b === WAIT); }); // 還沒選的放最後
   var old = ft.value.replace(/\n*土地使用分區面積：\n(・[^\n]*(\n|$))+/g, '').replace(/\s+$/, '');
-  // 都市計畫：兩筆以上地號就列；非都市計畫：兩種以上分區才列
-  if (urban ? lines.length < 2 : lines.length < 2) { if (old !== ft.value) { ft.value = old; ft.dispatchEvent(new Event('input', { bubbles: true })); } return ''; }
+  // 兩種以上分區（至少選了一種）才寫
+  if (order.length < 2 || !picked) { if (old !== ft.value) { ft.value = old; ft.dispatchEvent(new Event('input', { bubbles: true })); } return ''; }
+  var lines = order.map(function(z) {
+    return '・' + z.replace(/^(都計|非都)-/, '') + '：' + (area[z] > 0 ? fmt(area[z]) + '㎡（' + fmt(area[z] * 0.3025) + '坪）' : '') +
+      (pending[z] ? (area[z] > 0 ? '＋' : '') + '面積待補（請依使用分區證明填寫）' : '');
+  });
   ft.value = (old ? old + '\n\n' : '') + '土地使用分區面積：\n' + lines.join('\n');
   ft.dispatchEvent(new Event('input', { bubbles: true }));
-  return urban ? '已在「其他備註說明」最後列出每一筆地號的面積和選的分區，請確認' : '土地有 ' + Object.keys(zoneCount).length + ' 種使用分區，已在「其他備註說明」最後寫上每一種的面積，請確認';
+  return '土地有 ' + picked + ' 種使用分區，已在「其他備註說明」最後寫上每一種的面積，請確認';
 }
 // 廠房的土地含特定農業區／一般農業區農牧用地：提醒先調查清楚整體面積
 function updateFarmWarn_() {
@@ -4906,6 +4895,7 @@ function editShow_(view) {
   document.getElementById('editListView').style.display = view === 'list' ? '' : 'none';
   document.getElementById('editBar').style.display = view === 'form' ? '' : 'none';
   document.getElementById('listingForm').style.display = view === 'form' ? '' : 'none';
+  document.getElementById('typeNow').style.display = view === 'form' ? '' : 'none'; // 修改頁：清單、登入畫面不顯示「正在填寫」
   if (view !== 'form') document.getElementById('editNotice').style.display = 'none';
   document.getElementById('msgBox').style.display = 'none';
   window.scrollTo(0, 0);
@@ -6403,7 +6393,8 @@ function applyDeed_() {
   // 1. 地號、建號列（同一段別的號碼合併成一格）
   // 115/10/22：使用分區不同的地號分成不同列，每一列帶自己的使用分區（非都市計畫才有；都市計畫謄本沒寫）
   function addGroup(map, c, t, d, num, zone) {
-    var key = c + '|' + t + '|' + d + '|' + (zone || '');
+    // 115/10/27：謄本沒寫分區的（都市計畫）一筆地號一列，讓業務每一筆各自選分區
+    var key = c + '|' + t + '|' + d + '|' + (zone || ('#' + num));
     if (!map[key]) map[key] = { county: c, town: t, district: d, nums: [], zone: zone || '' };
     if (map[key].nums.indexOf(num) === -1) map[key].nums.push(num);
   }
