@@ -325,11 +325,7 @@
   <div id="msgBox" class="msg" role="status"></div>
 
   <div id="draftBanner" style="display:none; background:#fff8e1; border:1px solid #e0c341; border-radius:10px; padding:14px; margin-bottom:16px; font-size:14px; color:#5a4a00;">
-    偵測到瀏覽器裡有尚未送出的草稿，要繼續剛才填到一半的內容嗎？
-    <div style="margin-top:10px; display:flex; gap:8px;">
-      <button type="button" id="restoreDraftBtn" style="flex:1; padding:9px; background:#2f6f4e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">繼續使用草稿</button>
-      <button type="button" id="discardDraftBtn" style="flex:1; padding:9px; background:#eee; color:#333; border:none; border-radius:8px; cursor:pointer;">捨棄，重新開始</button>
-    </div>
+
   </div>
   <!-- 修改客需（網址加上 ?mode=edit 時顯示） -->
   <div id="editArea" style="display:none;">
@@ -1369,20 +1365,66 @@ function draftIsEmpty_(draft) {
   return !hasField && !draft.checked.length && !hasRegion;
 }
 
+// ---- 草稿可以存好幾份（115/10/27）----
+// 每次打開表單是新的一份草稿，不會蓋掉之前的；沒有「捨棄」按鈕（業務常誤刪）；60 天沒動的草稿自動清掉，最多留 20 份。
+var DRAFTS_KEY_ = DRAFT_STORAGE_KEY + '_list';
+var DRAFT_KEEP_DAYS_ = 60;
+var draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
+function draftsAll_() { try { var a = JSON.parse(localStorage.getItem(DRAFTS_KEY_) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function draftsSave_(a) {
+  var lim = Date.now() - DRAFT_KEEP_DAYS_ * 864e5;
+  a = a.filter(function(x) { return x && x.at >= lim && x.draft; }).sort(function(x, y) { return y.at - x.at; }).slice(0, 20);
+  try { localStorage.setItem(DRAFTS_KEY_, JSON.stringify(a)); } catch (e) {}
+}
+(function() { // 舊版只有一份草稿：搬進清單
+  try { var raw = localStorage.getItem(DRAFT_STORAGE_KEY); if (raw) { var a = draftsAll_(); var od = JSON.parse(raw), of = od.fields || {}; a.push({ id: 'old' + Date.now(), at: Date.now(), title: of['案名'] || of.clientNameInput || '', sub: od.type || '', draft: od }); draftsSave_(a); localStorage.removeItem(DRAFT_STORAGE_KEY); } } catch (e) {}
+})();
+function draftsPut_(draft, title, sub) {
+  var a = draftsAll_().filter(function(x) { return x.id !== draftId_; });
+  a.unshift({ id: draftId_, at: Date.now(), title: title || '', sub: sub || '', draft: draft });
+  draftsSave_(a);
+}
+function draftsRemoveCurrent_() {
+  draftsSave_(draftsAll_().filter(function(x) { return x.id !== draftId_; }));
+  draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
+}
+function draftsBannerRender_(onPick, onNew, newLabel) {
+  var box = document.getElementById('draftBanner'), list = draftsAll_();
+  if (!list.length) { box.style.display = 'none'; return false; }
+  var two = function(n) { return (n < 10 ? '0' : '') + n; };
+  var when = function(t) { var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()); };
+  box.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">有 ' + list.length + ' 份還沒送出的草稿（存在這台電腦的瀏覽器裡，保留 ' + DRAFT_KEEP_DAYS_ + ' 天）</div>' +
+    list.slice(0, 10).map(function(x) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed #e0c341;"><div style="flex:1;min-width:0;"><b>' + esc_(x.title || '（還沒填名稱）') + '</b>' +
+        (x.sub ? '<span style="color:#7a6a20;">｜' + esc_(x.sub) + '</span>' : '') + '<div style="font-size:12.5px;color:#7a6a20;">最後儲存 ' + when(x.at) + '</div></div>' +
+        '<button type="button" data-draft="' + x.id + '" style="padding:7px 14px;background:#2f6f4e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">繼續這一份</button></div>';
+    }).join('') +
+    '<div style="margin-top:8px;"><button type="button" id="draftNewBtn" style="width:100%;padding:9px;background:#fff;color:#2f6f4e;border:1px solid #2f6f4e;border-radius:8px;cursor:pointer;font-weight:600;">' + newLabel + '（草稿會留著）</button></div>';
+  box.style.display = 'block';
+  box.onclick = function(e) {
+    var b = e.target.closest('[data-draft]');
+    if (b) { var x = draftsAll_().filter(function(y) { return y.id === b.getAttribute('data-draft'); })[0]; if (x) { draftId_ = x.id; box.style.display = 'none'; onPick(x.draft); } return; }
+    if (e.target.id === 'draftNewBtn') { box.style.display = 'none'; onNew(); }
+  };
+  return true;
+}
+function esc_(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
 function saveDraftToLocalStorage_() {
   if (EDIT_MODE) return; // 修改客需不存草稿
   try {
     var draft = collectDraft_();
-    if (draftIsEmpty_(draft)) localStorage.removeItem(DRAFT_STORAGE_KEY);
-    else localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    // 只勾了自己（預設勾的負責業務）不算有填
+    var real = { fields: draft.fields, regions: draft.regions, checked: draft.checked.filter(function(c) { return !/businessCheckbox/.test(c.cls); }) };
+    if (draftIsEmpty_(real)) return;
+    var types = draft.checked.filter(function(c) { return /propertyType|typeCheckbox/.test(c.cls); }).map(function(c) { return c.value; }).join('、');
+    draftsPut_(draft, draft.fields.clientNameInput || draft.fields.contactPersonInput || '', types);
   } catch (err) {
     // localStorage 被瀏覽器擋掉或滿了，暫存失敗就算了，不影響正常填寫
   }
 }
 
-function clearDraft_() {
-  try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch (err) {}
-}
+function clearDraft_() { draftsRemoveCurrent_(); } // 送出成功：只刪這一份
 
 function fireChange_(el) { el.dispatchEvent(new Event('change', { bubbles: true })); }
 
@@ -1429,30 +1471,14 @@ function restoreDraft_(draft) {
 var pendingDraft_ = null;
 function initDraftBanner_() {
   if (EDIT_MODE) return;
-  try {
-    var raw = localStorage.getItem(DRAFT_STORAGE_KEY);
-    if (raw) pendingDraft_ = JSON.parse(raw);
-  } catch (err) { pendingDraft_ = null; }
-  if (pendingDraft_ && !draftIsEmpty_(pendingDraft_)) {
-    document.getElementById('draftBanner').style.display = 'block';
-  }
+  draftsBannerRender_(function(d) { restoreDraft_(d); }, function() {}, '開始填新的客需');
 }
-document.getElementById('restoreDraftBtn').addEventListener('click', function() {
-  if (pendingDraft_) restoreDraft_(pendingDraft_);
-  document.getElementById('draftBanner').style.display = 'none';
-});
-document.getElementById('discardDraftBtn').addEventListener('click', function() {
-  clearDraft_();
-  pendingDraft_ = null;
-  document.getElementById('draftBanner').style.display = 'none';
-});
 
 // 自動暫存：欄位有變動時（停止輸入 1 秒後才存），加上每 15 秒定期存一次保險。
 // 草稿橫幅還在、尚未決定要不要還原時先不存，避免把舊草稿蓋成空白。
 var draftSaveTimer_ = null;
 ['input', 'change'].forEach(function(evtName) {
   document.querySelector('.container').addEventListener(evtName, function() {
-    if (document.getElementById('draftBanner').style.display === 'block') return;
     clearTimeout(draftSaveTimer_);
     draftSaveTimer_ = setTimeout(function() { draftSaveTimer_ = null; saveDraftToLocalStorage_(); }, 1000);
   });
@@ -1463,7 +1489,6 @@ window.addEventListener('pagehide', function() {
 });
 
 setInterval(function() {
-  if (document.getElementById('draftBanner').style.display === 'block') return;
   saveDraftToLocalStorage_();
 }, 15000);
 

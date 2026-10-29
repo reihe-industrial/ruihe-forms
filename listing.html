@@ -557,11 +557,7 @@
     </div>
 
     <div id="draftBanner" style="display:none; background:#fff8e1; border:1px solid #e0c341; border-radius:10px; padding:14px; margin-bottom:16px; font-size:14px; color:#5a4a00;">
-      偵測到瀏覽器裡有尚未送出的草稿，要繼續剛才填到一半的內容嗎？（照片沒辦法存進草稿，需要重新選取）
-      <div style="margin-top:10px; display:flex; gap:8px;">
-        <button type="button" id="restoreDraftBtn" style="flex:1; padding:9px; background:#2f6f4e; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">繼續使用草稿</button>
-        <button type="button" id="discardDraftBtn" style="flex:1; padding:9px; background:#eee; color:#333; border:none; border-radius:8px; cursor:pointer;">捨棄，重新開始</button>
-      </div>
+
     </div>
 
     <!-- 115/10/27：新增物件一打開先問物件種類（業務常常沒注意上面的類型就填，選錯） -->
@@ -571,7 +567,7 @@
         <div class="type-ask-hint">依委託書上的物件選，選了之後還可以在上方切換</div>
         <div class="type-ask-grid">
           <button type="button" data-t="廠房"><b>廠房</b><span>廠房、廠辦、倉庫</span></button>
-          <button type="button" data-t="土地"><b>土地</b><span>農地、建地、工業地，沒有要賣建物的土地</span></button>
+          <button type="button" data-t="土地"><b>土地</b><span>農地、建地、工業地</span></button>
           <button type="button" data-t="房屋"><b>房屋</b><span>透天、華廈、大樓、公寓、別墅、套房、農舍、店面</span></button>
         </div>
       </div>
@@ -660,6 +656,12 @@
           <div class="hint">請填寫委託書上的編號</div>
           <input type="text" data-label="契約編號">
           <div class="hint" id="contractNoNote" style="display:none;"></div>
+        </div>
+        <!-- 關聯物件（115/10/27）：同一筆土地建物有另一份委託（例如可整筆買、也可部分買）時互相填，物件總表就不會標成重複 -->
+        <div class="field">
+          <label>關聯物件</label>
+          <div class="hint">同一筆土地建物還有另一份委託（例如可以整筆買，也可以只買一部分）時，填另一件的契約編號；好幾件用逗號分開</div>
+          <input type="text" data-label="關聯物件" placeholder="例：Z1959716">
         </div>
         <div class="field" id="entrustKindField" style="display:none; grid-column: 1 / -1;">
           <label class="required">委託類別</label>
@@ -3340,18 +3342,65 @@ function collectDraft_() {
   return draft;
 }
 
+// ---- 草稿可以存好幾份（115/10/27）----
+// 每次打開表單是新的一份草稿，不會蓋掉之前的；沒有「捨棄」按鈕（業務常誤刪）；60 天沒動的草稿自動清掉，最多留 20 份。
+var DRAFTS_KEY_ = DRAFT_STORAGE_KEY + '_list';
+var DRAFT_KEEP_DAYS_ = 60;
+var draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
+function draftsAll_() { try { var a = JSON.parse(localStorage.getItem(DRAFTS_KEY_) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function draftsSave_(a) {
+  var lim = Date.now() - DRAFT_KEEP_DAYS_ * 864e5;
+  a = a.filter(function(x) { return x && x.at >= lim && x.draft; }).sort(function(x, y) { return y.at - x.at; }).slice(0, 20);
+  try { localStorage.setItem(DRAFTS_KEY_, JSON.stringify(a)); } catch (e) {}
+}
+(function() { // 舊版只有一份草稿：搬進清單
+  try { var raw = localStorage.getItem(DRAFT_STORAGE_KEY); if (raw) { var a = draftsAll_(); var od = JSON.parse(raw), of = od.fields || {}; a.push({ id: 'old' + Date.now(), at: Date.now(), title: of['案名'] || of.clientNameInput || '', sub: od.type || '', draft: od }); draftsSave_(a); localStorage.removeItem(DRAFT_STORAGE_KEY); } } catch (e) {}
+})();
+function draftsPut_(draft, title, sub) {
+  var a = draftsAll_().filter(function(x) { return x.id !== draftId_; });
+  a.unshift({ id: draftId_, at: Date.now(), title: title || '', sub: sub || '', draft: draft });
+  draftsSave_(a);
+}
+function draftsRemoveCurrent_() {
+  draftsSave_(draftsAll_().filter(function(x) { return x.id !== draftId_; }));
+  draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
+}
+function draftsBannerRender_(onPick, onNew, newLabel) {
+  var box = document.getElementById('draftBanner'), list = draftsAll_();
+  if (!list.length) { box.style.display = 'none'; return false; }
+  var two = function(n) { return (n < 10 ? '0' : '') + n; };
+  var when = function(t) { var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()); };
+  box.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">有 ' + list.length + ' 份還沒送出的草稿（存在這台電腦的瀏覽器裡，保留 ' + DRAFT_KEEP_DAYS_ + ' 天）</div>' +
+    list.slice(0, 10).map(function(x) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed #e0c341;"><div style="flex:1;min-width:0;"><b>' + esc_(x.title || '（還沒填名稱）') + '</b>' +
+        (x.sub ? '<span style="color:#7a6a20;">｜' + esc_(x.sub) + '</span>' : '') + '<div style="font-size:12.5px;color:#7a6a20;">最後儲存 ' + when(x.at) + '</div></div>' +
+        '<button type="button" data-draft="' + x.id + '" style="padding:7px 14px;background:#2f6f4e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">繼續這一份</button></div>';
+    }).join('') +
+    '<div style="margin-top:8px;"><button type="button" id="draftNewBtn" style="width:100%;padding:9px;background:#fff;color:#2f6f4e;border:1px solid #2f6f4e;border-radius:8px;cursor:pointer;font-weight:600;">' + newLabel + '（草稿會留著）</button></div>';
+  box.style.display = 'block';
+  box.onclick = function(e) {
+    var b = e.target.closest('[data-draft]');
+    if (b) { var x = draftsAll_().filter(function(y) { return y.id === b.getAttribute('data-draft'); })[0]; if (x) { draftId_ = x.id; box.style.display = 'none'; onPick(x.draft); } return; }
+    if (e.target.id === 'draftNewBtn') { box.style.display = 'none'; onNew(); }
+  };
+  return true;
+}
+function esc_(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
 function saveDraftToLocalStorage_() {
   if (EDIT_MODE) return; // 修改案件不存草稿（委託人資料不留在瀏覽器裡）
   try {
-    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(collectDraft_()));
+    var d = collectDraft_(), f = d.fields || {};
+    var has = String(f['案名'] || '').trim() || String(f['委託人姓名'] || '').trim() ||
+      (d.lotEntries || []).some(function(e) { return String(e.value || '').trim(); }) || (d.buildingEntries || []).some(function(e) { return String(e.value || '').trim(); });
+    if (!has) return; // 還沒填重要的東西就不存（避免一堆空白草稿）
+    draftsPut_(d, f['案名'], d.type);
   } catch (err) {
     // localStorage 被瀏覽器擋掉或滿了，暫存失敗就算了，不影響正常填寫
   }
 }
 
-function clearDraft_() {
-  try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch (err) {}
-}
+function clearDraft_() { draftsRemoveCurrent_(); } // 送出成功：只刪這一份
 
 function restoreDraft_(draft) {
   // 1. 先切換到草稿當時的類型，重建對應的物件資訊欄位
@@ -3577,22 +3626,7 @@ function restoreDraft_(draft) {
 
 // 頁面一打開就檢查有沒有草稿，有的話先顯示提示橫幅（不自動套用，等使用者按按鈕）
 var pendingDraft_ = null;
-try {
-  var savedDraftRaw_ = localStorage.getItem(DRAFT_STORAGE_KEY);
-  if (savedDraftRaw_) pendingDraft_ = JSON.parse(savedDraftRaw_);
-} catch (err) { pendingDraft_ = null; }
-if (pendingDraft_ && !EDIT_MODE) {
-  document.getElementById('draftBanner').style.display = 'block';
-}
-document.getElementById('restoreDraftBtn').addEventListener('click', function() {
-  if (pendingDraft_) restoreDraft_(pendingDraft_);
-  document.getElementById('draftBanner').style.display = 'none';
-});
-document.getElementById('discardDraftBtn').addEventListener('click', function() {
-  clearDraft_();
-  document.getElementById('draftBanner').style.display = 'none';
-  pendingDraft_ = null; askTypeIfNeeded_(); // 捨棄草稿、重新開始：先問物件種類
-});
+if (!EDIT_MODE && draftsBannerRender_(function(d) { restoreDraft_(d); }, function() { pendingDraft_ = null; askTypeIfNeeded_(); }, '開始填新的物件')) pendingDraft_ = true;
 askTypeIfNeeded_();
 
 // 自動暫存：欄位有變動時（防抖，停止輸入1秒後才存），加上每15秒定期存一次保險
@@ -5542,7 +5576,7 @@ function editPhotoTile_(key, f) {
   var th = document.createElement('div'); th.className = 'thumb';
   if (f.thumb) th.style.backgroundImage = 'url("' + f.thumb + '")';
   else th.textContent = /pdf/i.test(f.mime) ? 'PDF' : '檔案';
-  var nm = document.createElement('div'); nm.className = 'fname'; nm.textContent = f.name; nm.title = f.name;
+  var nm = document.createElement('div'); nm.className = 'fname'; nm.textContent = (f.cat ? '【' + f.cat + '】' : '') + f.name; nm.title = f.name;
   var acts = document.createElement('div'); acts.className = 'acts';
   var vb = document.createElement('button'); vb.type = 'button'; vb.className = 'view'; vb.textContent = '查看';
   var db = document.createElement('button'); db.type = 'button'; db.className = 'del'; db.textContent = '刪除';
@@ -6398,7 +6432,7 @@ function applyDeed_() {
   // 115/10/22：使用分區不同的地號分成不同列，每一列帶自己的使用分區（非都市計畫才有；都市計畫謄本沒寫）
   function addGroup(map, c, t, d, num, zone) {
     // 115/10/27：謄本沒寫分區的（都市計畫）一筆地號一列，讓業務每一筆各自選分區
-    var key = c + '|' + t + '|' + d + '|' + (zone || ('#' + num));
+    var key = c + '|' + t + '|' + d + '|' + (zone === null ? '' : (zone || ('#' + num))); // 建號（zone 傳 null）不分列
     if (!map[key]) map[key] = { county: c, town: t, district: d, nums: [], zone: zone || '' };
     if (map[key].nums.indexOf(num) === -1) map[key].nums.push(num);
   }
@@ -6412,7 +6446,7 @@ function applyDeed_() {
       var dd = seg || lt.segment || b.district;
       addGroup(lotGroups, b.county, b.town, dd, lt.number, zoneByLot[dd + '|' + lt.number] || '');
     });
-    addGroup(bldGroups, b.county, b.town, b.district, b.number);
+    addGroup(bldGroups, b.county, b.town, b.district, b.number, null);
   });
   var lotKeys = Object.keys(lotGroups), bldKeys = Object.keys(bldGroups);
   if (lotKeys.length) {
@@ -6638,28 +6672,36 @@ function applyDeed_() {
     var mats = [];
     blds.forEach(function(b) { (b.materials || []).forEach(function(m) { var o = deedMaterialOption_(m); if (mats.indexOf(o) === -1) mats.push(o); }); });
     if (mats.length) deedCheckGroup_('主要建材', mats, [], res);
-    // 多棟、各棟建材不同：在「其他備註說明」補一行對照，例如「主要建材：A廠房：RC；B倉庫：SC」
+    // 115/10/27：好幾棟時，在「其他備註說明」寫「分棟資訊」：每一棟一行（建號、主要建材、建築完成日、屋齡、建物面積），再帶入一次會整段更新
     if (multiBld) {
-      var perGroup = groups.map(function(g) {
-        var codes = [];
-        g.blds.forEach(function(b) { (b.materials || []).forEach(function(m) {
-          var o = deedMaterialOption_(m);
-          var short = (o.match(/^([A-Z]{2,3})\s/) || [])[1] || o;
-          if (codes.indexOf(short) === -1) codes.push(short);
-        }); });
-        return { name: g.name, codes: codes };
-      }).filter(function(x) { return x.codes.length; });
-      var signatures = {};
-      perGroup.forEach(function(x) { signatures[x.codes.slice().sort().join('+')] = true; });
-      if (perGroup.length > 1 && Object.keys(signatures).length > 1) {
-        var matLine = '主要建材：' + perGroup.map(function(x) { return x.name + '：' + x.codes.join('、'); }).join('；');
-        var noteEl = deedField_('其他備註說明');
-        if (noteEl && noteEl.value.indexOf(matLine) === -1) {
-          var cur = noteEl.value.replace(/\s+$/, '');
-          noteEl.value = cur ? (cur + '\n' + matLine) : matLine;
-          deedFire_(noteEl, ['input', 'change']);
-          deedMark_(noteEl); res.filled.push('其他備註說明（各棟建材對照）');
-        }
+      var noteEl = deedField_('其他備註說明');
+      if (noteEl) {
+        var now_ = new Date(), fmt2_ = function(n) { return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); };
+        var bLines = groups.map(function(g) {
+          var codes = [], nums = [], area = 0, comp = g.completion || null;
+          g.blds.forEach(function(b) {
+            if (b.number && nums.indexOf(b.number) === -1) nums.push(b.number);
+            area += (b.totalAreaM2 || 0) + (b.attachedAreaM2 || 0);
+            if (!comp && b.completion) comp = b.completion;
+            (b.materials || []).forEach(function(m) {
+              var o = deedMaterialOption_(m), short = (o.match(/^([A-Z]{2,3})\s/) || [])[1] || o;
+              if (codes.indexOf(short) === -1) codes.push(short);
+            });
+          });
+          var age = '';
+          if (comp) { var cd = new Date(comp.rocYear + 1911, comp.month - 1, comp.day); age = (Math.round((now_ - cd) / (365.2425 * 864e5) * 10) / 10) + ' 年'; }
+          return '・' + g.name + (nums.length ? '（建號 ' + nums.join('、') + '）' : '') + '：' +
+            [codes.join('、') || '建材未載', comp ? '民國' + comp.rocYear + '年' + comp.month + '月' + comp.day + '日完成' : '完成日未載', age ? '屋齡 ' + age : '屋齡未知',
+             area > 0 ? '建物面積 ' + fmt2_(area) + '㎡（' + fmt2_(area * 0.3025) + '坪）' : '面積未載'].join('｜');
+        });
+        var head = '分棟資訊（屋齡以民國' + (now_.getFullYear() - 1911) + '年' + (now_.getMonth() + 1) + '月' + now_.getDate() + '日計算；建物面積＝主建物＋附屬建物）：';
+        var cur = noteEl.value
+          .replace(/\n*分棟資訊（[^\n]*）：\n(・[^\n]*(\n|$))+/g, '')   // 舊的分棟資訊整段換掉
+          .replace(/\n?主要建材：[^\n]*；[^\n]*/g, '')                  // 舊版的「主要建材：A：RC；B：SC」那一行
+          .replace(/\s+$/, '');
+        noteEl.value = (cur ? cur + '\n\n' : '') + head + '\n' + bLines.join('\n');
+        deedFire_(noteEl, ['input', 'change']);
+        deedMark_(noteEl); res.filled.push('其他備註說明（分棟資訊：各棟建材、完成日、屋齡、面積）');
       }
     }
     if (isFactory && document.querySelector('#typeFields [data-checkbox-label="建物類別"]')) {

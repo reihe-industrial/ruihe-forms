@@ -707,6 +707,20 @@ function multiHtml_(v) {
   var two = rows.some(function(r) { return r[0]; });
   return '<table class="mini">' + rows.map(function(r) { return '<tr>' + (two ? '<td class="mk">' + esc(r[0]) + '</td>' : '') + '<td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</table>';
 }
+// 其他備註說明：「分棟資訊」「土地使用分區面積」這種「標題：＋・一行一項」的段落排成表格（「｜」分欄）；其他照原樣換行
+function noteHtml_(v) {
+  var t = String(v || ''); if (!/\n・/.test(t)) return '';
+  return t.split(/\n\s*\n/).map(function(par) {
+    var lines = par.split('\n'), items = lines.slice(1);
+    if (lines.length > 1 && /：$/.test(lines[0].trim()) && items.every(function(l) { return /^・/.test(l.trim()); })) {
+      var rows = items.map(function(l) { var x = l.trim().replace(/^・/, ''), k = x.indexOf('：'); return [k > -1 ? x.slice(0, k) : '', k > -1 ? x.slice(k + 1) : x]; });
+      return '<div style="font-weight:700;margin:4px 0;">' + esc(lines[0].trim()) + '</div><table class="mini">' + rows.map(function(r) {
+        return '<tr><td class="mk">' + esc(r[0]) + '</td>' + r[1].split('｜').map(function(c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</table>';
+    }
+    return '<div>' + esc(par).replace(/\n/g, '<br>') + '</div>';
+  }).join('<div style="height:6px;"></div>');
+}
 var MASTER_KEY_COLS = ['案名', '案件狀態', '委託種類', '總價', '單價', '案件坐落', '詳細地址', '土地面積(坪)', '主建物面積(坪)', '主要業務名稱', '次要業務名稱', '契約編號', '委託類別', '合約到期'];
 var masterOpen = {};
 function canEditTable() { return (role === '秘書' || role === '管理員') && DESKTOP_QUERY.matches && data && current() && (current().keys || []).length > 0; }
@@ -779,7 +793,7 @@ function render() {
         if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 1) + '"><div class="kv">' + restIdx.map(function(i) {
           var a = cellAttrs(x, i);
           if (!editMode && !String(a.v).trim()) return '';
-          var multi = !editMode && MULTI_LABELS_.indexOf(t.columns[i]) !== -1 ? multiHtml_(a.v) : '';
+          var multi = editMode ? '' : MULTI_LABELS_.indexOf(t.columns[i]) !== -1 ? multiHtml_(a.v) : (t.columns[i] === '其他備註說明' ? noteHtml_(a.v) : '');
           return '<div class="kv-item ' + a.cls.join(' ') + (multi ? ' full' : String(a.v).length > 36 ? ' long' : '') + '"' + a.attrs + '><span class="k">' + esc(t.columns[i]) + '</span><span class="v">' + (multi || esc(a.v)) + '</span></div>';
         }).join('') + '</div></td></tr>';
       } else row += '</tr>';
