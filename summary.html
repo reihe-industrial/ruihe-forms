@@ -607,6 +607,8 @@ function buildItems() {
   colIndex = {};
   data.columns.forEach(function(c, i) { colIndex[c] = i; });
   items = data.rows.map(function(row, i) {
+    // 115/10/27：案件名稱空白、其他欄也幾乎是空的（只剩契約類型）的空白列不顯示
+    if (!String(cell(row, C.name)).trim() && !String(cell(row, C.place)).trim() && !String(cell(row, C.total)).trim()) return null;
     var place = splitPlace(cell(row, C.place));
     var it = {
       row: row, order: i,
@@ -630,6 +632,7 @@ function buildItems() {
     it.main = mainOf_(it.types); it.subs = subsOf_(it.types, it.main, cell(row, '使用分區'));
     return it;
   });
+  items = items.filter(Boolean);
   buildFilterOptions();
 }
 

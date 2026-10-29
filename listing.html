@@ -246,6 +246,19 @@
     #agentBlock { grid-column: 1 / -1; }
     .upload-zone { border: 1px dashed var(--line); border-radius: 10px; padding: 12px; background: #fbfaf6; margin-top: 10px; }
     .upload-zone > label { font-size: 15px; }
+    .type-ask { position: fixed; inset: 0; z-index: 9000; background: rgba(20,32,24,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .type-ask[hidden] { display: none; }
+    .type-ask-box { background: #fff; border-radius: 18px; max-width: 760px; width: 100%; padding: 26px 24px; box-shadow: 0 18px 50px rgba(0,0,0,.25); }
+    .type-ask-box h2 { margin: 0 0 6px; font-size: 24px; color: var(--brand-dark); text-align: center; }
+    .type-ask-hint { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+    .type-ask-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .type-ask-grid button { border: 2px solid var(--line); background: #fbfaf6; border-radius: 14px; padding: 20px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; align-items: center; font: inherit; color: var(--ink); }
+    .type-ask-grid button:hover, .type-ask-grid button:focus-visible { border-color: var(--brand); background: #EEF5F0; outline: none; }
+    .type-ask-grid b { font-size: 26px; color: var(--brand-dark); }
+    .type-ask-grid span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    @media (max-width: 600px) { .type-ask-grid { grid-template-columns: 1fr; } .type-ask-grid button { padding: 14px; } }
+    .type-now { font-size: 15px; font-weight: 700; color: var(--brand-dark); margin: 2px 0 6px; }
+    .type-now b { background: var(--brand); color: #fff; border-radius: 8px; padding: 2px 10px; margin: 0 4px; }
     .agent-box { border: 1px dashed var(--line); border-radius: 8px; padding: 12px; background: #fbfaf6; margin-top: 8px; }
     .agent-title { font-weight: 700; color: var(--brand-dark); margin-bottom: 8px; display: flex; align-items: center; }
     .agent-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; }
@@ -551,6 +564,19 @@
       </div>
     </div>
 
+    <!-- 115/10/27：新增物件一打開先問物件種類（業務常常沒注意上面的類型就填，選錯） -->
+    <div class="type-ask" id="typeAsk" hidden role="dialog" aria-modal="true" aria-labelledby="typeAskTitle">
+      <div class="type-ask-box">
+        <h2 id="typeAskTitle">這次要新增哪一種物件？</h2>
+        <div class="type-ask-hint">依委託書上的物件選，選了之後還可以在上方切換</div>
+        <div class="type-ask-grid">
+          <button type="button" data-t="廠房"><b>廠房</b><span>廠房、廠辦、倉庫、農地工廠</span></button>
+          <button type="button" data-t="土地"><b>土地</b><span>農地、建地、工業地，沒有要賣建物的土地</span></button>
+          <button type="button" data-t="房屋"><b>房屋</b><span>透天、華廈、大樓、公寓、別墅、套房、農舍、店面</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="type-now" id="typeNow"></div>
     <div class="type-switch">
       <label id="typeLabel-廠房"><input type="radio" name="typeTab" value="廠房" checked><span>廠房</span></label>
       <label id="typeLabel-土地"><input type="radio" name="typeTab" value="土地"><span>土地</span></label>
@@ -1978,9 +2004,28 @@ document.querySelectorAll('input[name="typeTab"]').forEach(function(radio) {
     renderTypeFields(currentType);
     rebuildDistrictEntries();
     refreshLotZoneOptions_();
+    updateTypeNow_();
   });
 });
 document.getElementById('typeLabel-廠房').classList.add('active');
+// 目前填的是哪一種物件，寫在類型按鈕上面（115/10/27）
+function updateTypeNow_() {
+  var el = document.getElementById('typeNow'); if (!el) return;
+  el.innerHTML = '正在填寫：<b>' + currentType + '</b>物件' + (EDIT_MODE ? '' : '　<span style="font-weight:400;color:var(--muted);font-size:13px;">選錯了可以按下面的按鈕切換</span>');
+}
+function askTypeIfNeeded_() {
+  if (EDIT_MODE || pendingDraft_) { updateTypeNow_(); return; } // 修改模式、有草稿要還原時不問
+  var box = document.getElementById('typeAsk'); if (!box) return;
+  box.hidden = false;
+  setTimeout(function() { var b = box.querySelector('button'); if (b) b.focus(); }, 30);
+}
+document.getElementById('typeAsk').addEventListener('click', function(e) {
+  var b = e.target.closest('button[data-t]'); if (!b) return;
+  var t = b.getAttribute('data-t'), r = document.querySelector('input[name="typeTab"][value="' + t + '"]');
+  if (r && !r.checked) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }
+  this.hidden = true; updateTypeNow_();
+  window.scrollTo(0, 0);
+});
 
 var districtBlockEl_ = document.getElementById('districtBlock');
 // ============================================================
@@ -3427,6 +3472,7 @@ function restoreDraft_(draft) {
   document.querySelectorAll('.zone-region-select').forEach(function(sel) { if (sel.syncFromChecked) sel.syncFromChecked(); });
   updateFloorLoc_();
   updateAgentBlock_();
+  updateTypeNow_();
   // 每一筆地號的使用分區：舊的草稿／舊案件沒有逐筆資料時，原本只有一種使用分區就每一筆都帶那一種
   (function() {
     var rows = document.querySelectorAll('#lotEntries .district-entry');
@@ -3556,7 +3602,9 @@ document.getElementById('restoreDraftBtn').addEventListener('click', function() 
 document.getElementById('discardDraftBtn').addEventListener('click', function() {
   clearDraft_();
   document.getElementById('draftBanner').style.display = 'none';
+  pendingDraft_ = null; askTypeIfNeeded_(); // 捨棄草稿、重新開始：先問物件種類
 });
+askTypeIfNeeded_();
 
 // 自動暫存：欄位有變動時（防抖，停止輸入1秒後才存），加上每15秒定期存一次保險
 var draftSaveTimer_ = null;
@@ -6738,7 +6786,7 @@ function applyDeed_() {
     if (causeItems.length) {
       var causeKinds = {};
       causeItems.forEach(function(c) { causeKinds[c.text] = true; });
-      var causeText = Object.keys(causeKinds).length === 1 ? causeItems[0].text : causeItems.map(function(c) { return c.label + '：' + c.text; }).join('；');
+      var causeText = Object.keys(causeKinds).length === 1 ? causeItems[0].text : causeItems.map(function(c) { return c.label + '：' + c.text; }).join('；\n');
       deedSetInput_('取得原因', causeText, res);
     }
     // 所有權人及持分：姓名（統一編號）持分，不含住址
@@ -6776,7 +6824,7 @@ function applyDeed_() {
       if (jointOrder.length) hasJoint_ = true;
       ownerLines.push(recLabel_(x.rec) + '：' + parts.join('、'));
     });
-    if (ownerLines.length) deedSetInput_('所有權人及持分', ownerLines.join('；'), res);
+    if (ownerLines.length) deedSetInput_('所有權人及持分', ownerLines.join('；\n'), res); // 115/10/27：一筆一行，比較好看
     if (hasJoint_) res.notes.push('有「公同共有」的所有權（通常是繼承還沒分割）：同一組的人一起持有那個權利範圍，處分需要全體公同共有人同意，請確認');
     if (idAutoMasked) res.notes.push('謄本上的個人身分證字號沒有遮，已自動遮成星字號');
     // 他項權利：同一筆抵押（種類、權利人、金額相同）合併成一行，各地號／建號分別標設定日；限制登記（查封等）也寫在這裡

@@ -195,6 +195,13 @@
       /* 精簡表格：一頁看得完；「更多」展開其他欄位（115/10/16） */
     .table-wrap.compact { overflow-x: visible; }
     .view-switch { margin: 6px 0 10px; }
+    /* 客需總表：短欄位不換行、區域和需求分配比較寬（115/10/27） */
+    .table-wrap.compact.c-table table { width: 100%; }
+    .table-wrap.compact.c-table th, .table-wrap.compact.c-table td { padding: 10px 10px; vertical-align: top; }
+    .table-wrap.compact.c-table th, .table-wrap.compact.c-table td.nw { white-space: nowrap; word-break: keep-all; }
+    .table-wrap.compact.c-table .area { width: 28%; }
+    .table-wrap.compact.c-table .need { width: 22%; }
+    .table-wrap.compact.c-table td.acts { width: 1%; white-space: nowrap; text-align: right; }
 
     .table-wrap.compact table { width: 100%; }
     .table-wrap.compact th, .table-wrap.compact td { white-space: normal; word-break: break-word; vertical-align: top; max-width: none; }
@@ -215,6 +222,10 @@
     .kv-item .k { display: block; background: #E6F0E9; color: #1E4A32 !important; font-weight: 700; font-size: 12.5px !important; padding: 4px 8px; }
     .kv-item .v { display: block; padding: 6px 8px; font-size: 14px !important; color: var(--ink); white-space: pre-wrap; }
     .kv-item.long { grid-column: span 2; }
+    .kv-item.full { grid-column: 1 / -1; }
+    table.mini { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0; }
+    table.mini td { border: 1px solid #E1E6E1; padding: 4px 8px; vertical-align: top; white-space: normal; background: #fff; }
+    table.mini td.mk { width: 1%; white-space: nowrap; color: #1E4A32; font-weight: 700; background: #F3F7F4; }
     .kv-item.edited .v { background: #FFF2CC; }
   </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261021a">
@@ -567,17 +578,19 @@ function cRender() {
   var keyIdx = C_KEY_.map(ci).filter(function(i) { return i !== -1; });
   var needIdx = C_NEED_.map(function(n) { return ci(n[0]); });
   var used = keyIdx.concat(needIdx.filter(function(i) { return i !== -1; }));
-  var head = keyIdx.map(function(i) { return '<th>' + esc(cols[i]) + '</th>'; }).join('') + '<th>需求</th><th></th>';
+  var NW = ['填表日期', '負責業務', '客戶身份', '物件類型', '需求類型', '客戶急迫程度', '聯絡電話'];
+  var cls = function(i) { return NW.indexOf(cols[i]) !== -1 ? ' class="nw"' : (cols[i] === '目標區域' ? ' class="area"' : ''); };
+  var head = keyIdx.map(function(i) { return '<th' + cls(i) + '>' + esc(cols[i] === '客戶急迫程度' ? '急迫程度' : cols[i]) + '</th>'; }).join('') + '<th class="need">需求</th><th></th>';
   var body = list.map(function(x) {
     var need = C_NEED_.map(function(n, j) { var v = needIdx[j] === -1 ? '' : String(x.r[needIdx[j]] || '').trim(); return v ? n[1] + ' ' + v + (/[坪萬元]/.test(v) ? '' : n[2]) : ''; }).filter(Boolean).join('、');
     var open = !!cOpen[x.k];
     var rest = cols.map(function(c, i) { return i; }).filter(function(i) { return used.indexOf(i) === -1 && String(x.r[i] || '').trim(); });
-    var row = '<tr>' + keyIdx.map(function(i) { return '<td' + (cols[i] === '公司／客戶名稱' ? ' class="name"' : '') + '>' + esc(x.r[i]) + '</td>'; }).join('') +
-      '<td>' + esc(need) + '</td><td class="acts">' + (rest.length ? '<button type="button" class="more-btn" data-copen="' + esc(x.k) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
+    var row = '<tr>' + keyIdx.map(function(i) { return '<td' + (cols[i] === '公司／客戶名稱' ? ' class="name"' : cls(i)) + '>' + esc(x.r[i]) + '</td>'; }).join('') +
+      '<td class="need">' + esc(need) + '</td><td class="acts">' + (rest.length ? '<button type="button" class="more-btn" data-copen="' + esc(x.k) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
     if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 2) + '"><div class="kv">' + rest.map(function(i) { return '<div class="kv-item"><span class="k">' + esc(cols[i]) + '</span><span class="v">' + esc(x.r[i]) + '</span></div>'; }).join('') + '</div></td></tr>';
     return row;
   }).join('');
-  $('cResults').innerHTML = '<div class="table-wrap compact"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+  $('cResults').innerHTML = '<div class="table-wrap compact c-table"><table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
 }
 $('cResults') && document.addEventListener('click', function(e) {
   var b = e.target.closest && e.target.closest('[data-copen]'); if (!b) return;
@@ -679,10 +692,20 @@ function withRatio(names, ratios) {
   var n = String(names || '').split(/[、,，\/]+/).map(function(x) { return x.trim(); }).filter(Boolean);
   var r = String(ratios || '').split(/[、,，\/\s]+/).map(function(x) { return x.trim(); }).filter(Boolean);
   if (!n.length || !r.length || /^(無|0)$/.test(r.join(''))) return names;
-  var pct = function(x) { return /%$/.test(x) ? x : x + '%'; };
+  // 試算表把比例格子設成百分比格式時，30 會顯示成 3000%：超過 100 的除回來（115/10/27）
+  var pct = function(x) { var m = String(x).match(/^(\d+(?:\.\d+)?)%$/); if (m && +m[1] > 100) return (+m[1] / 100) + '%'; return /%$/.test(x) ? x : x + '%'; };
   if (r.length === n.length) return n.map(function(x, k) { return x + ' ' + pct(r[k]); }).join('、');
   if (r.length === 1) return n.map(function(x) { return x + ' ' + pct(r[0]); }).join('、');
   return n.join('、') + '（' + r.map(pct).join('、') + '）';
+}
+// 115/10/27：所有權人及持分、他項權利、取得原因有好幾筆時（用「；」分開），排成小表格；「地號 375：王小明…」冒號前後分兩欄
+var MULTI_LABELS_ = ['所有權人及持分', '他項權利', '取得原因'];
+function multiHtml_(v) {
+  var parts = String(v || '').split(/[；;\n]+/).map(function(x) { return x.trim(); }).filter(Boolean);
+  if (parts.length < 2) return '';
+  var rows = parts.map(function(p) { var m = p.match(/^([^：:]{1,20})[：:]\s*([\s\S]+)$/); return m ? [m[1], m[2]] : ['', p]; });
+  var two = rows.some(function(r) { return r[0]; });
+  return '<table class="mini">' + rows.map(function(r) { return '<tr>' + (two ? '<td class="mk">' + esc(r[0]) + '</td>' : '') + '<td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</table>';
 }
 var MASTER_KEY_COLS = ['案名', '案件狀態', '委託種類', '總價', '單價', '案件坐落', '詳細地址', '土地面積(坪)', '主建物面積(坪)', '主要業務名稱', '次要業務名稱', '契約編號', '委託類別', '合約到期'];
 var masterOpen = {};
@@ -756,7 +779,8 @@ function render() {
         if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 1) + '"><div class="kv">' + restIdx.map(function(i) {
           var a = cellAttrs(x, i);
           if (!editMode && !String(a.v).trim()) return '';
-          return '<div class="kv-item ' + a.cls.join(' ') + (String(a.v).length > 36 ? ' long' : '') + '"' + a.attrs + '><span class="k">' + esc(t.columns[i]) + '</span><span class="v">' + esc(a.v) + '</span></div>';
+          var multi = !editMode && MULTI_LABELS_.indexOf(t.columns[i]) !== -1 ? multiHtml_(a.v) : '';
+          return '<div class="kv-item ' + a.cls.join(' ') + (multi ? ' full' : String(a.v).length > 36 ? ' long' : '') + '"' + a.attrs + '><span class="k">' + esc(t.columns[i]) + '</span><span class="v">' + (multi || esc(a.v)) + '</span></div>';
         }).join('') + '</div></td></tr>';
       } else row += '</tr>';
       return row;

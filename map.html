@@ -582,6 +582,7 @@ function buildItems() {
   data.columns.forEach(function(c, i) { colIndex[c] = i; });
   var seen = {};
   items = data.rows.map(function(row, i) {
+    if (!String(cell(row, '案件名稱')).trim() && !String(cell(row, '坐落')).trim() && !String(cell(row, '總價')).trim()) return null; // 空白列（115/10/27）
     var types = splitTypes(cell(row, '類型'));
     var c = data.coords && data.coords[i];
     var it = {
@@ -598,7 +599,7 @@ function buildItems() {
     }
     if (!it.draw && it.coord) it.draw = it.coord;
     return it;
-  });
+  }).filter(Boolean);
   buildFilterOptions();
 }
 
