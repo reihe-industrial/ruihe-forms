@@ -244,6 +244,8 @@
     .district-entry.no-building { grid-template-columns: 1fr 1fr 1fr auto; }
     .district-entry.lot-entry { grid-template-columns: 1fr 1fr 1fr 1fr 1.7fr auto; }
     #agentBlock { grid-column: 1 / -1; }
+    .photo-group-title { grid-column: 1 / -1; font-weight: 700; color: var(--brand-dark); font-size: 15px; margin: 8px 0 -2px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+    .photo-group-title:first-child { margin-top: 0; }
     .upload-zone { border: 1px dashed var(--line); border-radius: 10px; padding: 12px; background: #fbfaf6; margin-top: 10px; }
     .upload-zone > label { font-size: 15px; }
     .type-ask { position: fixed; inset: 0; z-index: 9000; background: rgba(20,32,24,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -656,12 +658,6 @@
           <div class="hint">請填寫委託書上的編號</div>
           <input type="text" data-label="契約編號">
           <div class="hint" id="contractNoNote" style="display:none;"></div>
-        </div>
-        <!-- 關聯物件（115/10/27）：同一筆土地建物有另一份委託（例如可整筆買、也可部分買）時互相填，物件總表就不會標成重複 -->
-        <div class="field">
-          <label>關聯物件</label>
-          <div class="hint">同一筆土地建物還有另一份委託（例如可以整筆買，也可以只買一部分）時，填另一件的契約編號；好幾件用逗號分開</div>
-          <input type="text" data-label="關聯物件" placeholder="例：Z1959716">
         </div>
         <div class="field" id="entrustKindField" style="display:none; grid-column: 1 / -1;">
           <label class="required">委託類別</label>
@@ -3343,7 +3339,7 @@ function collectDraft_() {
 }
 
 // ---- 草稿可以存好幾份（115/10/27）----
-// 每次打開表單是新的一份草稿，不會蓋掉之前的；沒有「捨棄」按鈕（業務常誤刪）；60 天沒動的草稿自動清掉，最多留 20 份。
+// 每次打開表單是新的一份草稿，不會蓋掉之前的；每一份可以單獨刪除（會先確認）；60 天沒動的草稿自動清掉，最多留 20 份。
 var DRAFTS_KEY_ = DRAFT_STORAGE_KEY + '_list';
 var DRAFT_KEEP_DAYS_ = 60;
 var draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
@@ -3374,11 +3370,21 @@ function draftsBannerRender_(onPick, onNew, newLabel) {
     list.slice(0, 10).map(function(x) {
       return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed #e0c341;"><div style="flex:1;min-width:0;"><b>' + esc_(x.title || '（還沒填名稱）') + '</b>' +
         (x.sub ? '<span style="color:#7a6a20;">｜' + esc_(x.sub) + '</span>' : '') + '<div style="font-size:12.5px;color:#7a6a20;">最後儲存 ' + when(x.at) + '</div></div>' +
-        '<button type="button" data-draft="' + x.id + '" style="padding:7px 14px;background:#2f6f4e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">繼續這一份</button></div>';
+        '<button type="button" data-draft="' + x.id + '" style="padding:7px 14px;background:#2f6f4e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">繼續這一份</button>' +
+        '<button type="button" data-draft-del="' + x.id + '" style="padding:7px 10px;background:#fff;color:#B3261E;border:1px solid #E8B4B0;border-radius:8px;cursor:pointer;">刪除</button></div>';
     }).join('') +
     '<div style="margin-top:8px;"><button type="button" id="draftNewBtn" style="width:100%;padding:9px;background:#fff;color:#2f6f4e;border:1px solid #2f6f4e;border-radius:8px;cursor:pointer;font-weight:600;">' + newLabel + '（草稿會留著）</button></div>';
   box.style.display = 'block';
   box.onclick = function(e) {
+    var del = e.target.closest('[data-draft-del]');
+    if (del) { // 只刪這一份（先確認，刪掉就找不回來）
+      var dx = draftsAll_().filter(function(y) { return y.id === del.getAttribute('data-draft-del'); })[0];
+      if (dx && confirm('確定要刪除「' + (dx.title || '（還沒填名稱）') + '」這份草稿嗎？刪掉就找不回來。')) {
+        draftsSave_(draftsAll_().filter(function(y) { return y.id !== dx.id; }));
+        if (!draftsBannerRender_(onPick, onNew, newLabel)) onNew();
+      }
+      return;
+    }
     var b = e.target.closest('[data-draft]');
     if (b) { var x = draftsAll_().filter(function(y) { return y.id === b.getAttribute('data-draft'); })[0]; if (x) { draftId_ = x.id; box.style.display = 'none'; onPick(x.draft); } return; }
     if (e.target.id === 'draftNewBtn') { box.style.display = 'none'; onNew(); }
@@ -5349,7 +5355,10 @@ function editOpenCase_(key, btn) {
       }
 
       // 表單送出後在試算表被改過的欄位：能帶入的帶入目前的值，其他的列出來
+      // 系統自己補的欄位（送出後自動用地址／地號定位的座標）不算「有人改過」，不提醒（115/10/27）
+      var SYSTEM_FILLED_ = ['座標(緯度)', '座標(經度)', '座標狀態', '定位方式'];
       (data.changedFields || []).forEach(function(f) {
+        if (SYSTEM_FILLED_.indexOf(f.label) !== -1) { editApplyCurrentValue_(f.label, f.value); return; }
         if (editApplyCurrentValue_(f.label, f.value)) {
           var fieldEl = document.querySelector('#listingForm [data-label="' + f.label.replace(/"/g, '\\"') + '"]');
           var wrap = fieldEl ? fieldEl.closest('.field') : null;
@@ -5561,22 +5570,34 @@ function editLoadPhotos_(key) {
   var grid = document.getElementById('editPhotoGrid');
   grid.innerHTML = ''; grid.style.display = 'none';
   editRenderPhotoInfo_(0, true);
+  var token = editPhotoToken_ = (editPhotoToken_ || 0) + 1; // 連續打開兩次時只用最後一次的結果（不然檔案會重複出現）
   runServer('editListPhotos', editAuth_.name, editAuth_.code, key)
     .then(function(res) {
-      if (!editCase_ || editCase_.key !== key) return;
+      if (!editCase_ || editCase_.key !== key || token !== editPhotoToken_) return;
       var files = res.files || [];
       editRenderPhotoInfo_(files.length, false);
-      files.forEach(function(f) { grid.appendChild(editPhotoTile_(key, f)); });
+      grid.innerHTML = '';
+      // 115/10/27：依類別分組顯示：圖片 → 物件資訊 → 委託書
+      var catOf = function(f) { return f.cat || (/^委託書_/.test(f.name) ? '委託書' : /^物件資訊_/.test(f.name) ? '物件資訊' : '圖片'); };
+      ['圖片', '物件資訊', '委託書'].forEach(function(c) {
+        var list = files.filter(function(f) { return catOf(f) === c; });
+        if (!list.length) return;
+        var h = document.createElement('div'); h.className = 'photo-group-title';
+        h.textContent = c + '（' + list.length + '）' + (c === '圖片' ? '　DM 會用這裡的照片' : '');
+        grid.appendChild(h);
+        list.forEach(function(f) { grid.appendChild(editPhotoTile_(key, f)); });
+      });
       grid.style.display = files.length ? '' : 'none';
     })
     .catch(function(err) { document.getElementById('editPhotoInfo').textContent = '讀取已上傳的照片失敗：' + err.message; });
 }
+var editPhotoToken_ = 0;
 function editPhotoTile_(key, f) {
   var tile = document.createElement('div'); tile.className = 'photo-tile';
   var th = document.createElement('div'); th.className = 'thumb';
   if (f.thumb) th.style.backgroundImage = 'url("' + f.thumb + '")';
   else th.textContent = /pdf/i.test(f.mime) ? 'PDF' : '檔案';
-  var nm = document.createElement('div'); nm.className = 'fname'; nm.textContent = (f.cat ? '【' + f.cat + '】' : '') + f.name; nm.title = f.name;
+  var nm = document.createElement('div'); nm.className = 'fname'; nm.textContent = String(f.name).replace(/^(委託書|物件資訊)_/, ''); nm.title = f.name;
   var acts = document.createElement('div'); acts.className = 'acts';
   var vb = document.createElement('button'); vb.type = 'button'; vb.className = 'view'; vb.textContent = '查看';
   var db = document.createElement('button'); db.type = 'button'; db.className = 'del'; db.textContent = '刪除';

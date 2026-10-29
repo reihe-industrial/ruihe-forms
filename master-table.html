@@ -223,6 +223,9 @@
     .kv-item .v { display: block; padding: 6px 8px; font-size: 14px !important; color: var(--ink); white-space: pre-wrap; }
     .kv-item.long { grid-column: span 2; }
     .kv-item.full { grid-column: 1 / -1; }
+    .dup-box { background: #FFF6E5; border: 1px solid #F0D49A; border-radius: 10px; padding: 8px 12px; margin: 6px 2px 4px; font-size: 13.5px; color: #6B4A00; }
+    .dup-box .dup-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .dup-box .btn { height: 30px; padding: 0 10px; font-size: 12.5px; }
     table.mini { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0; }
     table.mini td { border: 1px solid #E1E6E1; padding: 4px 8px; vertical-align: top; white-space: normal; background: #fff; }
     table.mini td.mk { width: 1%; white-space: nowrap; color: #1E4A32; font-weight: 700; background: #F3F7F4; }
@@ -647,6 +650,14 @@ function dupOf(t, i) { return (t.dup && t.dup[i]) || ''; }
 function dupCat(d) { return String(d || '').split('｜')[0]; }
 function dupText(d) { var k = String(d || '').indexOf('｜'); return k === -1 ? String(d || '') : String(d).substring(k + 1); }
 function dupCls(d) { var c = dupCat(d); return c === '相同' ? '' : c === '需要確認' ? ' chk' : ' sim'; }
+// 115/10/27：相同／需要確認／相似的那幾件，可以直接按「同一物件的不同委託（拆售等），不是重複」→ 兩件互相寫進「關聯物件」
+function dupLinkHtml_(t, i) {
+  var w = t.dupWith && t.dupWith[i]; if (!w || !w.others || !w.others.length || editMode) return '';
+  return '<div class="dup-box"><b>' + esc(dupCat(dupOf(t, i))) + '：</b>' + w.others.map(function(o, j) {
+    return '<div class="dup-line">與「' + esc(o.name || '（未填案名）') + '」' + (o.contract ? '（' + esc(o.contract) + '）' : '') +
+      ' <button type="button" class="btn ghost" data-link="' + esc(t.type + '|' + i + '|' + j) + '">同一物件的不同委託（拆售等），不是重複</button></div>';
+  }).join('') + '</div>';
+}
 function dupTag(d) { return '<span class="dup-tag' + dupCls(d) + '">' + esc(dupCat(d)) + '</span>'; }
 function filtered() {
   var t = current();
@@ -790,7 +801,7 @@ function render() {
         var nEdited = restIdx.filter(function(i) { return cellAttrs(x, i).edited; }).length;
         row += '<td class="acts"><button type="button" class="more-btn" data-mopen="' + esc(rk) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + (nEdited ? '（改了 ' + nEdited + ' 格）' : '') + '</button></td>';
         row += '</tr>';
-        if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 1) + '"><div class="kv">' + restIdx.map(function(i) {
+        if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 1) + '">' + dupLinkHtml_(t, x.i) + '<div class="kv">' + restIdx.map(function(i) {
           var a = cellAttrs(x, i);
           if (!editMode && !String(a.v).trim()) return '';
           var multi = editMode ? '' : MULTI_LABELS_.indexOf(t.columns[i]) !== -1 ? multiHtml_(a.v) : (t.columns[i] === '其他備註說明' ? noteHtml_(a.v) : '');
@@ -814,7 +825,7 @@ function render() {
         '<div class="item-top"><span class="item-name">' + (d ? dupTag(d) : '') + esc(val(t, x.r, '案名') || '（沒有案名）') + '</span><span class="tag ' + (st === '銷售中' ? 'rs' : '') + '">' + esc(st) + '</span></div>' +
         (d ? '<div class="item-meta" style="color:#8C1D18;font-weight:700;">' + esc(dupCat(d) + '：' + dupText(d)) + '</div>' : '') +
         lines + '<div class="item-more-hint"><span class="open-t">看全部欄位</span><span class="close-t">收起</span></div>' +
-        '</summary><div class="item-more" style="display:block;">' + detailHtml(t, x.r) + '</div></details>';
+        '</summary><div class="item-more" style="display:block;">' + dupLinkHtml_(t, x.i) + detailHtml(t, x.r) + '</div></details>';
     }).join('') + '</div>' + moreHtml(full.length);
   }
 }
@@ -926,6 +937,25 @@ $('statusChips').addEventListener('click', function(e) {
 $('fDup').addEventListener('change', function() { filters.dupOnly = this.checked; render(); });
 document.addEventListener('click', function(e) { if (e.target && e.target.id === 'moreBtn') { shownCount += PAGE_SIZE; render(); } });
 $('editToggle').addEventListener('click', function() { editMode = !editMode; render(); });
+// 設成關聯物件：兩件的「關聯物件」互相加上對方的契約編號（用物件總表直接改格子的同一套儲存）
+document.addEventListener('click', function(e) {
+  var b = e.target.closest && e.target.closest('[data-link]'); if (!b) return;
+  var p = b.getAttribute('data-link').split('|'), t = data.tabs.filter(function(x) { return x.type === p[0]; })[0];
+  var w = t && t.dupWith && t.dupWith[+p[1]], o = w && w.others[+p[2]], me = w && w.self;
+  if (!o || !me) return;
+  if (!me.contract || !o.contract) { alert('兩件都要有契約編號才能設成關聯物件（口約、訪談紀錄沒有編號）。請先補契約編號。'); return; }
+  if (!confirm('「' + (o.name || '') + '」和這一件，是同一筆土地建物的不同委託（例如整筆和部分），不是重複登錄嗎？\n設定後物件總表就不會再標成重複。')) return;
+  var add = function(cur, c) { var a = String(cur || '').split(/[、,，\s]+/).filter(Boolean); if (a.indexOf(c) === -1) a.push(c); return a.join('、'); };
+  var changes = [
+    { type: me.type, key: me.key, label: '關聯物件', old: me.linked || '', value: add(me.linked, o.contract) },
+    { type: o.type, key: o.key, label: '關聯物件', old: o.linked || '', value: add(o.linked, me.contract) }];
+  b.disabled = true; b.textContent = '設定中…';
+  runServer('masterTableUpdate', auth.name, auth.code, changes).then(function(res) {
+    if ((res.skipped || []).length || (res.conflicts || []).length) { alert('有一件沒存到（可能總彙整表還沒有「關聯物件」欄，請管理員執行 migrateAddShareAndStatusColumns），請重新整理再試。'); }
+    else alert('已設成關聯物件，重新整理後就不會再標成重複。');
+    check(true).catch(function() {});
+  }).catch(function(err) { alert(err.message || '設定失敗'); b.disabled = false; b.textContent = '同一物件的不同委託（拆售等），不是重複'; });
+});
 $('fWide').addEventListener('change', function() { render(); });
 $('editCancel').addEventListener('click', function() {
   if (!confirm('要放棄還沒儲存的 ' + editCount() + ' 格變更嗎？')) return;

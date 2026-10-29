@@ -1366,7 +1366,7 @@ function draftIsEmpty_(draft) {
 }
 
 // ---- 草稿可以存好幾份（115/10/27）----
-// 每次打開表單是新的一份草稿，不會蓋掉之前的；沒有「捨棄」按鈕（業務常誤刪）；60 天沒動的草稿自動清掉，最多留 20 份。
+// 每次打開表單是新的一份草稿，不會蓋掉之前的；每一份可以單獨刪除（會先確認）；60 天沒動的草稿自動清掉，最多留 20 份。
 var DRAFTS_KEY_ = DRAFT_STORAGE_KEY + '_list';
 var DRAFT_KEEP_DAYS_ = 60;
 var draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
@@ -1397,11 +1397,21 @@ function draftsBannerRender_(onPick, onNew, newLabel) {
     list.slice(0, 10).map(function(x) {
       return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed #e0c341;"><div style="flex:1;min-width:0;"><b>' + esc_(x.title || '（還沒填名稱）') + '</b>' +
         (x.sub ? '<span style="color:#7a6a20;">｜' + esc_(x.sub) + '</span>' : '') + '<div style="font-size:12.5px;color:#7a6a20;">最後儲存 ' + when(x.at) + '</div></div>' +
-        '<button type="button" data-draft="' + x.id + '" style="padding:7px 14px;background:#2f6f4e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">繼續這一份</button></div>';
+        '<button type="button" data-draft="' + x.id + '" style="padding:7px 14px;background:#2f6f4e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">繼續這一份</button>' +
+        '<button type="button" data-draft-del="' + x.id + '" style="padding:7px 10px;background:#fff;color:#B3261E;border:1px solid #E8B4B0;border-radius:8px;cursor:pointer;">刪除</button></div>';
     }).join('') +
     '<div style="margin-top:8px;"><button type="button" id="draftNewBtn" style="width:100%;padding:9px;background:#fff;color:#2f6f4e;border:1px solid #2f6f4e;border-radius:8px;cursor:pointer;font-weight:600;">' + newLabel + '（草稿會留著）</button></div>';
   box.style.display = 'block';
   box.onclick = function(e) {
+    var del = e.target.closest('[data-draft-del]');
+    if (del) { // 只刪這一份（先確認，刪掉就找不回來）
+      var dx = draftsAll_().filter(function(y) { return y.id === del.getAttribute('data-draft-del'); })[0];
+      if (dx && confirm('確定要刪除「' + (dx.title || '（還沒填名稱）') + '」這份草稿嗎？刪掉就找不回來。')) {
+        draftsSave_(draftsAll_().filter(function(y) { return y.id !== dx.id; }));
+        if (!draftsBannerRender_(onPick, onNew, newLabel)) onNew();
+      }
+      return;
+    }
     var b = e.target.closest('[data-draft]');
     if (b) { var x = draftsAll_().filter(function(y) { return y.id === b.getAttribute('data-draft'); })[0]; if (x) { draftId_ = x.id; box.style.display = 'none'; onPick(x.draft); } return; }
     if (e.target.id === 'draftNewBtn') { box.style.display = 'none'; onNew(); }

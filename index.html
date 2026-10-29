@@ -196,6 +196,10 @@
     .rem-row .meta { grid-column: 1; font-size: 13px; color: var(--muted); }
     .rem-row .when { grid-column: 1; font-size: 13.5px; }
     .rem-row .when b { color: var(--danger); }
+    /* 115/10/27：相同／需要確認的說明比較長，改成名稱、類型、說明上下排、說明會換行，不會擠在一起重疊 */
+    .rem-row.dup { grid-template-columns: minmax(0, 1fr) auto !important; gap: 2px 12px !important; }
+    .rem-row.dup .nm, .rem-row.dup .meta, .rem-row.dup .when { grid-column: 1 !important; white-space: normal !important; overflow: visible !important; }
+    .rem-row.dup .go { grid-column: 2 !important; grid-row: 1 / 4 !important; }
     .rem-row .go { grid-row: 1 / 4; grid-column: 2; align-self: center; }
     .rem-empty { padding: 14px 16px; color: var(--muted); font-size: 13.5px; }
     .rem-error { padding: 14px 16px; color: var(--danger); font-size: 13.5px; }
@@ -937,7 +941,7 @@ function renderDupReminder() {
   setBadge('cntDup', items.length, items.length ? 'hot' : '');
   if (!items.length) { $('bodyDup').innerHTML = '<div class="rem-empty">目前沒有相同、需要確認或相似的物件。</div>'; return; }
   $('bodyDup').innerHTML = items.slice(0, 8).map(function(it) {
-    return '<div class="rem-row"><div class="nm">' + esc(it.name || '（未填案名）') + '</div><div class="meta">' + esc(it.type) + '</div>' +
+    return '<div class="rem-row dup"><div class="nm">' + esc(it.name || '（未填案名）') + '</div><div class="meta">' + esc(it.type) + '</div>' +
       '<div class="when"><b>' + esc(it.why.split('｜')[0]) + '</b>　' + esc(it.why.split('｜').slice(1).join('｜')) + '</div><div class="go"><a class="link-btn" href="master-table.html?dup=1">看物件總表</a></div></div>';
   }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 件，請到物件總表勾「只看相同、需要確認或相似的」。</div>' : '');
 }
