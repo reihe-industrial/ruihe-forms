@@ -6059,8 +6059,34 @@ function parseDeedPages_(rawPages, districtData) {
         if (am && inAttach) rec.attachedAreaM2 += deedNum_(am[2]);
       });
       rec.attachedAreaM2 = Math.round(rec.attachedAreaM2 * 100) / 100;
-      var sh = content.join('\n').match(/權利範圍合計約\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
-      rec.sharedAreaM2 = sh ? deedNum_(sh[1]) : null;
+      // 共同使用面積：電子謄本常見兩種格式：
+      // 1. 直接記載「權利範圍合計約 XXX 平方公尺」
+      // 2. 逐筆列出「共有部分：某建號 XXX 平方公尺」及其後的
+      //    「權利範圍：分母分之分子」。第二種須以共有部分面積 × 持分比例計算後加總。
+      var deedBodyText = content.join('\n');
+      var shTotal = deedBodyText.match(/權利範圍合計約\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
+      var sharedParts = [];
+      var sharedRe = /共有部分\s*[:：]?([\s\S]*?)(?=共有部分|建號-\d|$)/g;
+      var sharedBlock;
+      while ((sharedBlock = sharedRe.exec(deedBodyText)) !== null) {
+        var areaMatch = sharedBlock[1].match(/([\d,]+(?:\.\d+)?)\s*平方公尺/);
+        var rightMatch = sharedBlock[1].match(/權利範圍\s*[:：]?\s*[*＊\s]*([\d,]+)\s*分之\s*([\d,]+)/);
+        if (areaMatch && rightMatch) {
+          var sharedWholeArea = deedNum_(areaMatch[1]);
+          var shareDenominator = deedNum_(rightMatch[1]);
+          var shareNumerator = deedNum_(rightMatch[2]);
+          if (sharedWholeArea > 0 && shareDenominator > 0 && shareNumerator > 0) {
+            sharedParts.push(sharedWholeArea * shareNumerator / shareDenominator);
+          }
+        }
+      }
+      if (shTotal) {
+        rec.sharedAreaM2 = deedNum_(shTotal[1]);
+      } else if (sharedParts.length) {
+        rec.sharedAreaM2 = Math.round(sharedParts.reduce(function(sum, area) { return sum + area; }, 0) * 100) / 100;
+      } else {
+        rec.sharedAreaM2 = null;
+      }
       var dm = firstMatch(/^建築完成日期\s*:?\s*民國\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
       rec.completion = dm ? { rocYear: parseInt(dm[1], 10), month: parseInt(dm[2], 10), day: parseInt(dm[3], 10) } : null;
       if (rec.totalAreaM2 === null) rec.warnings.push('找不到建物總面積');
