@@ -1629,7 +1629,7 @@ function checkLastSubmit_() {
   if (Date.now() - p.t > 15 * 60 * 1000) { try { localStorage.removeItem(LAST_SUBMIT_KEY); } catch (e) {} return; }
   var tries = 0;
   (function check() {
-    runServer('submissionStatus', p.id).then(function(st) {
+    runServer('submissionStatus', p.id, lg_()[0], lg_()[1]).then(function(st) {
       var box = document.getElementById('msgBox');
       if (st && st.state === 'done') {
         try { localStorage.removeItem(LAST_SUBMIT_KEY); } catch (e) {}
@@ -1747,7 +1747,7 @@ function sendListingSubmission_(fieldValues, submitBtn, msgBox) {
   });
 
   // 第 4 個參數：表單完整狀態，之後「修改案件」頁用它原樣還原；第 5 個：送出編號
-  runServer('submitListingForm', currentType, fieldValues, [], collectDraft_(), submitId)
+  runServer('submitListingForm', currentType, fieldValues, [], collectDraft_(), submitId, lg_()[0], lg_()[1])
     .then(handleResult_)
     .catch(function() {
       if (finished) return;
@@ -3854,7 +3854,7 @@ async function processUploadItem_(item) {
     while (item.tries < UPLOAD_MAX_TRIES) {
       item.tries++;
       try {
-        var result = await runServer('uploadListingPhoto', base64, mime, sendName);
+        var result = await runServer('uploadListingPhoto', base64, mime, sendName, lg_()[0], lg_()[1]);
         if (result && result.success) {
           item.url = result.url;
           var m = /[?&]id=([a-zA-Z0-9_-]+)/.exec(result.url || '');
@@ -3886,7 +3886,7 @@ async function processUploadItem_(item) {
 
 function trashUploadedFile_(item) {
   if (!item.fileId) return;
-  runServer('trashListingPhoto', item.fileId).catch(function() {});
+  runServer('trashListingPhoto', item.fileId, lg_()[0], lg_()[1]).catch(function() {});
 }
 
 function removeUploadItem_(item) {
@@ -4923,6 +4923,8 @@ function idleWatch_(isLoggedIn, onTimeout) {
   setInterval(check, 30000);
   document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
 }
+// 115/10/29：送出、上傳、刪照片、查送出狀態都要帶登入的姓名和通關碼（後端會檢查）
+function lg_() { var l = sharedLoginGet_() || {}; return [l.name || '', l.code || '']; }
 function sharedLoginGet_() {
   if (idleExpired_()) { sharedLoginClear_(); return null; }
   try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
@@ -6906,15 +6908,15 @@ function applyDeed_() {
     // 115/10/29：主要用途（全部，多棟合併不重複）；車位（不影響建物類別）
     var useAll = [];
     blds.forEach(function(b) { String(b.mainUse || '').split('、').forEach(function(u) { u = u.trim(); if (u && useAll.indexOf(u) === -1) useAll.push(u); }); });
-    if (useAll.length) { deedSetInput_('主要用途', useAll.join('、'), res); }
+    if (useAll.length) { deedSetAuto_('主要用途', useAll.join('、'), res); }
     // 車位：專有（業主可買賣）與公用（不能買賣、可以使用）分開記
     var parkAll = [];
     blds.forEach(function(b) { (b.parkItems || []).forEach(function(x) { if (!parkAll.filter(function(y) { return y.no === x.no; })[0]) parkAll.push(x); }); });
     if (parkAll.length && currentType !== '土地') {
       var own = parkAll.filter(function(x) { return !x.shared; }), pub = parkAll.filter(function(x) { return x.shared; });
       deedSetAuto_('有無車位', currentType === '廠房' ? '是' : '有', res);
-      deedSetInput_('車位編號', parkAll.map(function(x) { return x.no + (x.shared ? '（公用，不可買賣）' : '（專有）'); }).join('、'), res);
-      deedSetInput_('車位數量', '專有 ' + own.length + ' 個' + (pub.length ? '、公用 ' + pub.length + ' 個（不可買賣，可使用）' : ''), res);
+      deedSetAuto_('車位編號', parkAll.map(function(x) { return x.no + (x.shared ? '（公用，不可買賣）' : '（專有）'); }).join('、'), res);
+      deedSetAuto_('車位數量', '專有 ' + own.length + ' 個' + (pub.length ? '、公用 ' + pub.length + ' 個（不可買賣，可使用）' : ''), res);
     }
     // 115/10/27：好幾棟時，在「其他備註說明」寫「分棟資訊」：每一棟一行（建號、主要建材、建築完成日、屋齡、建物面積），再帶入一次會整段更新
     if (multiBld) {
