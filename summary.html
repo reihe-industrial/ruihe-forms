@@ -171,14 +171,13 @@
     .table-wrap.compact th, .table-wrap.compact td { white-space: normal; word-break: break-word; vertical-align: top; }
     .table-wrap.compact td.name { min-width: 9em; }
     .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
-/* 115/10/29：物件簡表欄位平均：數字欄不換行（總價不再一字一行）、名稱與坐落可換行 */
-.table-wrap.compact th, .table-wrap.compact td { min-width: 84px; }
-.table-wrap.compact td[data-c="總價"], .table-wrap.compact td[data-c="單價"], .table-wrap.compact td[data-c="土地面積(坪)"], .table-wrap.compact td[data-c="建物面積(坪)"],
-.table-wrap.compact td[data-c="租/售"], .table-wrap.compact td[data-c="契約類型"], .table-wrap.compact td[data-c="類型"],
-.table-wrap.compact th[data-c="總價"], .table-wrap.compact th[data-c="單價"], .table-wrap.compact th[data-c="土地面積(坪)"], .table-wrap.compact th[data-c="建物面積(坪)"],
-.table-wrap.compact th[data-c="租/售"], .table-wrap.compact th[data-c="契約類型"] { white-space: nowrap; }
-.table-wrap.compact td.name { min-width: 15em; white-space: normal; }
-.table-wrap.compact td[data-c="坐落"], .table-wrap.compact td[data-c="業務人員"] { min-width: 7em; }
+/* 115/10/29：物件簡表：欄位平均分配、不橫向捲動；產生 DM 按鈕固定在最右邊 */
+.table-wrap.compact { overflow-x: hidden; }
+.table-wrap.compact table { table-layout: fixed; width: 100%; }
+.table-wrap.compact th, .table-wrap.compact td { min-width: 0; white-space: normal; word-break: break-all; overflow-wrap: anywhere; }
+.table-wrap.compact td.name { white-space: normal; }
+.table-wrap.compact th:last-child, .table-wrap.compact td:last-child { width: 156px; }
+.table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
     .more-btn { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
     tr.opened td { background: #FAFAF6; }
     tr.more-row td { background: #FAFAF6; padding-top: 0; }
