@@ -6060,7 +6060,76 @@ function parseDeedPages_(rawPages, districtData) {
       });
       rec.attachedAreaM2 = Math.round(rec.attachedAreaM2 * 100) / 100;
       var sh = content.join('\n').match(/權利範圍合計約\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
-      rec.sharedAreaM2 = sh ? deedNum_(sh[1]) : null;
+      if (sh) {
+        rec.sharedAreaM2 = deedNum_(sh[1]);
+      } else {
+        var commonTotal = 0;
+        var hasCommon = false;
+        rec.commonParts = [];
+        rec.parkingSpaces = [];
+        var curCommon = null;
+
+        for (var ci = 0; ci < content.length; ci++) {
+          var cl = content[ci].trim();
+          if (/所有權部|他項權利部/.test(cl.replace(/[*#\s]/g, ''))) break;
+
+          // 匹配共有部分建號與面積，例如：共有部分：惠義段00616-000建號**7,702.32平方公尺
+          var cm = cl.match(/共有部分\s*[:：]?\s*(?:([^\d\s*]+)\s*)?(?:建號)?\s*(\d{3,5}-\d{3,4})?(?:\s*建號)?\s*\*+\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
+          if (cm) {
+            curCommon = {
+              segment: cm[1] || '',
+              buildNo: cm[2] || '',
+              areaM2: deedNum_(cm[3]),
+              ratioText: '',
+              sharedM2: 0
+            };
+            // 若面積換行在下一行，往下找 1~2 行
+            if (!curCommon.areaM2) {
+              for (var ni = ci + 1; ni < Math.min(content.length, ci + 3); ni++) {
+                var naMatch = content[ni].trim().match(/\**\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
+                if (naMatch && !/共有部分|權利範圍/.test(content[ni])) {
+                  curCommon.areaM2 = deedNum_(naMatch[1]);
+                  break;
+                }
+              }
+            }
+            rec.commonParts.push(curCommon);
+            hasCommon = true;
+            continue;
+          }
+
+          // 匹配該共有部分之主權利範圍（持分），排除括號開頭的車位行
+          if (curCommon && !curCommon.ratioText && !/^[（(]/.test(cl)) {
+            var rm = cl.match(/權利範圍\s*[:：]\s*\*+\s*(\d+)\s*分之\s*(\d+)/);
+            if (rm) {
+              var den = parseFloat(rm[1]);
+              var num = parseFloat(rm[2]);
+              curCommon.ratioText = num + '/' + den;
+              if (den > 0 && curCommon.areaM2) {
+                curCommon.sharedM2 = Math.round(curCommon.areaM2 * (num / den) * 100) / 100;
+                commonTotal += curCommon.sharedM2;
+              }
+            } else if (/權利範圍\s*[:：]\s*\*+\s*(全部|1分之1)/.test(cl)) {
+              curCommon.ratioText = '全部';
+              curCommon.sharedM2 = curCommon.areaM2;
+              commonTotal += curCommon.sharedM2;
+            }
+          }
+
+          // 順便抓取停車位編號，例如：(含停車位編號063 ,權利範圍:****100000分之479*******)
+          var pkm = cl.match(/^[（(]\s*(?:含停車位編號\s*)?([0-9a-zA-Z\-_]+(?:[(（][^()（）]*[)）])?)\s*[,，\s]*權利範圍\s*[:：]\s*\*+/);
+          if (pkm) {
+            var pNo = pkm[1].replace(/\s+/g, '');
+            if (rec.parkingSpaces.indexOf(pNo) === -1) rec.parkingSpaces.push(pNo);
+          }
+        }
+
+        if (hasCommon && commonTotal > 0) {
+          rec.sharedAreaM2 = Math.round(commonTotal * 100) / 100;
+        } else {
+          rec.sharedAreaM2 = hasCommon ? 0 : null;
+        }
+      }
       var dm = firstMatch(/^建築完成日期\s*:?\s*民國\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
       rec.completion = dm ? { rocYear: parseInt(dm[1], 10), month: parseInt(dm[2], 10), day: parseInt(dm[3], 10) } : null;
       if (rec.totalAreaM2 === null) rec.warnings.push('找不到建物總面積');
@@ -6256,7 +6325,7 @@ function deedRecordText_(r) {
   }
   var c = r.completion ? ('民國' + r.completion.rocYear + '年' + r.completion.month + '月' + r.completion.day + '日') : '完成日？';
   return '建物｜' + loc + ' ' + r.number + ' 建號｜' + (r.address || '門牌？') + '｜總面積 ' + (r.totalAreaM2 === null ? '？' : r.totalAreaM2.toLocaleString() + ' m²') +
-    '｜附屬 ' + r.attachedAreaM2 + ' m²｜' + c + '｜' + (r.floors || '？') + '層｜' + r.source;
+    '｜附屬 ' + r.attachedAreaM2 + ' m²' + shText + '｜' + c + '｜' + (r.floors || '？') + '層｜' + r.source;
 }
 
 // 建物分棟：預設以門牌分棟；同一個門牌有好幾個建號時，業務可以在預覽選「分開成不同棟」
