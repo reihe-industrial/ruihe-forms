@@ -6083,13 +6083,20 @@ function parseDeedPages_(rawPages, districtData) {
       var toHalf_ = function(x) { return String(x).replace(/[０-９]/g, function(c) { return String.fromCharCode(c.charCodeAt(0) - 65248); }).replace(/[－–—]/g, '-'); };
       var ptm = toHalf_(content.join(' ')).match(/停車位共計\s*[:：]?\s*(\d+)\s*位/);
       if (ptm) rec.parkTotal = ptm[1];
+      // 115/10/29：每個車位標記專有（業主可買賣）或公用（標「共用」，不能買賣、可以使用）
+      rec.parkItems = [];
       content.forEach(function(line) {
         var t = toHalf_(line);
         var m1 = t.match(/停車位編號\s*(\d{2,3}(?:-\d+)?)/);
         var m2 = t.match(/^[（(]\s*(\d{2,3}(?:-\d+)?)\s*(?:\(共用\))?\s*,\s*權利範圍/);
         var no = m1 ? m1[1] : (m2 ? m2[1] : '');
-        if (no && rec.parkNos.indexOf(no) === -1) rec.parkNos.push(no);
+        if (!no) return;
+        var shared = /共用/.test(t);
+        var had = rec.parkItems.filter(function(x) { return x.no === no; })[0];
+        if (had) { if (shared) had.shared = true; return; }
+        rec.parkItems.push({ no: no, shared: shared });
       });
+      rec.parkNos = rec.parkItems.map(function(x) { return x.no; });
       var mat = firstMatch(/^主要建材\s*:?\s*(\S+)/);
       rec.materials = mat ? mat[1].split('、').filter(Boolean) : [];
       var fl = firstMatch(/層\s*數\s*:?\s*(\d+)\s*層/);
@@ -6900,12 +6907,14 @@ function applyDeed_() {
     var useAll = [];
     blds.forEach(function(b) { String(b.mainUse || '').split('、').forEach(function(u) { u = u.trim(); if (u && useAll.indexOf(u) === -1) useAll.push(u); }); });
     if (useAll.length) { deedSetInput_('主要用途', useAll.join('、'), res); }
+    // 車位：專有（業主可買賣）與公用（不能買賣、可以使用）分開記
     var parkAll = [];
-    blds.forEach(function(b) { (b.parkNos || []).forEach(function(n) { if (parkAll.indexOf(n) === -1) parkAll.push(n); }); });
+    blds.forEach(function(b) { (b.parkItems || []).forEach(function(x) { if (!parkAll.filter(function(y) { return y.no === x.no; })[0]) parkAll.push(x); }); });
     if (parkAll.length && currentType !== '土地') {
+      var own = parkAll.filter(function(x) { return !x.shared; }), pub = parkAll.filter(function(x) { return x.shared; });
       deedSetAuto_('有無車位', currentType === '廠房' ? '是' : '有', res);
-      deedSetInput_('車位編號', parkAll.join('、'), res);
-      deedSetInput_('車位數量', String(parkAll.length), res);
+      deedSetInput_('車位編號', parkAll.map(function(x) { return x.no + (x.shared ? '（公用，不可買賣）' : '（專有）'); }).join('、'), res);
+      deedSetInput_('車位數量', '專有 ' + own.length + ' 個' + (pub.length ? '、公用 ' + pub.length + ' 個（不可買賣，可使用）' : ''), res);
     }
     // 115/10/27：好幾棟時，在「其他備註說明」寫「分棟資訊」：每一棟一行（建號、主要建材、建築完成日、屋齡、建物面積），再帶入一次會整段更新
     if (multiBld) {
