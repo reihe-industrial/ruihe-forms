@@ -702,7 +702,7 @@ var editMode = false, edits = {}, editingCell = null;
 function withRatio(names, ratios) {
   var n = String(names || '').split(/[、,，\/]+/).map(function(x) { return x.trim(); }).filter(Boolean);
   var r = String(ratios || '').split(/[、,，\/\s]+/).map(function(x) { return x.trim(); }).filter(Boolean);
-  if (!n.length || !r.length || /^(無|0)$/.test(r.join(''))) return names;
+  if (!n.length || !r.length || /^無$/.test(r.join(''))) return names; // 115/10/27：0% 也照寫（例如「曾甄茹 0%」）
   // 試算表把比例格子設成百分比格式時，30 會顯示成 3000%：超過 100 的除回來（115/10/27）
   var pct = function(x) { var m = String(x).match(/^(\d+(?:\.\d+)?)%$/); if (m && +m[1] > 100) return (+m[1] / 100) + '%'; return /%$/.test(x) ? x : x + '%'; };
   if (r.length === n.length) return n.map(function(x, k) { return x + ' ' + pct(r[k]); }).join('、');

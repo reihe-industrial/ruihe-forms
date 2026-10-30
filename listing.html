@@ -244,6 +244,8 @@
     .district-entry.no-building { grid-template-columns: 1fr 1fr 1fr auto; }
     .district-entry.lot-entry { grid-template-columns: 1fr 1fr 1fr 1fr 1.7fr auto; }
     #agentBlock { grid-column: 1 / -1; }
+    .photo-tile .ord { display: flex; justify-content: center; gap: 6px; margin: 2px 0; }
+    .photo-tile .ord button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 1px 10px; cursor: pointer; font-size: 12px; }
     .photo-group-title { grid-column: 1 / -1; font-weight: 700; color: var(--brand-dark); font-size: 15px; margin: 8px 0 -2px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
     .photo-group-title:first-child { margin-top: 0; }
     .upload-zone { border: 1px dashed var(--line); border-radius: 10px; padding: 12px; background: #fbfaf6; margin-top: 10px; }
@@ -1501,8 +1503,8 @@ var FIELD_CONFIG = {
     { label: '原契約總價(萬)', type: 'number', required: true, group: 'presale', hint: '填數字，單位是萬' },
     { label: '轉讓證明書', type: 'select', options: ['有', '無'], required: true, group: 'presale', transferCert: true, hint: '選「有」請在這裡上傳轉讓證明書' },
     { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
-    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物）換算帶入，可以再修改' },
-    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物）換算帶入，可以再修改' },
+    { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物＋共同使用面積）換算帶入，可以再修改' },
+    { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物＋共同使用面積）換算帶入，可以再修改' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租','興建中'] },
     { label: '使用狀態補充說明(房屋)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
@@ -1526,8 +1528,8 @@ var FIELD_CONFIG = {
     { label: '附屬建物面積(m²)', type: 'number', required: true, hint: '從權狀本填寫，無需填單位。如無附屬建物請填0，範例：500', showPing: true },
     { label: '加蓋面積(m²)', type: 'number', hint: '無需填單位。範例：20', showPing: true },
     { label: '共同使用面積(m²)', type: 'number', hint: '從權狀本填寫，無需填單位。如無共同使用面積請填0，範例：35.2', showPing: true },
-    { label: '建蔽率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
-    { label: '容積率', type: 'text', required: true, hint: '無需填寫百分比符號(%)' },
+    { label: '建蔽率', type: 'text', hint: '無需填寫百分比符號(%)' }, // 115/10/27：房屋的建蔽率不用必填
+    { label: '容積率', type: 'text', hint: '無需填寫百分比符號(%)' }, // 115/10/27：房屋的容積率不用必填
     { label: '建物類別', type: 'checkbox-other', required: true, options: ['無電梯公寓','華廈(10樓含以下)','大樓(11樓以上)','透天','別墅','一般套房','商務套房','學生套房','樓中樓','農舍'] },
     { label: '基地深度', type: 'text', hint: '無需填單位。範例：150' },
     { label: '基地面寬', type: 'text', hint: '無需填單位。範例：60' },
@@ -3247,6 +3249,26 @@ document.getElementById('addBuildingBtn').addEventListener('click', addBuildingE
 // ------------------------------------------------------------
 var DRAFT_STORAGE_KEY = 'ruiheListingFormDraft';
 
+// 格局（115/10/27）：草稿、修改頁存「5房3廳5衛」這種完整文字，還原時拆回「有格局」＋房廳衛三格（原本只存「有格局」，數字不見，修改時一直說沒填）
+function roomLayoutText_(el) {
+  if (el.value !== '有格局') return el.value;
+  var w = el.parentElement.querySelector('.room-layout-inputs'), parts = [];
+  if (w) w.querySelectorAll('.room-count-input').forEach(function(inp) { var n = inp.value.trim(); if (n) parts.push(n + inp.getAttribute('data-unit')); });
+  return parts.join('') || '有格局';
+}
+function setRoomLayout_(el, value) {
+  value = String(value == null ? '' : value).trim();
+  var w = el.parentElement.querySelector('.room-layout-inputs');
+  var inputs = w ? w.querySelectorAll('.room-count-input') : [];
+  inputs.forEach(function(inp) { inp.value = ''; });
+  if (/\d+\s*[房廳衛]/.test(value) || value === '有格局') {
+    el.value = '有格局';
+    inputs.forEach(function(inp) { var m = value.match(new RegExp('(\\d+)\\s*' + inp.getAttribute('data-unit'))); if (m) inp.value = m[1]; });
+  } else if (Array.prototype.some.call(el.options, function(o) { return o.value === value; })) el.value = value;
+  else el.value = value ? '有格局' : '';
+  el.dispatchEvent(new Event('change'));
+  return true;
+}
 function collectDraft_() {
   var draft = { type: currentType, priceUnits: {}, fields: {}, otherInputs: {}, checkboxGroups: {},
     multiGroups: {}, extraFloorGroups: {}, businessEntries: [], lotEntries: [], buildingEntries: [],
@@ -3254,7 +3276,7 @@ function collectDraft_() {
 
   document.querySelectorAll('#listingForm [data-label]').forEach(function(el) {
     var label = el.getAttribute('data-label');
-    draft.fields[label] = el.value;
+    draft.fields[label] = el.classList.contains('room-layout-select') ? roomLayoutText_(el) : el.value;
     var otherInput = el.parentElement.querySelector('.other-input');
     if (otherInput) draft.otherInputs[label] = otherInput.value;
   });
@@ -3463,6 +3485,7 @@ function restoreDraft_(draft) {
       var restoredRows = el._multi ? parseMultiDateText_(draft.fields[label]) : null;
       if (restoredRows) enterMultiDate_(el, restoredRows); else makeDateFieldText_(el);
     }
+    if (el.classList.contains('room-layout-select')) { setRoomLayout_(el, draft.fields[label]); return; }
     el.value = draft.fields[label];
     if (el.tagName === 'SELECT') el.dispatchEvent(new Event('change'));
     el.dispatchEvent(new Event('input')); // 讓「地上樓層」「地下樓層」這類有監聽 input 事件的欄位（例如簷高會依此重新長出樓層格子）正確反應還原的值
@@ -4375,8 +4398,8 @@ document.getElementById('listingForm').addEventListener('submit', async function
 // 單價／總價互相換算、持分面積、產業園區名稱(土地) 顯示條件、案件狀態
 // ============================================================
 var SQM_PER_PING_ = 3.305785;
-// 換算用的面積：廠房、土地用土地面積；房屋用主建物＋附屬建物（持分出售時這些欄位填的就是持分面積）
-var PRICE_AREA_LABELS = { '廠房': ['土地面積(m²)'], '土地': ['土地面積(m²)'], '房屋': ['主建物面積(m²)', '附屬建物面積(m²)'] };
+// 換算用的面積：廠房、土地用土地面積；房屋用主建物＋附屬建物＋共同使用面積（115/10/27 加上共有面積；持分出售時這些欄位填的就是持分面積）
+var PRICE_AREA_LABELS = { '廠房': ['土地面積(m²)'], '土地': ['土地面積(m²)'], '房屋': ['主建物面積(m²)', '附屬建物面積(m²)', '共同使用面積(m²)'] };
 var TOTAL_UNIT_YUAN_ = { '萬': 1e4, '億': 1e8, '元': 1, '萬/月': 1e4, '元/月': 1 };
 var PER_PING_UNIT_YUAN_ = { '萬/坪': 1e4, '元/坪': 1, '元/坪/月': 1 }; // 單價單位是「萬/月」「元/月」時不換算
 var priceDriver_ = null; // 業務最後自己輸入的是「單價」還是「總價」，另一個跟著算
@@ -5323,7 +5346,7 @@ function editApplyCurrentValue_(label, value) {
     fire(el);
     return true;
   }
-  if (el.classList.contains('room-layout-select')) return false;
+  if (el.classList.contains('room-layout-select')) return setRoomLayout_(el, value);
   if (el.tagName === 'SELECT') {
     var has = function(v) { return Array.prototype.some.call(el.options, function(o) { return o.value === v; }); };
     if (has(value)) { el.value = value; fire(el); return true; }
@@ -5352,6 +5375,12 @@ function editOpenCase_(key, btn) {
         var form = data.form || {};
         form.type = data.typeTab; // 類型以案件為準，不能更改
         restoreDraft_(form);
+        // 格局：舊的表單狀態只記「有格局」，房廳衛數字用試算表目前的值補（115/10/27）
+        Object.keys(data.layouts || {}).forEach(function(l) {
+          var el = document.querySelector('#listingForm [data-label="' + l + '"]'); if (!el) return;
+          var cur = roomLayoutText_(el);
+          if ((!cur || cur === '有格局') && data.layouts[l]) setRoomLayout_(el, data.layouts[l]);
+        });
       }
 
       // 表單送出後在試算表被改過的欄位：能帶入的帶入目前的值，其他的列出來
@@ -5583,10 +5612,22 @@ function editLoadPhotos_(key) {
         var list = files.filter(function(f) { return catOf(f) === c; });
         if (!list.length) return;
         var h = document.createElement('div'); h.className = 'photo-group-title';
-        h.textContent = c + '（' + list.length + '）' + (c === '圖片' ? '　DM 會用這裡的照片' : '');
+        h.textContent = c + '（' + list.length + '）' + (c === '圖片' ? '　DM 照這個順序用照片，可以按 ◀ ▶ 調整' : '');
+        if (c === '圖片' && list.length > 1) {
+          var bar = document.createElement('span'); bar.id = 'photoOrderBar'; bar.style.display = 'none';
+          var sb = document.createElement('button'); sb.type = 'button'; sb.className = 'edit-btn'; sb.textContent = '儲存照片順序'; sb.style.cssText = 'margin-left:10px;padding:4px 12px;font-size:13px;';
+          sb.addEventListener('click', function() { editSavePhotoOrder_(sb); });
+          bar.appendChild(sb); h.appendChild(bar);
+        }
         grid.appendChild(h);
-        list.forEach(function(f) { grid.appendChild(editPhotoTile_(key, f)); });
+        list.forEach(function(f) { var tl = editPhotoTile_(key, f); tl.setAttribute('data-cat', c); grid.appendChild(tl); });
       });
+      if (files.length) { // 整包下載
+        var dl = document.createElement('div'); dl.className = 'photo-group-title'; dl.style.borderBottom = 'none';
+        var db2 = document.createElement('button'); db2.type = 'button'; db2.className = 'edit-btn secondary'; db2.textContent = '全部下載（壓縮檔）'; db2.style.cssText = 'padding:6px 14px;font-size:13px;';
+        db2.addEventListener('click', function() { editDownloadAll_(db2); });
+        dl.appendChild(db2); grid.insertBefore(dl, grid.firstChild);
+      }
       grid.style.display = files.length ? '' : 'none';
     })
     .catch(function(err) { document.getElementById('editPhotoInfo').textContent = '讀取已上傳的照片失敗：' + err.message; });
@@ -5617,8 +5658,66 @@ function editPhotoTile_(key, f) {
       .catch(function(err) { db.disabled = false; db.textContent = '刪除'; showToast('刪除失敗：' + err.message, 'error', true); });
   });
   acts.appendChild(vb); acts.appendChild(db);
-  tile.appendChild(th); tile.appendChild(nm); tile.appendChild(acts);
+  tile.setAttribute('data-id', f.id);
+  if ((f.cat || '圖片') === '圖片' && !/^(委託書|物件資訊)_/.test(f.name)) { // 照片可以調順序（DM 照這個順序用）
+    var ord = document.createElement('div'); ord.className = 'ord';
+    [['◀', -1, '往前'], ['▶', 1, '往後']].forEach(function(x) {
+      var bt = document.createElement('button'); bt.type = 'button'; bt.textContent = x[0]; bt.title = x[2];
+      bt.addEventListener('click', function() { editMovePhoto_(tile, x[1]); });
+      ord.appendChild(bt);
+    });
+    tile.appendChild(th); tile.appendChild(nm); tile.appendChild(ord); tile.appendChild(acts);
+    tile.classList.add('is-photo');
+  } else {
+    tile.appendChild(th); tile.appendChild(nm); tile.appendChild(acts);
+  }
   return tile;
+}
+// ---- 照片順序、整包下載（115/10/27）----
+function editMovePhoto_(tile, dir) {
+  var sib = dir < 0 ? tile.previousElementSibling : tile.nextElementSibling;
+  if (!sib || !sib.classList.contains('is-photo')) return;
+  if (dir < 0) tile.parentNode.insertBefore(tile, sib); else tile.parentNode.insertBefore(sib, tile);
+  var bar = document.getElementById('photoOrderBar'); if (bar) bar.style.display = '';
+}
+function editSavePhotoOrder_(btn) {
+  if (!editCase_) return;
+  var key = editCase_.key, ids = Array.prototype.map.call(document.querySelectorAll('#editPhotoGrid .photo-tile.is-photo'), function(t) { return t.getAttribute('data-id'); });
+  btn.disabled = true; btn.textContent = '儲存中…';
+  runServer('editSetPhotoOrder', editAuth_.name, editAuth_.code, key, ids)
+    .then(function() { showToast('照片順序已儲存，DM 會照這個順序用照片', 'success', true); editLoadPhotos_(key); })
+    .catch(function(err) { btn.disabled = false; btn.textContent = '儲存照片順序'; showToast('儲存失敗：' + err.message, 'error', true); });
+}
+function editDownloadAll_(btn) {
+  if (!editCase_) return;
+  var key = editCase_.key, tiles = Array.prototype.slice.call(document.querySelectorAll('#editPhotoGrid .photo-tile'));
+  if (!tiles.length) return;
+  var name0 = (document.querySelector('[data-label="案名"]') || {}).value || '物件';
+  var load = window.JSZip ? Promise.resolve(window.JSZip) : new Promise(function(res, rej) {
+    var sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    sc.onload = function() { window.JSZip ? res(window.JSZip) : rej(new Error('載入壓縮工具失敗')); }; sc.onerror = function() { rej(new Error('載入壓縮工具失敗')); };
+    document.head.appendChild(sc);
+  });
+  btn.disabled = true;
+  load.then(function(JSZip) {
+    var zip = new JSZip(), done = 0, used = {};
+    var folderOf = function(t) { var g = t.getAttribute('data-cat') || '圖片'; return g === '委託書' ? '3_委託書' : g === '物件資訊' ? '2_物件資訊' : '1_圖片'; };
+    var next = function(i) {
+      if (i >= tiles.length) return zip.generateAsync({ type: 'blob' });
+      btn.textContent = '打包中…（' + (i + 1) + '/' + tiles.length + '）';
+      return runServer('editGetPhoto', editAuth_.name, editAuth_.code, key, tiles[i].getAttribute('data-id')).then(function(res) {
+        var fn = folderOf(tiles[i]) + '/' + String(res.name || ('檔案' + (i + 1))).replace(/[\\\/:*?"<>|]/g, '_');
+        if (used[fn]) fn = fn.replace(/(\.[^.]+)?$/, '_' + i + '$1'); used[fn] = 1;
+        zip.file(fn, res.data, { base64: true }); done++;
+        return next(i + 1);
+      });
+    };
+    return next(0);
+  }).then(function(blob) {
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = String(name0).replace(/[\\\/:*?"<>|]/g, '_') + '_檔案.zip';
+    document.body.appendChild(a); a.click(); setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    btn.disabled = false; btn.textContent = '全部下載（壓縮檔）';
+  }).catch(function(err) { btn.disabled = false; btn.textContent = '全部下載（壓縮檔）'; showToast('打包失敗：' + err.message, 'error', true); });
 }
 function editViewPhoto_(key, f, btn) {
   btn.disabled = true; btn.textContent = '讀取中…';
