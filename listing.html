@@ -1436,11 +1436,11 @@ var FIELD_CONFIG = {
     { label: '基地面寬', type: 'text', required: true },
     { label: '面臨路寬', type: 'text', required: true },
     { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期。年份可以輸入民國年（例如 113）或西元年（例如 2024）；1912 年以前的老建築請輸入西元年（例如 1895）。有好幾棟、完成日不同時，請按下面「各棟完成日不同？分棟填寫」，一棟填一個日期' },
+    { label: '主要用途', type: 'text', hint: '謄本會自動帶入，多個用途用「、」分開，例如：人行道、店舖、停車空間' },
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總樓層數，例如：4；如果只提供其中一層樓，請填該樓層，例如：3F(僅提供3樓)；如果基地上有好幾棟不同樓層的建物，請簡短列出，例如：廠房2F、倉庫1F、宿舍3F' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)；如果好幾棟都有地下室，請簡短列出，例如：廠房B1、宿舍B1' },
     { label: '物件格局(廠房)', type: 'room-layout', required: true },
     { label: '建物類別', type: 'checkbox-other', required: true, options: ['廠房','廠辦','倉庫'] }, // 115/10/27 拿掉「農地工廠」（不一定合法）
-    { label: '主要用途', type: 'text', hint: '謄本會自動帶入，多個用途用「、」分開，例如：人行道、店舖、停車空間' },
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
     { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
@@ -1550,13 +1550,13 @@ var FIELD_CONFIG = {
     { label: '建蔽率', type: 'text', hint: '無需填寫百分比符號(%)' }, // 115/10/27：房屋的建蔽率不用必填
     { label: '容積率', type: 'text', hint: '無需填寫百分比符號(%)' }, // 115/10/27：房屋的容積率不用必填
     { label: '建物類別', type: 'checkbox-other', required: true, options: ['無電梯公寓','華廈(10樓含以下)','大樓(11樓以上)','透天','別墅','一般套房','商務套房','學生套房','樓中樓','農舍'] },
-    { label: '主要用途', type: 'text', hint: '謄本會自動帶入，多個用途用「、」分開，例如：人行道、店舖、停車空間' },
     { label: '基地深度', type: 'text', hint: '無需填單位。範例：150' },
     { label: '基地面寬', type: 'text', hint: '無需填單位。範例：60' },
     { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
     { label: '建築完成日', type: 'roc-date', required: true, hint: '請選擇日期。年份可以輸入民國年（例如 113）或西元年（例如 2024）；1912 年以前的老建築請輸入西元年（例如 1895）。有好幾棟、完成日不同時，請按下面「各棟完成日不同？分棟填寫」，一棟填一個日期' },
+    { label: '主要用途', type: 'text', hint: '謄本會自動帶入，多個用途用「、」分開，例如：人行道、店舖、停車空間' },
     { label: '所在樓別', type: 'text', required: true, hint: '物件位於幾樓', group: 'floorLoc' },
     { label: '地上樓層', type: 'text', required: true, hint: '請依據建物謄本填寫' },
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)' },
@@ -6788,8 +6788,12 @@ function applyDeed_() {
       var maxProv = g.provided.length ? g.provided[g.provided.length - 1] : 0;
       if (maxProv > g.floorsTotal) g.floorsTotal = maxProv;
       g.whole = !!g.floorsTotal && g.provided.length === g.floorsTotal; // 提供的樓層涵蓋 1 樓到頂樓，等於整棟
-      var use = String(g.blds[0].mainUse || '').split('、')[0].trim();
-      g.name = (multiBld ? String.fromCharCode(65 + gi) : '') + (use || (multiBld ? '建物' : '廠房'));
+      // 115/10/29：棟名稱與分棟資訊用完整的主要用途（不只第一個）
+      var useList_ = [];
+      g.blds.forEach(function(b) { String(b.mainUse || '').split('、').forEach(function(u) { u = u.trim(); if (u && useList_.indexOf(u) === -1) useList_.push(u); }); });
+      var use = useList_.join('、');
+      g.useFull = use; // 完整主要用途（分棟資訊用）
+      g.name = multiBld ? String.fromCharCode(65 + gi) + '棟' : (currentType === '廠房' ? '廠房' : '建物'); // 棟名用 A棟、B棟，不用主要用途
       g.address = g.addrList.join('、');
       g.rangeText = deedRangeText_(g.provided);
       g.nums = g.blds.map(function(b) { return b.number; });
@@ -6936,7 +6940,7 @@ function applyDeed_() {
           });
           var age = '';
           if (comp) { var cd = new Date(comp.rocYear + 1911, comp.month - 1, comp.day); age = (Math.round((now_ - cd) / (365.2425 * 864e5) * 10) / 10) + ' 年'; }
-          return '・' + g.name + (nums.length ? '（建號 ' + nums.join('、') + '）' : '') + '：' +
+          return '・' + g.name + (nums.length ? '（建號 ' + nums.join('、') + '）' : '') + '：' + (g.useFull ? g.useFull + '｜' : '') +
             [codes.join('、') || '建材未載', comp ? '民國' + comp.rocYear + '年' + comp.month + '月' + comp.day + '日完成' : '完成日未載', age ? '屋齡 ' + age : '屋齡未知',
              area > 0 ? '建物面積 ' + fmt2_(area) + '㎡（' + fmt2_(area * 0.3025) + '坪）' : '面積未載'].join('｜');
         });
