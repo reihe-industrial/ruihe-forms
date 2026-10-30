@@ -171,6 +171,14 @@
     .table-wrap.compact th, .table-wrap.compact td { white-space: normal; word-break: break-word; vertical-align: top; }
     .table-wrap.compact td.name { min-width: 9em; }
     .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
+/* 115/10/29：物件簡表欄位平均：數字欄不換行（總價不再一字一行）、名稱與坐落可換行 */
+.table-wrap.compact th, .table-wrap.compact td { min-width: 84px; }
+.table-wrap.compact td[data-c="總價"], .table-wrap.compact td[data-c="單價"], .table-wrap.compact td[data-c="土地面積(坪)"], .table-wrap.compact td[data-c="建物面積(坪)"],
+.table-wrap.compact td[data-c="租/售"], .table-wrap.compact td[data-c="契約類型"], .table-wrap.compact td[data-c="類型"],
+.table-wrap.compact th[data-c="總價"], .table-wrap.compact th[data-c="單價"], .table-wrap.compact th[data-c="土地面積(坪)"], .table-wrap.compact th[data-c="建物面積(坪)"],
+.table-wrap.compact th[data-c="租/售"], .table-wrap.compact th[data-c="契約類型"] { white-space: nowrap; }
+.table-wrap.compact td.name { min-width: 15em; white-space: normal; }
+.table-wrap.compact td[data-c="坐落"], .table-wrap.compact td[data-c="業務人員"] { min-width: 7em; }
     .more-btn { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
     tr.opened td { background: #FAFAF6; }
     tr.more-row td { background: #FAFAF6; padding-top: 0; }
@@ -811,6 +819,17 @@ function applyAndRender() {
     return;
   }
   box.innerHTML = DESKTOP_QUERY.matches ? tableHtml(list) : cardsHtml(list);
+  tagSummaryCols_(box); // 115/10/29：每一欄加上欄位名稱，好讓樣式對欄位（總價、單價等不換行）
+}
+// 115/10/29：表格每一欄標上欄位名稱（data-c），數字欄位不換行、名稱與坐落可換行，欄寬比較平均
+function tagSummaryCols_(box) {
+  box.querySelectorAll('table').forEach(function(t) {
+    var heads = Array.prototype.map.call(t.querySelectorAll('thead th'), function(th) { return (th.textContent || '').replace(/[▲▼]/g, '').trim(); });
+    heads.forEach(function(h, i) { var th = t.querySelectorAll('thead th')[i]; if (th && h) th.setAttribute('data-c', h); });
+    t.querySelectorAll('tbody tr').forEach(function(tr) {
+      Array.prototype.forEach.call(tr.children, function(td, i) { if (heads[i]) td.setAttribute('data-c', heads[i]); });
+    });
+  });
 }
 function typeTagHtml(row) {
   return splitTypes(cell(row, C.type)).map(function(t) {

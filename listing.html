@@ -1440,6 +1440,7 @@ var FIELD_CONFIG = {
     { label: '地下樓層', type: 'text', required: true, hint: '請依據建物謄本填寫。如果是整棟出售/出租，請填總地下樓層數，例如：1；如果只提供其中一層，請填該樓層，例如：B1(僅提供地下1樓)；如果好幾棟都有地下室，請簡短列出，例如：廠房B1、宿舍B1' },
     { label: '物件格局(廠房)', type: 'room-layout', required: true },
     { label: '建物類別', type: 'checkbox-other', required: true, options: ['廠房','廠辦','倉庫'] }, // 115/10/27 拿掉「農地工廠」（不一定合法）
+    { label: '主要用途', type: 'text', hint: '謄本會自動帶入，多個用途用「、」分開，例如：人行道、店舖、停車空間' },
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
     { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
@@ -1549,6 +1550,7 @@ var FIELD_CONFIG = {
     { label: '建蔽率', type: 'text', hint: '無需填寫百分比符號(%)' }, // 115/10/27：房屋的建蔽率不用必填
     { label: '容積率', type: 'text', hint: '無需填寫百分比符號(%)' }, // 115/10/27：房屋的容積率不用必填
     { label: '建物類別', type: 'checkbox-other', required: true, options: ['無電梯公寓','華廈(10樓含以下)','大樓(11樓以上)','透天','別墅','一般套房','商務套房','學生套房','樓中樓','農舍'] },
+    { label: '主要用途', type: 'text', hint: '謄本會自動帶入，多個用途用「、」分開，例如：人行道、店舖、停車空間' },
     { label: '基地深度', type: 'text', hint: '無需填單位。範例：150' },
     { label: '基地面寬', type: 'text', hint: '無需填單位。範例：60' },
     { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
@@ -6063,8 +6065,31 @@ function parseDeedPages_(rawPages, districtData) {
         });
         break;
       }
-      var use = firstMatch(/^主要用途\s*:?\s*(\S.*)$/);
-      rec.mainUse = use ? use[1].trim() : '';
+      // 115/10/29：主要用途整段讀取（換行的接續行也要，遇到下一個標題就停），用「、」分開
+      rec.mainUse = (function() {
+        var idx = -1;
+        for (var u = 0; u < content.length; u++) { if (/^主要用途\s*[:：]?\s*\S/.test(content[u].trim())) { idx = u; break; } }
+        if (idx < 0) return '';
+        var parts = [content[idx].trim().replace(/^主要用途\s*[:：]?\s*/, '')];
+        for (var v = idx + 1; v < content.length; v++) {
+          var t = content[v].trim();
+          if (!t || /^(共有部分|附屬建物|其他登記事項|建築完成日期|權利範圍|層\s*數|層\s*次|主要建材|登記日期|登記原因|騎樓|夾層|總面積|面\s*積|建物坐落|建號-)/.test(t) || /^[\u4e00-\u9fa5\s]{2,10}:/.test(t)) break;
+          parts.push(t);
+        }
+        return parts.join('').split(/[、，,]+/).map(function(x) { return x.trim(); }).filter(Boolean).join('、');
+      })();
+      // 115/10/29：車位：停車位共計、含停車位編號（全形數字、「－」都先轉成半形）
+      rec.parkNos = []; rec.parkTotal = '';
+      var toHalf_ = function(x) { return String(x).replace(/[０-９]/g, function(c) { return String.fromCharCode(c.charCodeAt(0) - 65248); }).replace(/[－–—]/g, '-'); };
+      var ptm = toHalf_(content.join(' ')).match(/停車位共計\s*[:：]?\s*(\d+)\s*位/);
+      if (ptm) rec.parkTotal = ptm[1];
+      content.forEach(function(line) {
+        var t = toHalf_(line);
+        var m1 = t.match(/停車位編號\s*(\d{2,3}(?:-\d+)?)/);
+        var m2 = t.match(/^[（(]\s*(\d{2,3}(?:-\d+)?)\s*(?:\(共用\))?\s*,\s*權利範圍/);
+        var no = m1 ? m1[1] : (m2 ? m2[1] : '');
+        if (no && rec.parkNos.indexOf(no) === -1) rec.parkNos.push(no);
+      });
       var mat = firstMatch(/^主要建材\s*:?\s*(\S+)/);
       rec.materials = mat ? mat[1].split('、').filter(Boolean) : [];
       var fl = firstMatch(/層\s*數\s*:?\s*(\d+)\s*層/);
@@ -6871,6 +6896,17 @@ function applyDeed_() {
     var mats = [];
     blds.forEach(function(b) { (b.materials || []).forEach(function(m) { var o = deedMaterialOption_(m); if (mats.indexOf(o) === -1) mats.push(o); }); });
     if (mats.length) deedCheckGroup_('主要建材', mats, [], res);
+    // 115/10/29：主要用途（全部，多棟合併不重複）；車位（不影響建物類別）
+    var useAll = [];
+    blds.forEach(function(b) { String(b.mainUse || '').split('、').forEach(function(u) { u = u.trim(); if (u && useAll.indexOf(u) === -1) useAll.push(u); }); });
+    if (useAll.length) { deedSetInput_('主要用途', useAll.join('、'), res); }
+    var parkAll = [];
+    blds.forEach(function(b) { (b.parkNos || []).forEach(function(n) { if (parkAll.indexOf(n) === -1) parkAll.push(n); }); });
+    if (parkAll.length && currentType !== '土地') {
+      deedSetAuto_('有無車位', currentType === '廠房' ? '是' : '有', res);
+      deedSetInput_('車位編號', parkAll.join('、'), res);
+      deedSetInput_('車位數量', String(parkAll.length), res);
+    }
     // 115/10/27：好幾棟時，在「其他備註說明」寫「分棟資訊」：每一棟一行（建號、主要建材、建築完成日、屋齡、建物面積），再帶入一次會整段更新
     if (multiBld) {
       var noteEl = deedField_('其他備註說明');
@@ -7362,7 +7398,7 @@ document.getElementById('listingForm').addEventListener('change', function(e) {
 <script>
 // 謄本可以自動帶入的欄位標淺藍色（115/10/21）
 (function() {
-  var DEED_LABELS = ['主建物面積(m²)', '主要建材', '他項權利', '使用分區', '全筆主建物面積(m²)', '全筆土地面積(m²)', '共同使用面積(m²)', '取得原因', '取得年月',
+  var DEED_LABELS = ['主建物面積(m²)', '主要建材', '主要用途', '車位編號', '車位數量', '有無車位', '他項權利', '使用分區', '全筆主建物面積(m²)', '全筆土地面積(m²)', '共同使用面積(m²)', '取得原因', '取得年月',
     '土地面積(m²)', '地上樓層', '地下樓層', '屋主是否一年內取得', '建物類別', '建築完成日', '所在樓別', '所有權人及持分', '持分比例', '產權範圍', '詳細地址', '都市或非都市計畫', '附屬建物面積(m²)'];
   function mark() {
     [].forEach.call(document.querySelectorAll('#typeFields .field'), function(f) {
