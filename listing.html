@@ -6777,8 +6777,46 @@ function applyDeed_() {
     blds.forEach(function(b) { total += b.totalAreaM2 || 0; attached += b.attachedAreaM2 || 0; if (b.sharedAreaM2 !== null && b.sharedAreaM2 !== undefined) { shared += b.sharedAreaM2; hasShared = true; } });
     deedSetAuto_('主建物面積(m²)', String(Math.round(total * 100) / 100), res);
     deedSetAuto_('附屬建物面積(m²)', String(Math.round(attached * 100) / 100), res);
-    if (hasShared) deedSetAuto_('共同使用面積(m²)', String(Math.round(shared * 100) / 100), res);
-    else if (deedField_('共同使用面積(m²)')) res.notes.push('這份謄本沒有列出共有部分的面積，「共同使用面積」請從權狀填寫');
+   if (hasShared) {
+      var sharedVal = String(Math.round(shared * 100) / 100);
+      if (deedField_('共同使用面積(m²)')) {
+        deedSetAuto_('共同使用面積(m²)', sharedVal, res);
+      } else {
+        // 廠房類型表單若無「共同使用面積」獨立欄位，自動寫入「其他備註說明」備查
+        var noteEl = deedField_('其他備註說明');
+        if (noteEl) {
+          var curNote = noteEl.value.replace(/\n*共有部分持分面積合計[^\n]*/g, '').replace(/\s+$/, '');
+          var cMsg = '共有部分持分面積合計：' + sharedVal + '㎡（' + (Math.round(shared * 0.3025 * 100) / 100) + '坪）';
+          noteEl.value = (curNote ? curNote + '\n\n' : '') + cMsg;
+          deedFire_(noteEl, ['input', 'change']);
+          deedMark_(noteEl);
+          res.filled.push('其他備註說明（共有部分持分面積）');
+        }
+      }
+      res.infos.push('共有部分已依權利範圍計算帶入合計 ' + sharedVal + ' ㎡（約 ' + (Math.round(shared * 0.3025 * 100) / 100) + ' 坪）。');
+    } else if (deedField_('共同使用面積(m²)')) {
+      res.notes.push('這份謄本沒有列出共有部分的面積，「共同使用面積」請從權狀填寫');
+    }
+
+    // 自動帶入謄本中偵測到的車位
+    var allParkings = [];
+    blds.forEach(function(b) {
+      (b.parkingSpaces || []).forEach(function(p) {
+        if (allParkings.indexOf(p) === -1) allParkings.push(p);
+      });
+    });
+    if (allParkings.length) {
+      var parkHasField = deedField_('有無車位');
+      if (parkHasField) {
+        var hasVal = currentType === '廠房' ? '是' : '有';
+        deedSetAuto_('有無車位', hasVal, res);
+        toggleGroup('parking', true);
+        deedSetAuto_('車位編號', allParkings.join('、'), res);
+        deedSetAuto_('車位數量', String(allParkings.length), res);
+        deedSetAuto_('車位產權', '公設內含', res);
+        res.infos.push('已自動帶入車位編號：' + allParkings.join('、'));
+      }
+    }
 
     // 建築完成日
     function rocText_(c) { return c.rocYear + '年' + c.month + '月' + c.day + '日'; }
