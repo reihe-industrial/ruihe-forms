@@ -195,12 +195,7 @@
       /* 精簡表格：一頁看得完；「更多」展開其他欄位（115/10/16） */
     .table-wrap.compact { overflow-x: visible; }
     .view-switch { margin: 6px 0 10px; }
-    /* 115/10/29：物件總表欄位位置固定：欄寬固定、內容太長就省略（滑鼠停上去可看完整），不會因為資料長短左右跳動 */
-    #results table { table-layout: fixed; width: 100%; } /* 不左右捲：欄寬固定、超出就省略 */
-    #results th, #results td { min-width: 96px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #results th.name, #results td.name { min-width: 200px; max-width: 280px; white-space: normal; }
-    #results .more-row td { white-space: normal; max-width: none; }
-    /* 客需總表：短欄位不換行、區域和需求分配比較寬（115/10/27） */
+        /* 客需總表：短欄位不換行、區域和需求分配比較寬（115/10/27） */
     .table-wrap.compact.c-table table { width: 100%; }
     .table-wrap.compact.c-table th, .table-wrap.compact.c-table td { padding: 10px 10px; vertical-align: top; }
     .table-wrap.compact.c-table th, .table-wrap.compact.c-table td.nw { white-space: nowrap; word-break: keep-all; }
@@ -1059,8 +1054,3 @@ if (sharedLoginGet_()) login(sharedLoginGet_()); else ruiheGoHome_();
 </script>
 </body>
 </html>
-/* 115/10/29：收合（更多）裡的欄位位置固定：每排三欄等寬（手機一欄、平板兩欄） */
-.kv { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-.kv-item.long, .kv-item.full { grid-column: 1 / -1; }
-@media (max-width: 900px) { .kv { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
-@media (max-width: 560px) { .kv { grid-template-columns: 1fr !important; } }
