@@ -792,20 +792,20 @@
         <div class="photo-grid" id="editPhotoGrid" style="display:none;"></div>
         <div class="field upload-zone">
           <label>委託書上傳</label>
-          <div class="hint">委託契約書（含現況說明書）；代理人簽約的，授權書也傳在這裡。拍照或 PDF 都可以，一律保留原檔。</div>
+          <div class="hint">放委託契約書（含現況說明書）；代理人簽約的，授權書也傳在這裡。拍照或 PDF 都可以。</div>
           <input type="file" id="entrustInput" accept="image/*,application/pdf" multiple>
           <div id="entrustList" style="margin-top:8px;"></div>
         </div>
         <div class="field upload-zone">
           <label>圖片上傳</label>
           <div class="hint warn-hint">❗ 照片不可以使用街景截圖或他人的圖片；使用 AI 生成的圖片，請在檔名或特色說明註明。</div>
-          <div class="hint">物件照片，DM 會用這裡的照片。可以一次選好幾張，也可以分好幾次選，會壓縮後上傳；要保留原圖的在檔案旁勾選「保留原圖」。</div>
+          <div class="hint">放物件照片，可以一次選好幾張，也可以分好幾次選；要保留原圖的在檔案旁勾選「保留原圖」。權狀、謄本這類文件請放在下面的物件資訊上傳。</div>
           <input type="file" id="photoInput" accept="image/*,application/pdf" multiple>
           <div id="photoList" style="margin-top:8px;"></div>
         </div>
         <div class="field upload-zone">
           <label>物件資訊上傳</label>
-          <div class="hint">謄本、地籍圖、使用分區證明、權狀、使用執照等文件，一律保留原檔。用上面「謄本自動帶入」讀過的謄本會自動放在這裡。</div>
+          <div class="hint">放謄本、地籍圖、使用分區證明、權狀、使用執照等文件。</div>
           <input type="file" id="infoInput" accept="image/*,application/pdf" multiple>
           <div id="infoList" style="margin-top:8px;"></div>
         </div>
@@ -1380,6 +1380,28 @@ var LAND_ZONE_OPTIONS = [
   '海洋資源地區第1-3類(儲備用地)', '海洋資源地區第2類(相容性)', '海洋資源地區第3類(待定區)',
 ];
 
+// 土地的使用分區選項，依「土地類型」分組（115/10/27）：地號每一列的分區下拉，只列選的土地類型那一組（選「其他」或還沒選就全部列）
+var LAND_ZONE_GROUPS_ = {
+  '都市計畫': {
+    '工業地': ['都計-甲種工業區', '都計-乙種工業區', '都計-特種工業區', '都計-零星工業區'],
+    '建地': ['都計-住宅區', '都計-第一種住宅區', '都計-第二種住宅區', '都計-第三種住宅區', '都計-第四種住宅區', '都計-第五種住宅區',
+      '都計-商業區', '都計-第一種商業區', '都計-第二種商業區', '都計-第三種商業區'],
+    '農地': ['都計-農業區', '都計-保護區'],
+    '_其他': ['都計-道路用地'],
+  },
+  '非都市計畫': {
+    '工業地': ['非都-工業區丁種建築用地', '非都-一般農業區丁種建築用地', '非都-特定農業區丁種建築用地', '非都-鄉村區丁種建築用地', '非都-山坡地保育區丁種建築用地'],
+    '建地': ['非都-鄉村區甲種建築用地', '非都-鄉村區乙種建築用地', '非都-一般農業區甲種建築用地', '非都-特定農業區甲種建築用地', '非都-山坡地保育區丙種建築用地'],
+    '農地': ['非都-一般農業區農牧用地', '非都-特定農業區農牧用地', '非都-山坡地保育區農牧用地', '非都-山坡地保育區林業用地', '非都-一般農業區養殖用地'],
+    '_其他': [],
+  },
+};
+var LAND_ZONES_BY_PLAN_ = {};
+Object.keys(LAND_ZONE_GROUPS_).forEach(function(plan) {
+  var all = []; Object.keys(LAND_ZONE_GROUPS_[plan]).forEach(function(g) { LAND_ZONE_GROUPS_[plan][g].forEach(function(z) { if (all.indexOf(z) === -1) all.push(z); }); });
+  LAND_ZONES_BY_PLAN_[plan] = all;
+});
+
 var FIELD_CONFIG = {
   '廠房': [
     { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
@@ -1461,11 +1483,7 @@ var FIELD_CONFIG = {
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
     { label: '使用分區', type: 'checkbox-other-conditional', required: true,
       hint: '1.都市計畫請依據土地實際都市計畫分區填寫\n2.非都市計畫請填寫使用分區+用地類別\n有其他分區可以另外填寫\n★請記得申調使用分區證明!!',
-      optionsByPlan: {
-        '都市計畫': ['都計-甲種工業區','都計-乙種工業區','都計-特種工業區','都計-零星工業區','都計-農業區','都計-道路用地'],
-        '非都市計畫': ['非都-工業區丁種建築用地','非都-一般農業區丁種建築用地','非都-特定農業區丁種建築用地',
-          '非都-一般農業區農牧用地','非都-特定農業區農牧用地'],
-      } },
+      optionsByPlan: LAND_ZONES_BY_PLAN_ },
     { label: '都市計畫細部計畫', type: 'textarea', required: true, group: 'urbanPlan',
       hint: '如果為都市計畫請查詢土地是什麼細部計畫並填寫\n例如：擬定谷關風景特定區計畫細部計畫案、變更臺中市都市計畫(新市政中心專用區南側)細部計畫(配合醫療專用區變更附帶條件修訂土地使用分區管制要點)\n★要注意特定非都有另外的細部計畫規定!!(如：嘉義大埔美)\n※各縣市細部計畫查詢(有些縣市不包含，台中的請點下面的網址)\nhttps://ngis.nlma.gov.tw/TCDPageD2.aspx\n※台中市細部計畫查詢\nhttps://www.ud.taichung.gov.tw/2878076/post' },
     { label: '國土功能分區', type: 'checkbox-region', options: LAND_ZONE_OPTIONS, required: true, hint: '先選國土功能分區，再勾選第幾類（可複選），有顏色的是常用分區\n國土功能分區查詢：https://nluz.nlma.gov.tw/ex3s/ExWeb.aspx' },
@@ -2896,6 +2914,7 @@ function updateFloorLoc_() {
 }
 document.addEventListener('change', function(e) {
   if (e.target && e.target.closest && e.target.closest('#typeFields [data-checkbox-label="建物類別"]')) updateFloorLoc_();
+  if (e.target && e.target.matches && e.target.matches('#typeFields [data-label="土地類型"]')) refreshLotZoneOptions_(); // 土地類型改了，分區選項跟著換
 });
 function toggleGroup(groupName, show) {
   document.querySelectorAll('[data-group="' + groupName + '"]').forEach(function(el) {
@@ -3054,10 +3073,14 @@ function createLocationRow(kind, isFirstLot, prefill) {
     zoneWrap.innerHTML = '<div class="mini-label">使用分區</div>';
     var zoneSel = document.createElement('select'); zoneSel.className = 'lotZoneSelect';
     var zoneOther = document.createElement('input'); zoneOther.type = 'text'; zoneOther.className = 'lotZoneOther'; zoneOther.placeholder = '請填寫使用分區'; zoneOther.style.display = 'none';
-    zoneWrap.appendChild(zoneSel); zoneWrap.appendChild(zoneOther);
+    // 住宅區、商業區的細分（例如 住1-B、商2）：不是每個都有，有才填（115/10/27）
+    var zoneDetail = document.createElement('input'); zoneDetail.type = 'text'; zoneDetail.className = 'lotZoneDetail'; zoneDetail.placeholder = '細分（例：住1-B），沒有可不填'; zoneDetail.style.display = 'none';
+    zoneWrap.appendChild(zoneSel); zoneWrap.appendChild(zoneOther); zoneWrap.appendChild(zoneDetail);
+    zoneDetail.addEventListener('input', syncZoneFromLots_);
     row.appendChild(zoneWrap);
     fillLotZoneSelect_(zoneSel);
-    zoneSel.addEventListener('change', function() { zoneOther.style.display = zoneSel.value === '其他' ? '' : 'none'; syncZoneFromLots_(); });
+    zoneSel.addEventListener('change', function() { zoneOther.style.display = zoneSel.value === '其他' ? '' : 'none'; updateZoneDetail_(row); syncZoneFromLots_(); });
+    zoneOther.addEventListener('input', function() { updateZoneDetail_(row); });
     zoneOther.addEventListener('input', syncZoneFromLots_);
     valueInput.addEventListener('input', updateFarmWarn_);
     districtSelect.addEventListener('change', updateFarmWarn_);
@@ -3078,7 +3101,11 @@ function createLocationRow(kind, isFirstLot, prefill) {
 function zoneOptions_() {
   var f = (FIELD_CONFIG[currentType] || []).filter(function(x) { return x.label === '使用分區'; })[0];
   var ps = document.querySelector('#typeFields [data-label="都市或非都市計畫"]'), plan = ps ? ps.value : '';
-  return (f && f.optionsByPlan && f.optionsByPlan[plan]) || null;
+  var all = (f && f.optionsByPlan && f.optionsByPlan[plan]) || null;
+  if (!all || currentType !== '土地' || !LAND_ZONE_GROUPS_[plan]) return all;
+  var lt = document.querySelector('#typeFields [data-label="土地類型"]'), kind = lt ? lt.value : '';
+  var grp = LAND_ZONE_GROUPS_[plan][kind];
+  return grp && grp.length ? grp : all; // 選了工業地／建地／農地只列那一組；其他或還沒選列全部
 }
 function fillLotZoneSelect_(sel) {
   var keep = sel.value, opts = zoneOptions_();
@@ -3095,12 +3122,23 @@ function refreshLotZoneOptions_() {
   document.querySelectorAll('#lotEntries .lotZoneSelect').forEach(fillLotZoneSelect_);
   syncZoneFromLots_();
 }
-function lotZoneOf_(row) {
+function lotZoneBase_(row) {
   var sel = row.querySelector('.lotZoneSelect'); if (!sel || !sel.value) return '';
   return sel.value === '其他' ? (row.querySelector('.lotZoneOther').value || '').trim() : sel.value;
 }
+function lotZoneOf_(row) { // 分區＋細分：「都計-第一種住宅區（住1-B）」
+  var b = lotZoneBase_(row), d = row.querySelector('.lotZoneDetail');
+  var dv = d && d.style.display !== 'none' ? d.value.trim() : '';
+  return b && dv ? b + '（' + dv + '）' : b;
+}
+function updateZoneDetail_(row) {
+  var d = row.querySelector('.lotZoneDetail'); if (!d) return;
+  d.style.display = /住宅區|商業區/.test(lotZoneBase_(row)) ? '' : 'none';
+}
 function setLotZone_(row, zone) {
   var sel = row.querySelector('.lotZoneSelect'); if (!sel || !zone) return;
+  var dm = String(zone).match(/^(.*?)（([^（）]+)）$/); // 「都計-第一種住宅區（住1-B）」拆成分區＋細分
+  if (dm && /住宅區|商業區/.test(dm[1])) { zone = dm[1]; var dIn = row.querySelector('.lotZoneDetail'); if (dIn) dIn.value = dm[2]; }
   if (!zoneOptions_()) { row.dataset.pendingZone = zone; return; } // 還沒選都市或非都市計畫：等選了再帶
   delete row.dataset.pendingZone;
   if (sel.options.length <= 1) fillLotZoneSelect_(sel);
@@ -3108,6 +3146,7 @@ function setLotZone_(row, zone) {
   if (has) sel.value = zone;
   else if (sel.options.length > 1) { sel.value = '其他'; row.querySelector('.lotZoneOther').value = zone; }
   row.querySelector('.lotZoneOther').style.display = sel.value === '其他' ? '' : 'none';
+  updateZoneDetail_(row);
 }
 function syncZoneFromLots_() {
   var picked = [], others = [], any = false;
@@ -3333,6 +3372,7 @@ function collectDraft_() {
       value: row.querySelector('.lotValueInput').value,
       zone: row.querySelector('.lotZoneSelect') ? row.querySelector('.lotZoneSelect').value : '',
       zoneOther: row.querySelector('.lotZoneOther') ? row.querySelector('.lotZoneOther').value : '',
+      zoneDetail: row.querySelector('.lotZoneDetail') ? row.querySelector('.lotZoneDetail').value : '',
     });
   });
   draft.noBuildingNumber = document.getElementById('noBuildingNumber').checked;
@@ -3455,6 +3495,7 @@ function restoreDraft_(draft) {
     row.querySelector('.districtSelect').value = entry.district || '';
     row.querySelector('.lotValueInput').value = entry.value || '';
     if (entry.zone) setLotZone_(row, entry.zone === '其他' ? (entry.zoneOther || '其他') : entry.zone);
+    if (entry.zoneDetail && row.querySelector('.lotZoneDetail')) { row.querySelector('.lotZoneDetail').value = entry.zoneDetail; updateZoneDetail_(row); }
   });
 
   document.getElementById('buildingSection').style.display = (currentType === '土地') ? 'none' : '';
@@ -4157,6 +4198,9 @@ function collectFormValues_(implausibleDateLabels_) {
   if (lotParts.length > 0) fieldValues['地段+地號'] = lotParts.join('；');
   if (currentType !== '土地' && document.getElementById('noBuildingNumber').checked) buildingParts.push('未保存登記');
   if (buildingParts.length > 0) fieldValues['地段+建號'] = buildingParts.join('；');
+  // 使用分區：地號每一列選的分區（含住宅區細分）合起來（115/10/27）
+  var zoneRows_ = Array.prototype.map.call(document.querySelectorAll('#lotEntries .district-entry'), lotZoneOf_).filter(Boolean);
+  if (zoneRows_.length) fieldValues['使用分區'] = zoneRows_.filter(function(z, i) { return zoneRows_.indexOf(z) === i; }).join('、');
   // 委託人本人簽的：代理人欄位一律送空白（之前選過代理人又改回來的不會留下）
   if (fieldValues['簽約人身分'] !== '代理人') Object.keys(fieldValues).forEach(function(k) { if (/^代理人/.test(k)) fieldValues[k] = ''; });
 
