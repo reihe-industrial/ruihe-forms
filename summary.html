@@ -170,6 +170,7 @@
     .table-wrap.compact table { width: 100%; table-layout: auto; }
     .table-wrap.compact th, .table-wrap.compact td { white-space: normal; word-break: break-word; vertical-align: top; }
     .table-wrap.compact td.name { min-width: 9em; }
+    .table-wrap.compact td { overflow: hidden; }
     .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
 /* 115/10/29：物件簡表：欄位平均分配、不橫向捲動；產生 DM 按鈕固定在最右邊 */
 .table-wrap.compact { overflow-x: hidden; }
@@ -854,7 +855,7 @@ function tableHtml(list) {
       if (c === C.type) return '<td>' + typeTagHtml(r) + '</td>';
       if (c === C.name) return '<td class="name">' + esc(v) + '</td>';
       if (c === C.contract) return '<td>' + contractTagHtml(v) + '</td>';
-      if (c === C.unit) { var u = unitHtml_(r, cell(r, C.land), cell(r, C.bld)); return '<td class="num">' + (/均價/.test(u) ? u.replace(/<span>/g, '<div style="white-space:nowrap;">').replace(/<\/span>/g, '</div>') : esc(v)) + '</td>'; }
+      if (c === C.unit) { var u = unitHtml_(r, cell(r, C.land), cell(r, C.bld)); return '<td class="num">' + (/均價/.test(u) ? u.replace(/<span>/g, '<div style="white-space:normal;">').replace(/<\/span>/g, '</div>') : esc(v)) + '</td>'; }
       if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(v) + '</td>';
       return '<td>' + esc(v) + '</td>';
     }).join('');
