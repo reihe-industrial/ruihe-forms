@@ -622,6 +622,7 @@ function ruiheGoHome_(msg) {
   } catch (e) {}
 })();
 function sharedLoginClear_() {
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_edit_lists_v1'].forEach(function(k) { localStorage.removeItem(k); }); Object.keys(localStorage).filter(function(k) { return k.indexOf('ruihe_cal_') === 0; }).forEach(function(k) { localStorage.removeItem(k); }); } catch (e) {} // 登出時清掉快取（115/10/29）
   // 登出：讓後端的登入憑證馬上失效（憑證才會失效，不影響通關碼）
   try {
     var o_ = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null');
@@ -737,6 +738,7 @@ function renderClient() {
     return;
   }
   if (!c) return;
+  c.due = c.due || []; c.stale = c.stale || []; c.newMatches = c.newMatches || [];
   var all = c.scope === 'all';
   function row(it, whenHtml) {
     var canEdit = it.editable !== false;   // 主管看同組的客需：不顯示客戶資料、不能改
@@ -757,6 +759,7 @@ function renderContract() {
   var c = state.contract;
   if (state.contractErr && !c) { $('bodyContract').innerHTML = '<div class="rem-error">讀取失敗：' + esc(state.contractErr) + '</div>'; setBadge('cntContract', '!', 'hot'); return; }
   if (!c) return;
+  c.items = c.items || []; // 後端回傳不完整時不要整頁出錯（115/10/27）
   var all = c.scope === 'all';
   $('bodyContract').innerHTML = c.items.length ? c.items.map(function(it) {
     var go = it.editable ? '<div class="go"><a class="link-btn" href="listing.html?mode=edit&key=' + encodeURIComponent(it.key) + '">修改</a></div>' : '<div class="go"></div>';
@@ -770,7 +773,7 @@ function renderReminders() {
   renderClient(); renderContract();
   $('remNote').textContent = scope === 'all' ? (role === '主管' ? '你那一組' : '全公司') : '只有你負責的';
 }
-function saveHomeCache() { try { sessionStorage.setItem(HOME_CACHE_KEY, JSON.stringify({ name: auth.name, scope: scope, client: state.client, contract: state.contract })); } catch (e) {} }
+function saveHomeCache() { try { localStorage.setItem(HOME_CACHE_KEY, JSON.stringify({ name: auth.name, scope: scope, client: state.client, contract: state.contract })); } catch (e) {} }
 function loadReminders(manual) {
   if (!auth) return;
   $('refreshBtn').disabled = true;
@@ -835,7 +838,7 @@ function enterPortal(name, code, r) {
   onRole(r || '業務');
   [].forEach.call(document.querySelectorAll('#scopeSeg button'), function(b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-scope') === 'mine')); });
   // 先顯示這個分頁上次的內容（換頁回來馬上看得到），同時背景更新
-  var cached = null; try { cached = JSON.parse(sessionStorage.getItem(HOME_CACHE_KEY) || 'null'); } catch (e) {}
+  var cached = null; try { cached = JSON.parse(localStorage.getItem(HOME_CACHE_KEY) || 'null'); } catch (e) {}
   state = { client: null, contract: null, clientErr: '', contractErr: '' };
   if (cached && cached.name === name && cached.scope === 'mine') { state.client = cached.client; state.contract = cached.contract; renderReminders(); }
   loadReminders(false);
@@ -979,7 +982,7 @@ function prefetchPages() {
     var tc = readJson(sessionStorage, 'ruihe_master_cache_v1');
     post(OBJ_API, 'masterTableGet', [who, code, tc && tc.name === who ? tc.version : '']).then(function(res) {
       if (res.unchanged || !auth) return;
-      try { sessionStorage.setItem('ruihe_master_cache_v1', JSON.stringify({ name: who, role: res.role || r, version: res.version, tabs: res.tabs || [] })); } catch (e) {}
+      try { localStorage.setItem('ruihe_master_cache_v1', JSON.stringify({ name: who, role: res.role || r, version: res.version, tabs: res.tabs || [] })); } catch (e) {}
       renderDupReminder();
     }).then(function() { renderDupReminder(); }, function() {});
   }
@@ -987,7 +990,7 @@ function prefetchPages() {
   if (r === '秘書' || r === '管理員') {
     Promise.all([post(OBJ_API, 'adminListPeople', [who, code]), post(REG_API, 'regListRequests', [who, code])]).then(function(all) {
       if (!auth) return;
-      try { sessionStorage.setItem('ruihe_secretary_cache_v1', JSON.stringify({ name: who, people: all[0], reg: all[1] })); } catch (e) {}
+      try { localStorage.setItem('ruihe_secretary_cache_v1', JSON.stringify({ name: who, people: all[0], reg: all[1] })); } catch (e) {}
       renderReqReminder();
     }).catch(function() {});
   }
@@ -1237,7 +1240,7 @@ function calDutyEdit() {
       btn.disabled = true; btn.textContent = '儲存中…';
       var r = calRange();
       post(OBJ_API, 'calendarSetDuty', [auth.name, auth.code, month, duties, r.from, r.to]).then(function(res) {
-        cal.data = res; try { sessionStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {}
+        cal.data = res; try { localStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {}
         calRender(); dlg.close(); toast('值班表已儲存');
       }).catch(function(err) { var mm = b.querySelector('#dutyMsg'); mm.textContent = err.message || '儲存失敗'; mm.style.display = 'block'; btn.disabled = false; btn.textContent = '儲存 ' + (m + 1) + ' 月值班'; });
     });
@@ -1262,14 +1265,14 @@ function calLoad(force) {
   if (!cal.month) { var t = new Date(); cal.month = new Date(t.getFullYear(), t.getMonth(), 1); cal.sel = calIso(t); }
   var r = calRange(), key = r.from + '|' + r.to;
   var ck = 'ruihe_cal_' + auth.name + '_' + key;
-  if (!force) { try { var c = JSON.parse(sessionStorage.getItem(ck) || 'null'); if (c) { cal.data = c; calRender(); } } catch (e) {} }
+  if (!force) { try { var c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c) { cal.data = c; calRender(); } } catch (e) {} }
   if (!cal.data) calRender();
   $('calNote').textContent = '讀取中…';
   cal.range = key;
   post(OBJ_API, 'calendarGet', [auth.name, auth.code, r.from, r.to]).then(function(res) {
     if (cal.range !== key) return;
     cal.data = res; $('calNote').textContent = '';
-    try { sessionStorage.setItem(ck, JSON.stringify(res)); } catch (e) {}
+    try { localStorage.setItem(ck, JSON.stringify(res)); } catch (e) {}
     calRender();
   }).catch(function(err) { $('calNote').textContent = '行事曆讀取失敗：' + (err.message || '連不上系統'); });
 }
@@ -1358,7 +1361,7 @@ function calEdit(ev, kind) {
   if (ev.canEdit === false) return;
   if (isTrip) calTripBind(b);
   var r = calRange();
-  var done = function(res) { cal.data = res; try { sessionStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {} calRender(); dlg.close(); };
+  var done = function(res) { cal.data = res; try { localStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {} calRender(); dlg.close(); };
   var fail = function(btn, txt) { return function(err) { var m = b.querySelector('#cfMsg'); m.textContent = err.message || '儲存失敗'; m.style.display = 'block'; btn.disabled = false; btn.textContent = txt; }; };
   b.querySelector('#cfSave').addEventListener('click', function() {
     var btn = this; btn.disabled = true; btn.textContent = '儲存中…';

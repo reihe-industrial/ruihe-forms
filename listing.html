@@ -4957,6 +4957,7 @@ function ruiheGoHome_(msg) {
   } catch (e) {}
 })();
 function sharedLoginClear_() {
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_edit_lists_v1'].forEach(function(k) { localStorage.removeItem(k); }); Object.keys(localStorage).filter(function(k) { return k.indexOf('ruihe_cal_') === 0; }).forEach(function(k) { localStorage.removeItem(k); }); } catch (e) {} // 登出時清掉快取（115/10/29）
   // 登出：讓後端的登入憑證馬上失效（憑證才會失效，不影響通關碼）
   try {
     var o_ = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null');
@@ -5022,11 +5023,11 @@ function editSetLoginMsg_(text) {
 var EDIT_LISTS_KEY = 'ruihe_edit_lists_v1';
 function editSaveLists_() {
   if (!editAuth_) return;
-  try { sessionStorage.setItem(EDIT_LISTS_KEY, JSON.stringify({ name: editAuth_.name, cases: editCases_, needs: editNeeds_ })); } catch (e) {}
+  try { localStorage.setItem(EDIT_LISTS_KEY, JSON.stringify({ name: editAuth_.name, cases: editCases_, needs: editNeeds_ })); } catch (e) {}
 }
 function editLoadListsCache_(name) {
   try {
-    var o = JSON.parse(sessionStorage.getItem(EDIT_LISTS_KEY) || 'null');
+    var o = JSON.parse(localStorage.getItem(EDIT_LISTS_KEY) || 'null');
     return o && o.name === name ? o : null;
   } catch (e) { return null; }
 }
