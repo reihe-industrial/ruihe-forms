@@ -6,16 +6,16 @@
   (function() {
     var ok = false;
     try {
-      var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
+      var v = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
       try { var st = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; if (st && isFinite(Number(st.idleMinutes))) lim = Number(st.idleMinutes); } catch (e2) {}
-      var t = parseInt(sessionStorage.getItem('ruihe_last_active_v1'), 10) || 0;
+      var t = parseInt(localStorage.getItem('ruihe_last_active_v1'), 10) || 0;
       ok = !!(v && v.name && v.code) && !(t > 0 && Date.now() - t > lim * 60000);
     } catch (e) {}
     if (!ok) { try { sessionStorage.setItem('ruihe_login_msg', '請先登入'); } catch (e) {} location.replace('index.html?next=' + encodeURIComponent(location.pathname.split('/').pop() + location.search)); return; }
     // 填表單時有動作就算「有在用」，其他頁面不會因為 30 分鐘沒動作而登出
     var last = 0;
     ['click', 'keydown', 'input', 'touchstart', 'scroll'].forEach(function(ev) {
-      window.addEventListener(ev, function() { var n = Date.now(); if (n - last < 15000) return; last = n; try { sessionStorage.setItem('ruihe_last_active_v1', String(n)); } catch (e) {} }, { passive: true, capture: true });
+      window.addEventListener(ev, function() { var n = Date.now(); if (n - last < 15000) return; last = n; try { localStorage.setItem('ruihe_last_active_v1', String(n)); } catch (e) {} }, { passive: true, capture: true });
     });
   })();
   </script>
@@ -173,7 +173,7 @@
     // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
     window.ruiheUpdateNav_ = function() {
       var o = null;
-      try { o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      try { o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
       var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
       var els = document.querySelectorAll('#siteNav [data-auth]');
       for (var j = 0; j < els.length; j++) {
@@ -515,7 +515,7 @@ function renderBizGroup_() {
 }
 // 調謄本：預設勾選登入的人（115/10/22）
 function preselectMe_() {
-  var me = ''; try { me = (JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null') || {}).name || ''; } catch (e) {}
+  var me = ''; try { me = (JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null') || {}).name || ''; } catch (e) {}
   if (!me || document.querySelector('.bizCheckbox:checked')) return;
   document.querySelectorAll('.bizCheckbox').forEach(function(cb) { if (cb.value === me && cb.value !== '其他') cb.checked = true; });
 }

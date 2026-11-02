@@ -6,16 +6,16 @@
   (function() {
     var ok = false;
     try {
-      var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
+      var v = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
       try { var st = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; if (st && isFinite(Number(st.idleMinutes))) lim = Number(st.idleMinutes); } catch (e2) {}
-      var t = parseInt(sessionStorage.getItem('ruihe_last_active_v1'), 10) || 0;
+      var t = parseInt(localStorage.getItem('ruihe_last_active_v1'), 10) || 0;
       ok = !!(v && v.name && v.code) && !(t > 0 && Date.now() - t > lim * 60000);
     } catch (e) {}
     if (!ok) { try { sessionStorage.setItem('ruihe_login_msg', '請先登入'); } catch (e) {} location.replace('index.html?next=' + encodeURIComponent(location.pathname.split('/').pop() + location.search)); return; }
     // 填表單時有動作就算「有在用」，其他頁面不會因為 30 分鐘沒動作而登出
     var last = 0;
     ['click', 'keydown', 'input', 'touchstart', 'scroll'].forEach(function(ev) {
-      window.addEventListener(ev, function() { var n = Date.now(); if (n - last < 15000) return; last = n; try { sessionStorage.setItem('ruihe_last_active_v1', String(n)); } catch (e) {} }, { passive: true, capture: true });
+      window.addEventListener(ev, function() { var n = Date.now(); if (n - last < 15000) return; last = n; try { localStorage.setItem('ruihe_last_active_v1', String(n)); } catch (e) {} }, { passive: true, capture: true });
     });
   })();
   </script>
@@ -480,7 +480,7 @@
     // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
     window.ruiheUpdateNav_ = function() {
       var o = null;
-      try { o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      try { o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
       var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
       var els = document.querySelectorAll('#siteNav [data-auth]');
       for (var j = 0; j < els.length; j++) {
@@ -4907,11 +4907,11 @@ function idleTouch_(force) {
   var now = Date.now();
   if (!force && now - idleLastWrite_ < 15000) return;
   idleLastWrite_ = now;
-  try { sessionStorage.setItem(IDLE_KEY, String(now)); } catch (e) {}
+  try { localStorage.setItem(IDLE_KEY, String(now)); } catch (e) {}
 }
 function idleExpired_() {
   var t = 0;
-  try { t = parseInt(sessionStorage.getItem(IDLE_KEY), 10) || 0; } catch (e) {}
+  try { t = parseInt(localStorage.getItem(IDLE_KEY), 10) || 0; } catch (e) {}
   return t > 0 && Date.now() - t > IDLE_LIMIT_MS;
 }
 // isLoggedIn()：這一頁現在有沒有登入；onTimeout(訊息)：這一頁的登出
@@ -4927,18 +4927,18 @@ function idleWatch_(isLoggedIn, onTimeout) {
 function lg_() { var l = sharedLoginGet_() || {}; return [l.name || '', l.code || '']; }
 function sharedLoginGet_() {
   if (idleExpired_()) { sharedLoginClear_(); return null; }
-  try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
+  try { var o = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
   catch (e) { return null; }
 }
 function sharedLoginSet_(name, code, role) {
-  if (!role) { var prev = null; try { prev = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); } catch (e) {} role = prev && prev.name === name ? prev.role : ''; }
-  try { sessionStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code, role: role || '業務' })); } catch (e) {}
+  if (!role) { var prev = null; try { prev = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null'); } catch (e) {} role = prev && prev.name === name ? prev.role : ''; }
+  try { localStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code, role: role || '業務' })); } catch (e) {}
   if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.setItem('ruihe_summary_last_name', name); } catch (e) {}
   idleTouch_(true);
 }
 function sharedRole_() {
-  try { var o = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return (o && o.role) || '業務'; } catch (e) { return '業務'; }
+  try { var o = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return (o && o.role) || '業務'; } catch (e) { return '業務'; }
 }
 // 沒登入、或登入失效（通關碼失效、30 分鐘沒動作）：回首頁登入，登入後回到原本的頁面
 function ruiheGoHome_(msg) {
@@ -4960,10 +4960,10 @@ function sharedLoginClear_() {
   try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_edit_lists_v1'].forEach(function(k) { localStorage.removeItem(k); }); Object.keys(localStorage).filter(function(k) { return k.indexOf('ruihe_cal_') === 0; }).forEach(function(k) { localStorage.removeItem(k); }); } catch (e) {} // 登出時清掉快取（115/10/29）
   // 登出：讓後端的登入憑證馬上失效（憑證才會失效，不影響通關碼）
   try {
-    var o_ = JSON.parse(sessionStorage.getItem(SHARED_LOGIN_KEY) || 'null');
+    var o_ = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null');
     if (o_ && /^S_/.test(o_.code || '')) fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'sessionLogout', args: [o_.name, o_.code] }), keepalive: true }).catch(function() {});
   } catch (e) {}
-  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_prefetch_at'].forEach(function(k) { sessionStorage.removeItem(k); }); sessionStorage.removeItem(SHARED_LOGIN_KEY); sessionStorage.removeItem(IDLE_KEY); } catch (e) {}
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_prefetch_at'].forEach(function(k) { sessionStorage.removeItem(k); }); localStorage.removeItem(SHARED_LOGIN_KEY); localStorage.removeItem(IDLE_KEY); } catch (e) {}
   if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
   try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
   try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}

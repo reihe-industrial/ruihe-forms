@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>週會｜瑞禾業務系統</title>
   <script>
-  (function() { var ok = false; try { var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); ok = !!(v && v.name && v.code); } catch (e) {}
+  (function() { var ok = false; try { var v = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); ok = !!(v && v.name && v.code); } catch (e) {}
     if (!ok) location.replace('index.html?next=meeting.html'); })();
   </script>
   <style>
@@ -101,7 +101,7 @@
     // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
     window.ruiheUpdateNav_ = function() {
       var o = null;
-      try { o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      try { o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
       var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
       var els = document.querySelectorAll('#siteNav [data-auth]');
       for (var j = 0; j < els.length; j++) {
@@ -152,16 +152,16 @@
     <div class="ctl"><button type="button" id="sPrev">← 上一項</button><button type="button" id="sNext">下一項 →</button></div>
   </div>
 <script src="lib/match.js?v=20261021c"></script>
-<script src="lib/dm.js?v=20261029a"></script>
+<script src="lib/dm.js?v=20261029b"></script>
 <script>
 var API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
-var auth = null; try { auth = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+var auth = null; try { auth = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
 var $ = function(id) { return document.getElementById(id); };
 function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function toast(t) { var d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1E4A32;color:#fff;padding:10px 18px;border-radius:999px;z-index:300;font-weight:700;'; document.body.appendChild(d); setTimeout(function() { d.remove(); }, 2200); }
 function post(fn, args) {
   return fetch(API, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) }).then(function(r) { return r.json(); }).then(function(j) {
-    if (!j.ok) { var e = new Error(j.message || '發生錯誤'); if (/通關碼|請選擇姓名|登入/.test(e.message)) { try { sessionStorage.removeItem('ruihe_login_v1'); } catch (x) {} location.replace('index.html?next=meeting.html'); } throw e; }
+    if (!j.ok) { var e = new Error(j.message || '發生錯誤'); if (/通關碼|請選擇姓名|登入/.test(e.message)) { try { localStorage.removeItem('ruihe_login_v1'); } catch (x) {} location.replace('index.html?next=meeting.html'); } throw e; }
     return j.result;
   });
 }

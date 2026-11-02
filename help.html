@@ -5,7 +5,7 @@
   // 使用說明只給登入的同仁看：這個分頁沒有登入就帶到首頁登入，登入後回來
   (function() {
     var ok = false;
-    try { var v = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); ok = !!(v && v.name && v.code); } catch (e) {}
+    try { var v = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); ok = !!(v && v.name && v.code); } catch (e) {}
     if (!ok) location.replace('index.html?next=' + encodeURIComponent('help.html' + location.hash));
   })();
   </script>
@@ -71,7 +71,7 @@
     // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
     window.ruiheUpdateNav_ = function() {
       var o = null;
-      try { o = JSON.parse(sessionStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      try { o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
       var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
       var els = document.querySelectorAll('#siteNav [data-auth]');
       for (var j = 0; j < els.length; j++) {
