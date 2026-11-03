@@ -709,7 +709,7 @@
           <input type="text" id="clientAddrDetail" placeholder="請輸入詳細地址（路名、巷弄門牌號等）" style="margin-top:8px;">
         </div>
         <!-- 簽約人身分（115/10/27）：委託書由代理人簽的選「代理人」，再填代理人資料（最多兩位） -->
-        <div class="field">
+        <div class="field" id="signerField">
           <label class="required">簽約人身分</label>
           <div class="hint">委託書是代理人簽的選「代理人」；上面委託人的資料照樣要填</div>
           <select data-label="簽約人身分" id="signerType"><option value="委託人本人">委託人本人</option><option value="代理人">代理人</option></select>
@@ -1298,13 +1298,16 @@ setInterval(function() { var h = document.getElementById('entrustKindValue'); if
 // 簽約人身分：選「代理人」才出現代理人資料（115/10/27）
 function updateAgentBlock_() {
   var sel = document.getElementById('signerType'), blk = document.getElementById('agentBlock'); if (!sel || !blk) return;
-  var on = sel.value === '代理人';
+  // 115/11/03：只有「委託」要填簽約人身分；口約、訪談紀錄、授權書收起來
+  var entrust = selectedContractType_() === '委託';
+  var sf = document.getElementById('signerField'); if (sf) sf.style.display = entrust ? '' : 'none';
+  var on = entrust && sel.value === '代理人';
   blk.style.display = on ? '' : 'none';
   var has2 = ['代理人2姓名', '代理人2身分證字號', '代理人2電話', '代理人2與委託人關係', '代理人2地址'].some(function(l) { var e = document.querySelector('[data-label="' + l + '"]'); return e && e.value.trim(); });
   if (has2) document.getElementById('agent2Box').style.display = '';
   document.getElementById('agent2Add').style.display = document.getElementById('agent2Box').style.display === 'none' ? '' : 'none';
 }
-document.addEventListener('change', function(e) { if (e.target && e.target.id === 'signerType') updateAgentBlock_(); });
+document.addEventListener('change', function(e) { if (e.target && (e.target.id === 'signerType' || e.target.name === 'contractType')) updateAgentBlock_(); });
 document.addEventListener('click', function(e) {
   if (!e.target) return;
   if (e.target.id === 'agent2Add') { document.getElementById('agent2Box').style.display = ''; updateAgentBlock_(); }
@@ -1443,7 +1446,7 @@ var FIELD_CONFIG = {
     { label: '建物類別', type: 'checkbox-other', required: true, options: ['廠房','廠辦','倉庫'] }, // 115/10/27 拿掉「農地工廠」（不一定合法）
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
-    { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
+    { label: '建物朝向', type: 'select', options: DIRECTIONS.concat(['待查']), required: true }, // 115/11/03：當下不知道可以先選「待查」
     { label: '土地朝向(廠房)', type: 'select', options: DIRECTIONS, required: true },
     { label: '簷高(滴水高度)', type: 'per-floor-height', hint: '選填。按「＋新增一棟」，輸入棟別名稱和地上／地下幾層，下面會出現每一層的簷高欄位，分別填寫；基地上不只一棟就一棟一棟新增。(滴水高度：雨水離開廠房屋頂，開始下墜時離地面的高度)' },
     { label: '樓地板載重或機具/電梯載重', type: 'multi-text', hint: '有資訊者填寫。指樓地板(公斤/平方公尺)、貨梯(公斤或公噸)...、天車(公斤或公噸)...等載重，可能不只一種，點「新增一筆」逐項填寫。' },
@@ -1589,7 +1592,7 @@ var FIELD_CONFIG = {
     { label: '管理費', type: 'select', options: ['有','無'], required: true },
     { label: '管理費用', type: 'text', hint: '有請寫管理費用金額，無請填0', requiredIf: { label: '管理費', value: '有' } },
     { label: '繳費方式', type: 'select', options: ['月繳','雙月繳','季繳','半年繳','年繳','一次繳'], requiredIf: { label: '管理費', value: '有' }, hint: '管理費選「有」才需要填' },
-    { label: '建物朝向', type: 'select', options: DIRECTIONS, required: true },
+    { label: '建物朝向', type: 'select', options: DIRECTIONS.concat(['待查']), required: true }, // 115/11/03：當下不知道可以先選「待查」
     { label: '大門朝向', type: 'select', options: DIRECTIONS, required: true },
     { label: '落地窗朝向', type: 'select', options: DIRECTIONS, required: true },
     { label: '附屬設備', type: 'checkbox-other',
@@ -4220,6 +4223,8 @@ function collectFormValues_(implausibleDateLabels_) {
   // 使用分區：地號每一列選的分區（含住宅區細分）合起來（115/10/27）
   var zoneRows_ = Array.prototype.map.call(document.querySelectorAll('#lotEntries .district-entry'), lotZoneOf_).filter(Boolean);
   if (zoneRows_.length) fieldValues['使用分區'] = zoneRows_.filter(function(z, i) { return zoneRows_.indexOf(z) === i; }).join('、');
+  // 115/11/03：不是「委託」的（口約、訪談紀錄、授權書）不存簽約人身分
+  if (selectedContractType_() !== '委託') fieldValues['簽約人身分'] = '';
   // 委託人本人簽的：代理人欄位一律送空白（之前選過代理人又改回來的不會留下）
   if (fieldValues['簽約人身分'] !== '代理人') Object.keys(fieldValues).forEach(function(k) { if (/^代理人/.test(k)) fieldValues[k] = ''; });
 
