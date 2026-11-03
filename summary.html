@@ -179,6 +179,16 @@
 .table-wrap.compact td.name { white-space: normal; }
 .table-wrap.compact th:last-child, .table-wrap.compact td:last-child { width: 156px; }
 .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
+/* 115/11/03：物件簡表欄寬：類型、單價、坐落寬一點，租/售、契約類型窄一點，總寬不變（沒指定的欄位平分剩下的寬度） */
+.table-wrap.compact th[data-c="類型"] { width: 112px; }
+.table-wrap.compact td[data-c="類型"] .tag { white-space: normal; word-break: keep-all; line-height: 1.35; }
+.table-wrap.compact th[data-c="租/售"] { width: 50px; }
+.table-wrap.compact th[data-c="契約類型"] { width: 70px; }
+.table-wrap.compact th[data-c="總價"] { width: 86px; }
+.table-wrap.compact th[data-c="單價"] { width: 112px; }
+.table-wrap.compact th[data-c="坐落"] { width: 118px; }
+.table-wrap.compact th[data-c="土地面積(坪)"], .table-wrap.compact th[data-c="建物面積(坪)"] { width: 82px; }
+.table-wrap.compact td[data-c="單價"], .table-wrap.compact td[data-c="坐落"] { word-break: normal; overflow-wrap: anywhere; }
     .more-btn { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
     tr.opened td { background: #FAFAF6; }
     tr.more-row td { background: #FAFAF6; padding-top: 0; }
