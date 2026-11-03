@@ -6137,6 +6137,8 @@ function parseDeedPages_(rawPages, districtData) {
       var top = cut === -1 ? content : content.slice(0, cut);
       var basement = {};
       top.join('\n').replace(/地下\s*([一二三四五六七八九十\d]+)\s*層/g, function(_, n) { basement[n] = true; return ''; });
+      // 115/11/03：謄本只寫「地下層」（沒有寫第幾層）也算地下 1 層，例：「層次 地下層 層次面積 37.99平方公尺」
+      if (!Object.keys(basement).length && top.some(function(l) { return /(^|\s|層\s*次\s*:?\s*)地下(層|室)(\s|$|層次面積)/.test(l.trim()) || /^地下層\s/.test(l.trim()); })) basement['1'] = true;
       rec.basementCount = Object.keys(basement).length;
       // 層次：這筆建號位在地上第幾層（一層、二層…；地下層、突出物不算）。
       // 同一棟大樓／廠房的不同樓層常常是不同的建號，靠這個才知道各筆建號分別是幾樓
