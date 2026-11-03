@@ -1568,10 +1568,10 @@ var FIELD_CONFIG = {
     { label: '停車方式', type: 'select', options: ['坡道/平面','坡道/機械','昇降/平面','昇降/機械','平移/機械','庭院','獨立車庫','機械循環式車位'], group: 'parking', required: true },
     { label: '車位管理費', type: 'text', group: 'parking', required: true },
     { label: '車位說明', type: 'text', group: 'parking', required: true },
-    { label: '屋主是否一年內取得', type: 'select', options: YES_NO, required: true, group: 'existingHouse' },
-    { label: '資訊為實價登錄或屋主提供?', type: 'select', options: ['實價登錄','屋主提供'], required: true, group: 'existingHouse' },
-    { label: '取得年月', type: 'roc-month', required: true, hint: '請選擇年月。年份可以輸入民國年（例如 113）或西元年（例如 2024）', group: 'existingHouse' },
-    { label: '取得成交價格', type: 'text', required: true, group: 'existingHouse' },
+    { label: '屋主是否一年內取得', type: 'select', options: YES_NO, required: true, group: 'acquire' },
+    { label: '資訊為實價登錄或屋主提供?', type: 'select', options: ['實價登錄','屋主提供'], required: true, group: 'acquire' },
+    { label: '取得年月', type: 'roc-month', required: true, hint: '請選擇年月。年份可以輸入民國年（例如 113）或西元年（例如 2024）', group: 'acquire' },
+    { label: '取得成交價格', type: 'text', required: true, group: 'acquire' },
     { label: '小學', type: 'text' },
     { label: '國中', type: 'text' },
     { label: '高中', type: 'text' },
@@ -2907,15 +2907,32 @@ function renderTypeFields(typeTab) {
 // （例如選「否」就把車位編號、車位數量…等欄位整組收起來，不用業務多看）
 // 房屋的建物類別只勾透天／別墅／農舍（整棟）時，不用填「所在樓別」（115/10/22）
 var WHOLE_BUILDING_TYPES_ = ['透天', '別墅', '農舍'];
+// 115/11/03：謄本「層數」比這一戶擁有的樓層多（例如整棟 9 層、這戶只有 1～4 樓），就算勾透天也要填「所在樓別」
+function floorLocCount_(text) {
+  var t = String(text || '').replace(/(地下|B)\s*\d+\s*(樓|F|層)?/gi, ' '); // 地下層不算
+  var n = 0;
+  t = t.replace(/(\d+)\s*[~～\-－至到]\s*(\d+)/g, function(m, a, b) { a = +a; b = +b; if (b >= a) n += b - a + 1; return ' '; });
+  (t.match(/\d+/g) || []).forEach(function() { n++; });
+  return n;
+}
+function floorLocPartial_() {
+  var up = document.querySelector('#typeFields [data-label="地上樓層"]');
+  var loc = document.querySelector('#typeFields [data-label="所在樓別"]');
+  var total = up ? String(up.value || '').trim() : '';
+  if (!/^\d+$/.test(total)) return false; // 好幾棟、或寫成文字的不判斷
+  var cnt = floorLocCount_(loc ? loc.value : '');
+  return cnt > 0 && cnt < parseInt(total, 10);
+}
 function updateFloorLoc_() {
   if (currentType !== '房屋') return;
   var cbs = document.querySelectorAll('#typeFields [data-checkbox-label="建物類別"] input[type="checkbox"]');
   var checked = Array.prototype.filter.call(cbs, function(cb) { return cb.checked; }).map(function(cb) { return cb.value; });
   var whole = checked.length > 0 && checked.every(function(v) { return WHOLE_BUILDING_TYPES_.indexOf(v) !== -1; });
-  toggleGroup('floorLoc', !whole);
+  toggleGroup('floorLoc', !whole || floorLocPartial_());
 }
 document.addEventListener('change', function(e) {
   if (e.target && e.target.closest && e.target.closest('#typeFields [data-checkbox-label="建物類別"]')) updateFloorLoc_();
+  if (e.target && e.target.matches && e.target.matches('#typeFields [data-label="地上樓層"], #typeFields [data-label="所在樓別"]')) updateFloorLoc_();
   if (e.target && e.target.matches && e.target.matches('#typeFields [data-label="土地類型"]')) refreshLotZoneOptions_(); // 土地類型改了，分區選項跟著換
 });
 function toggleGroup(groupName, show) {
@@ -4075,7 +4092,7 @@ function collectFormValues_(implausibleDateLabels_) {
   if (currentType === '房屋') {
     // 成屋不存預售屋欄位、預售屋不存成屋才有的欄位（被隱藏的欄位一律存空白）
     (FIELD_CONFIG['房屋'] || []).forEach(function(f) {
-      if ((f.group === 'presale' && !isPresale_()) || (f.group === 'existingHouse' && isPresale_())) fieldValues[f.label] = '';
+      if ((f.group === 'presale' && !isPresale_()) || (f.group === 'existingHouse' && isPresale_()) || (f.group === 'acquire' && !acquireFieldsNeeded_())) fieldValues[f.label] = '';
     });
   }
   if (!EDIT_MODE) { fieldValues['案件狀態'] = '銷售中'; fieldValues['狀態日期'] = ''; fieldValues['成交價'] = ''; fieldValues['狀態說明'] = ''; }
@@ -4599,6 +4616,13 @@ document.getElementById('listingForm').addEventListener('change', function(e) {
 // ============================================================
 // 現況說明書附表（建築能效標示、太陽光電）、成屋／預售屋、轉讓證明書、未保存登記
 // ============================================================
+// 115/11/03：「屋主是否一年內取得」「資訊為實價登錄或屋主提供?」「取得年月」「取得成交價格」只有成屋買賣要填（租賃、預售屋收起來）
+function acquireFieldsNeeded_() {
+  return currentType === '房屋' && !isPresale_() && currentCommittalType_() !== '租賃';
+}
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.matches && e.target.matches('[data-label="委託種類"]') && currentType === '房屋') updateHouseKind_();
+});
 function isPresale_() {
   var el = document.querySelector('#typeFields [data-label="房屋類別"]');
   return currentType === '房屋' && !!el && el.value === '預售屋';
@@ -4710,6 +4734,7 @@ function updateHouseKind_() {
   var pre = isPresale_();
   toggleGroup('presale', pre);
   toggleGroup('existingHouse', !pre);
+  toggleGroup('acquire', acquireFieldsNeeded_()); // 115/11/03：租賃、預售屋不用填取得資料
   if (deedCard) deedCard.style.display = pre ? 'none' : '';
   var cd = document.querySelector('#typeFields [data-label="建築完成日"]');
   var cdLabel = cd ? fieldLabelEl_(cd.closest('.field')) : null;
@@ -6141,39 +6166,45 @@ function parseDeedPages_(rawPages, districtData) {
       // 共有部分：逐筆讀取共有建號面積及其權利範圍，計算持分面積後加總。
       // 例如：7,702.32平方公尺 × 1,233/100,000。
       rec.sharedParts = [];
+      // 115/11/03 修正：共有建號的「面積」常寫在「權利範圍」後面（例如 HouseAI 電傳：權利範圍 10000分之307 → 面積 1,375.54平方公尺），
+      // 以前抓到「權利範圍合計約 42.229平方公尺」當成共有建號面積再乘一次權利範圍，算成 1.3。
+      // 現在：一個【共有部分】裡逐筆（建號-1、建號-2…）讀「面積」×「權利範圍」；謄本有寫「權利範圍合計約」就以合計為準。
+      var sharedTotalListed = null;
       for (var si = 0; si < content.length; si++) {
         if (!/共有部分/.test(content[si])) continue;
         var sj = si + 1;
         while (sj < content.length && !/共有部分/.test(content[sj])) sj++;
         var partText = content.slice(si, sj).join(' ');
-        var rightMatch = partText.match(/權利範圍\s*:?\s*\**\s*([\d,]+)\s*分之\s*([\d,]+)/);
-        var rightPos = partText.search(/權利範圍/);
-        var areaText = rightPos >= 0 ? partText.slice(0, rightPos) : partText;
-        var areaMatch = areaText.match(/([\d,]+(?:\.\d+)?)\s*平方公尺/);
-        if (!areaMatch) areaMatch = partText.match(/([\d,]+(?:\.\d+)?)\s*平方公尺/);
-        if (areaMatch && rightMatch) {
-          var partArea = deedNum_(areaMatch[1]);
-          var denominator = deedNum_(rightMatch[1]);
-          var numerator = deedNum_(rightMatch[2]);
-          if (denominator > 0) {
-            rec.sharedParts.push({
-              areaM2: partArea,
-              numerator: numerator,
-              denominator: denominator,
-              shareAreaM2: partArea * numerator / denominator
-            });
+        var tot = partText.match(/權利範圍合計約\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
+        if (tot) sharedTotalListed = (sharedTotalListed || 0) + deedNum_(tot[1]);
+        var body = partText.replace(/【?權利範圍合計約[^】]*】?/g, ' ');
+        var chunks = body.split(/建號\s*-\s*\d+/).slice(1);
+        if (!chunks.length) chunks = [body];
+        chunks.forEach(function(ck) {
+          var rightMatch = ck.match(/權利範圍\s*:?\s*\**\s*([\d,]+)\s*分之\s*([\d,]+)/);
+          var areaMatch = ck.match(/(?:^|[^總層次一-龥])面\s*積\s*:?\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
+          if (!areaMatch) { // 舊格式：面積寫在權利範圍前面、沒有「面積」兩個字
+            var rp = ck.search(/權利範圍/);
+            areaMatch = (rp >= 0 ? ck.slice(0, rp) : ck).match(/([\d,]+(?:\.\d+)?)\s*平方公尺/);
           }
-        }
+          if (areaMatch && rightMatch) {
+            var partArea = deedNum_(areaMatch[1]);
+            var denominator = deedNum_(rightMatch[1]);
+            var numerator = deedNum_(rightMatch[2]);
+            if (denominator > 0) {
+              rec.sharedParts.push({ areaM2: partArea, numerator: numerator, denominator: denominator, shareAreaM2: partArea * numerator / denominator });
+            }
+          }
+        });
       }
       if (rec.sharedParts.length) {
-        rec.sharedAreaM2 = rec.sharedParts.reduce(function(sum, p) {
-          return sum + p.shareAreaM2;
-        }, 0);
+        rec.sharedAreaM2 = rec.sharedParts.reduce(function(sum, p) { return sum + p.shareAreaM2; }, 0);
+        // 謄本自己有寫合計、而且跟逐筆算的差超過 1%：以謄本的合計為準
+        if (sharedTotalListed !== null && Math.abs(rec.sharedAreaM2 - sharedTotalListed) > Math.max(0.05, sharedTotalListed * 0.01)) rec.sharedAreaM2 = sharedTotalListed;
         rec.sharedAreaM2 = Math.round(rec.sharedAreaM2 * 100) / 100;
       } else {
         // 相容其他謄本格式：若直接列出「權利範圍合計約」則沿用。
-        var sh = content.join('\n').match(/權利範圍合計約\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
-        rec.sharedAreaM2 = sh ? deedNum_(sh[1]) : null;
+        rec.sharedAreaM2 = sharedTotalListed !== null ? Math.round(sharedTotalListed * 100) / 100 : null;
       }
       var dm = firstMatch(/^建築完成日期\s*:?\s*民國\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/);
       rec.completion = dm ? { rocYear: parseInt(dm[1], 10), month: parseInt(dm[2], 10), day: parseInt(dm[3], 10) } : null;
@@ -6872,6 +6903,7 @@ function applyDeed_() {
       if (floorLocText) deedSetInput_('所在樓別', floorLocText, res);
     }
     if (upText) deedSetInput_('地上樓層', upText, res);
+    try { updateFloorLoc_(); } catch (e) {} // 115/11/03：謄本層數比這戶樓層多就顯示所在樓別
     var downText = multiBld
       ? (groups.map(function(g) { return g.basement ? (g.name + 'B' + g.basement) : ''; }).filter(Boolean).join('、') || '0')
       : String(groups[0].basement || 0);
