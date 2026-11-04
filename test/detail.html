@@ -22,20 +22,20 @@
     .test-banner { background: #fff4d6; border: 1px solid #e0c341; color: #6b5300; border-radius: 10px; padding: 8px 12px; font-size: 14px; margin: 0 0 12px; }
     .crumb { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
     .crumb a { color: var(--brand-dark); font-weight: 700; text-decoration: none; }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; }
     .head { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
     .head-main { flex: 1 1 420px; min-width: 0; }
-    .title { font-size: 24px; font-weight: 700; margin: 0 0 8px; line-height: 1.3; }
+    .title { font-size: 22px; font-weight: 700; margin: 0 0 6px; line-height: 1.3; }
     .tags span { display: inline-block; font-size: 12.5px; font-weight: 700; border-radius: 6px; padding: 2px 9px; margin: 0 6px 4px 0; background: #eef0ea; color: var(--muted); }
     .tags .t-factory { background: var(--t-factory-soft); color: var(--t-factory); }
     .tags .t-land { background: var(--t-land-soft); color: var(--t-land); }
     .tags .t-house { background: var(--t-house-soft); color: var(--t-house); }
     .tags .ok { background: var(--brand-soft); color: var(--brand-dark); }
     .tags .warn { background: #fbebe9; color: var(--danger); }
-    .sub { color: var(--muted); font-size: 14px; margin-top: 6px; line-height: 1.75; }
+    .sub { color: var(--muted); font-size: 13.5px; margin-top: 4px; line-height: 1.6; }
     .sub b { color: var(--ink); font-weight: 500; }
     .price { flex: 0 0 auto; text-align: right; margin-left: auto; }
-    .price .big { font-size: 30px; font-weight: 700; color: #b3261e; line-height: 1.1; }
+    .price .big { font-size: 28px; font-weight: 700; color: #b3261e; line-height: 1.1; }
     .price .u { color: var(--muted); font-size: 14px; margin-top: 4px; line-height: 1.6; }
     .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
     .btn { height: 38px; padding: 0 16px; border-radius: 9px; border: 1px solid var(--brand-dark); background: var(--brand-dark); color: #fff; font-weight: 700; font-size: 14px;
@@ -43,23 +43,25 @@
     .btn.blue { background: var(--t-factory); border-color: var(--t-factory); }
     .btn.ghost { background: #fff; color: var(--brand-dark); }
     .btn:disabled { opacity: .55; cursor: default; }
-    h3 { margin: 0 0 10px; font-size: 16px; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
+    h3 { margin: 0 0 6px; font-size: 15px; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
     h3:before { content: ""; width: 4px; height: 16px; background: var(--brand-dark); border-radius: 2px; flex: 0 0 auto; }
-    .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; margin: 0; }
-    .kv > div { display: flex; gap: 10px; border-bottom: 1px solid #eeede6; padding: 8px 2px; min-width: 0; }
+    .kv { display: grid; grid-template-columns: 1fr; column-gap: 20px; margin: 0; font-size: 14px; }
+    .kv > div { display: flex; gap: 10px; border-bottom: 1px solid #eeede6; padding: 4px 2px; min-width: 0; }
     .kv > div.long { grid-column: 1 / -1; }
-    .kv dt { width: 128px; color: var(--muted); flex: 0 0 auto; }
+    .kv dt { width: 112px; color: var(--muted); flex: 0 0 auto; }
     .kv dd { margin: 0; font-weight: 500; min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
     .kv.one { grid-template-columns: 1fr; }
     .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
-    .feat { white-space: pre-line; line-height: 1.85; font-size: 15px; }
+    .feat { white-space: pre-line; line-height: 1.7; font-size: 14.5px; }
+    .secs { column-count: 2; column-gap: 10px; }
+    .secs > .card { break-inside: avoid; display: inline-block; width: 100%; vertical-align: top; }
     .photos { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
     .photos button { padding: 0; border: 0; border-radius: 9px; overflow: hidden; cursor: zoom-in; background: #e6e9e2; aspect-ratio: 4 / 3; }
     .photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .muted { color: var(--muted); font-size: 14px; }
-    #map { height: 320px; border-radius: 9px; border: 1px solid var(--line); }
+    #map { height: 280px; border-radius: 9px; border: 1px solid var(--line); }
     .agents { display: flex; gap: 12px; flex-wrap: wrap; }
-    .ag { flex: 1 1 200px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+    .ag { flex: 1 1 160px; border: 1px solid var(--line); border-radius: 9px; padding: 6px 12px; }
     .ag b { font-size: 15px; } .ag div { color: var(--muted); font-size: 14px; margin-top: 2px; }
     .ag a, .kv a { color: var(--brand-dark); }
     .owner-box { border-left: 4px solid #c9a227; }
@@ -74,6 +76,7 @@
     #toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999; padding: 12px 18px; border-radius: 10px; background: var(--brand-dark); color: #fff; display: none; max-width: 90%; }
     #toast.error { background: var(--danger); }
     @media (max-width: 760px) {
+      .secs { column-count: 1; }
       body { padding: 14px 12px 50px; }
       .kv, .grid2 { grid-template-columns: 1fr; }
       .kv dt { width: 108px; }
@@ -333,12 +336,13 @@ function render() {
   var secs = SECTIONS.map(function(s) {
     var body = kvHtml(s.labels); return body ? '<div class="card"><h3>' + esc(s.title) + '</h3>' + body + '</div>' : '';
   }).filter(Boolean);
-  // 兩欄排：土地＋建物在最前面
-  h += secs.join('');
+  // 115/11/04 緊湊：物件資訊各組卡片兩欄瀑布排（手機一欄）
+  h += '<div class="secs">' + secs.join('') + '</div>';
 
   // 位置：接在物件資訊下面（115/11/04）
   h += '<div class="card"><h3>位置</h3>' + (D.coord ? '<div id="map"></div><div class="muted" style="margin-top:6px;"><a href="../map.html?k=' + encodeURIComponent(D.key) + '">在物件地圖上看附近物件</a>　｜　<a href="https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a></div>' : '<div class="muted">還沒有座標。</div>') + '</div>';
 
+  var h0 = h; h = '';
   if (F('其他備註說明')) h += '<div class="card"><h3>其他備註說明</h3><div class="feat">' + esc(F('其他備註說明')) + '</div></div>';
 
   // 負責業務
@@ -355,13 +359,15 @@ function render() {
   // 委託人（只有這件的業務、秘書、管理員；其他人整段不出現）
   if (D.canSeeOwner) {
     var ob = OWNER.map(function(o, i) { var b = kvHtml(o[1], 'one'); return b ? '<div>' + (i ? '<div class="muted" style="font-weight:700;margin-top:4px;">' + esc(o[0]) + '</div>' : '') + b + '</div>' : ''; }).filter(Boolean);
-    if (ob.length) h += '<div class="card owner-box"><h3>委託人</h3>' + (ob.length > 1 ? '<div class="grid2">' + ob.join('') + '</div>' : ob[0].replace('class="kv one"', 'class="kv"')) + '</div>';
+    if (ob.length) h += '<div class="card owner-box"><h3>委託人</h3>' + ob.join('') + '</div>';
   }
 
   // 其他資料（上面沒列到的欄位）
   var used = usedLabels();
   var rest = (D.order || []).filter(function(l) { return used.indexOf(l) === -1 && F(l); });
   if (rest.length) h += '<div class="card"><h3>其他資料</h3>' + kvHtml(rest) + '</div>';
+
+  h = h0 + (h ? '<div class="secs">' + h + '</div>' : '');
 
   // 特色說明放在資料下面、照片上面（115/11/04）
   if (F('特色說明')) h += '<div class="card"><h3>特色說明</h3><div class="feat">' + esc(F('特色說明')) + '</div></div>';
