@@ -225,7 +225,7 @@ var SECTIONS = [
   { id: 'land', title: '土地', labels: ['都市或非都市計畫', '使用分區', '都市計畫細部計畫', '國土功能分區', '產業園區名稱', '產業園區名稱(土地)', '土地類型',
     '土地面積(m²)', '建蔽率', '容積率', '基地面寬', '基地深度', '面臨路寬', '土地朝向(廠房)', '土地朝向(土地)'] },
   { id: 'bld', title: '建物', labels: ['建物類別', '房屋類別', '社區大樓名稱', '__建物合計', '主建物面積(m²)', '附屬建物面積(m²)', '共同使用面積(m²)', '加蓋面積(m²)', '加蓋面積位於何處(廠房)',
-    '建築完成日', '所在樓別', '地上樓層', '地下樓層', '主要建材', '外壁材質', '物件格局(廠房)', '物件格局', '加蓋格局', '建物朝向', '大門朝向', '落地窗朝向',
+    '建築完成日', '__屋齡', '所在樓別', '地上樓層', '地下樓層', '主要建材', '外壁材質', '物件格局(廠房)', '物件格局', '加蓋格局', '建物朝向', '大門朝向', '落地窗朝向',
     '簷高(滴水高度)', '樓地板載重或機具/電梯載重', '電梯數', '每層戶數'] },
   { id: 'equip', title: '設備與管理', labels: ['可供用水量', '可供用電量', '是否有汙水處理廠', '是否有廠登', '附屬設備', '建築能效標示', '太陽光電發電設備',
     '管理方式', '管理費', '管理費用', '繳費方式', '是否有留鑰匙'] },
@@ -235,13 +235,14 @@ var SECTIONS = [
   { id: 'deed', title: '謄本資料', labels: ['地段', '地段+地號', '地段+建號', '產權範圍', '持分比例', '全筆土地面積(m²)', '全筆主建物面積(m²)', '取得原因',
     '所有權人及持分', '他項權利', '屋主是否一年內取得', '取得年月', '取得成交價格', '資訊為實價登錄或屋主提供?'] },
   { id: 'presale', title: '預售屋／換約', labels: ['建築執照', '換約金額(萬)', '轉讓證明書', '原始簽約日', '原契約總價(萬)'] },
-  { id: 'deal', title: '委託與狀態', labels: ['物件編號', '契約編號', '委託種類', '委託案件種類', '委託類別', '合約起始', '合約到期', '填寫日期', '使用狀態',
+  { id: 'deal', title: '委託與狀態', labels: ['物件編號', '契約編號', '委託種類', '委託案件種類', '委託類別', '使用狀態',
     '使用狀態補充說明(廠房)', '使用狀態補充說明(土地)', '使用狀態補充說明(房屋)', '主要用途', '案件狀態', '狀態日期', '狀態說明', '成交價', '關聯物件'] }
 ];
 var OWNER = [['委託人', ['委託人姓名', '身份證字號或統編', '委託人連絡電話', '委託人聯絡地址', '簽約人身分']],
   ['代理人', ['代理人姓名', '代理人身分證字號', '代理人電話', '代理人地址', '代理人與委託人關係']],
   ['代理人 2', ['代理人2姓名', '代理人2身分證字號', '代理人2電話', '代理人2地址', '代理人2與委託人關係']]];
-var HEAD_USED = ['案名', '單價', '總價', '案件坐落', '詳細地址', '特色說明', '其他備註說明', '主要業務名稱', '次要業務名稱', '主要業務人員比例', '次要業務人員比例', '中人比例', '類型', '業務人員'];
+var HIDE_ON_PAGE = ['合約起始', '合約到期', '填寫日期']; // 物件內容頁不顯示（115/11/04）
+var HEAD_USED = ['合約起始', '合約到期', '填寫日期', '案名', '單價', '總價', '案件坐落', '詳細地址', '特色說明', '其他備註說明', '主要業務名稱', '次要業務名稱', '主要業務人員比例', '次要業務人員比例', '中人比例', '類型', '業務人員'];
 var LONG = /說明|嫌惡|環境|交通|他項|所有權人|取得原因/;
 
 var auth = loginGet_();
@@ -264,12 +265,17 @@ function bldTotal() {
 }
 function valueText(l) {
   if (l === '__建物合計') { var b = bldTotal(); return b ? r2(b) + ' 坪（主建物＋附屬＋共有）' : ''; }
-  if (l === '建築完成日') { var d = parseDate(F(l)); if (!d) return F(l); var y = (Date.now() - d.getTime()) / (365.25 * 86400000); return F(l) + '（屋齡約 ' + Math.max(0, Math.floor(y)) + ' 年）'; }
+  if (l === '__屋齡') {
+    var d = parseDate(F('建築完成日')); if (!d) return '';
+    var now = new Date(), m = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth()) - (now.getDate() < d.getDate() ? 1 : 0);
+    if (m < 0) return '';
+    return Math.floor(m / 12) + ' 年' + (m % 12 ? ' ' + (m % 12) + ' 個月' : '') + '（從建築完成日 ' + rocText(d) + ' 算到今天 ' + rocText(now) + '）';
+  }
   if (l === '面臨路寬' || l === '基地面寬' || l === '基地深度') { var v = F(l); return v && /^\d+(\.\d+)?$/.test(v) ? v + ' 米' : v; }
   if (/電話/.test(l)) { var t = F(l); return t ? t.split(/[、,，;；\s]+/).filter(Boolean).map(function(x) { return '<a href="tel:' + esc(x.replace(/[^\d+]/g, '')) + '">' + esc(x) + '</a>'; }).join('、') : ''; }
   return areaText(l);
 }
-function labelText(l) { return l === '__建物合計' ? '建物面積合計' : l.replace(/\((廠房|土地|房屋)\)$/, '').replace(/\(m²\)$/, ''); }
+function labelText(l) { return l === '__建物合計' ? '建物面積合計' : l === '__屋齡' ? '屋齡' : l.replace(/\((廠房|土地|房屋)\)$/, '').replace(/\(m²\)$/, ''); }
 function kvHtml(labels, cls) {
   var rows = labels.map(function(l) {
     var v = valueText(l); if (!v) return '';
@@ -282,6 +288,8 @@ function usedLabels() {
   var u = HEAD_USED.slice(); SECTIONS.forEach(function(s) { u = u.concat(s.labels); }); OWNER.forEach(function(o) { u = u.concat(o[1]); });
   return u;
 }
+// 中人比例寫「無」、0、0% 就不顯示（115/11/04）
+function hasRatio(v) { v = String(v || '').trim(); return !!v && !/^(無|没有|沒有|-|－|0+(\.0+)?\s*%?)$/.test(v); }
 function rsText() { var t = F('委託種類'); return /租/.test(t) ? '租' : /買賣|售/.test(t) ? '售' : t; }
 function unitLines() {
   var total = toWan(F('總價')), out = [];
@@ -297,18 +305,14 @@ function unitLines() {
 // ---------------- 畫面 ----------------
 function render() {
   var types = [D.type].concat(F('建物類別') && F('建物類別') !== D.type ? [F('建物類別')] : []).concat(F('土地類型') ? [F('土地類型')] : []);
-  var exp = parseDate(F('合約到期')), st = parseDate(F('合約起始'));
-  var left = exp ? daysLeft(exp) : null;
   var place = [F('案件坐落'), F('詳細地址')].filter(Boolean);
   if (place.length === 2 && F('詳細地址').indexOf(F('案件坐落')) === 0) place = [F('詳細地址')];
   var subLines = [];
   subLines.push(esc(place.join('　')) + (F('地段') ? '（' + esc(F('地段')) + '）' : ''));
   var l2 = [];
   if (F('契約編號')) l2.push('契約編號 <b>' + esc(F('契約編號')) + '</b>');
-  if (exp) l2.push('委託期間 <b>' + (st ? rocText(st) : '') + '～' + rocText(exp) + '</b>' + (left >= 0 ? '（還有 ' + left + ' 天）' : '（<span style="color:var(--danger)">已過期 ' + (-left) + ' 天</span>）'));
   if (l2.length) subLines.push(l2.join('　｜　'));
   var l3 = [];
-  if (F('填寫日期')) l3.push('填寫日期 ' + esc(F('填寫日期')));
   if (F('關聯物件')) l3.push('關聯物件：' + esc(F('關聯物件')));
   if (l3.length) subLines.push(l3.join('　｜　'));
 
@@ -327,9 +331,6 @@ function render() {
 
   if (F('特色說明')) h += '<div class="card"><h3>特色說明</h3><div class="feat">' + esc(F('特色說明')) + '</div></div>';
 
-  h += '<div class="grid2"><div class="card"><h3>照片</h3><div id="photoBox"><div class="muted">照片讀取中…（大約 10 秒）</div></div></div>' +
-    '<div class="card"><h3>位置</h3>' + (D.coord ? '<div id="map"></div><div class="muted" style="margin-top:6px;"><a href="../map.html?k=' + encodeURIComponent(D.key) + '">在物件地圖上看附近物件</a>　｜　<a href="https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a></div>' : '<div class="muted">還沒有座標。</div>') + '</div></div>';
-
   var secs = SECTIONS.map(function(s) {
     var body = kvHtml(s.labels); return body ? '<div class="card"><h3>' + esc(s.title) + '</h3>' + body + '</div>' : '';
   }).filter(Boolean);
@@ -347,7 +348,7 @@ function render() {
     return '<div class="ag"><b>' + esc(a.name) + '</b>' + (D.residential ? '' : (a.main ? '（主要）' : '（次要）')) +
       (a.phone ? '<div><a href="tel:' + esc(a.phone.replace(/[^\d+]/g, '')) + '">' + esc(a.phone) + '</a></div>' : '') +
       (r ? '<div>業務比例 ' + esc(r) + '</div>' : '') + '</div>';
-  }).join('') + (F('中人比例') ? '<div class="ag"><b>中人比例</b><div>' + esc(F('中人比例')) + '</div></div>' : '') + '</div></div>';
+  }).join('') + '</div></div>'; // 中人比例一律不顯示（115/11/04）
 
   // 委託人（只有這件的業務、秘書、管理員；其他人整段不出現）
   if (D.canSeeOwner) {
@@ -359,6 +360,10 @@ function render() {
   var used = usedLabels();
   var rest = (D.order || []).filter(function(l) { return used.indexOf(l) === -1 && F(l); });
   if (rest.length) h += '<div class="card"><h3>其他資料</h3>' + kvHtml(rest) + '</div>';
+
+  // 照片、位置放最下面（115/11/04：資訊在上，圖片跟定位在下）
+  h += '<div class="grid2"><div class="card"><h3>照片</h3><div id="photoBox"><div class="muted">照片讀取中…（大約 10 秒）</div></div></div>' +
+    '<div class="card"><h3>位置</h3>' + (D.coord ? '<div id="map"></div><div class="muted" style="margin-top:6px;"><a href="../map.html?k=' + encodeURIComponent(D.key) + '">在物件地圖上看附近物件</a>　｜　<a href="https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a></div>' : '<div class="muted">還沒有座標。</div>') + '</div></div>';
 
   $('page').innerHTML = h;
   $('crumbTail').textContent = '　／　' + (D.type || '') + '　／　' + (F('案名') || '');
@@ -454,7 +459,6 @@ function openTour() {
   });
 }
 function tourHtml(photos) {
-  var exp = parseDate(F('合約到期')), st = parseDate(F('合約起始'));
   var units = unitLines();
   var specs = SECTIONS.filter(function(s) { return s.id !== 'deal'; }).map(function(s) { var b = kvHtml(s.labels); return b ? '<h3>' + esc(s.title) + '</h3>' + b : ''; }).join('');
   var checks = CHECKS[D.type] || CHECKS['房屋'];
@@ -474,7 +478,6 @@ function tourHtml(photos) {
     ['開價', (F('總價') || '') + (units.length ? '（' + units.join('；') + '）' : '')],
     ['地址', F('詳細地址') || F('案件坐落')],
     ['契約編號', F('契約編號')],
-    ['委託期間', exp ? (st ? rocText(st) : '') + '～' + rocText(exp) : ''],
     ['使用狀態', F('使用狀態')],
     ['負責業務', (D.agents || []).map(function(a) { return a.name + (a.phone ? ' ' + a.phone : ''); }).join('、')],
     ['位置', D.coord ? 'https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] : '']
