@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>物件內容（測試）｜瑞禾業務系統</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --ink: #1c2b22; --muted: #66776c; --paper: #f3f1e9; --card: #ffffff; --line: #dfe2d7;
+      --brand: #2f6f4e; --brand-dark: #1e4a32; --brand-soft: #e9f1ec; --danger: #a3352c; --radius: 10px;
+      --t-factory: #3d5a80; --t-factory-soft: #e6ecf4; --t-land: #8a6a1f; --t-land-soft: #f5eedb; --t-house: #8c3f5a; --t-house-soft: #f6e7ec;
+    }
+    html { -webkit-text-size-adjust: 100%; }
+    body { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: var(--paper); margin: 0; padding: 20px 16px 60px; color: var(--ink); line-height: 1.55; }
+    .container { max-width: 1180px; margin: 0 auto; }
+    .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 14px; }
+    .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
+    .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .test-banner { background: #fff4d6; border: 1px solid #e0c341; color: #6b5300; border-radius: 10px; padding: 8px 12px; font-size: 14px; margin: 0 0 12px; }
+    .crumb { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
+    .crumb a { color: var(--brand-dark); font-weight: 700; text-decoration: none; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
+    .head { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+    .head-main { flex: 1 1 420px; min-width: 0; }
+    .title { font-size: 24px; font-weight: 700; margin: 0 0 8px; line-height: 1.3; }
+    .tags span { display: inline-block; font-size: 12.5px; font-weight: 700; border-radius: 6px; padding: 2px 9px; margin: 0 6px 4px 0; background: #eef0ea; color: var(--muted); }
+    .tags .t-factory { background: var(--t-factory-soft); color: var(--t-factory); }
+    .tags .t-land { background: var(--t-land-soft); color: var(--t-land); }
+    .tags .t-house { background: var(--t-house-soft); color: var(--t-house); }
+    .tags .ok { background: var(--brand-soft); color: var(--brand-dark); }
+    .tags .warn { background: #fbebe9; color: var(--danger); }
+    .sub { color: var(--muted); font-size: 14px; margin-top: 6px; line-height: 1.75; }
+    .sub b { color: var(--ink); font-weight: 500; }
+    .price { flex: 0 0 auto; text-align: right; margin-left: auto; }
+    .price .big { font-size: 30px; font-weight: 700; color: #b3261e; line-height: 1.1; }
+    .price .u { color: var(--muted); font-size: 14px; margin-top: 4px; line-height: 1.6; }
+    .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
+    .btn { height: 38px; padding: 0 16px; border-radius: 9px; border: 1px solid var(--brand-dark); background: var(--brand-dark); color: #fff; font-weight: 700; font-size: 14px;
+      display: inline-flex; align-items: center; white-space: nowrap; cursor: pointer; text-decoration: none; font-family: inherit; }
+    .btn.blue { background: var(--t-factory); border-color: var(--t-factory); }
+    .btn.ghost { background: #fff; color: var(--brand-dark); }
+    .btn:disabled { opacity: .55; cursor: default; }
+    h3 { margin: 0 0 10px; font-size: 16px; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
+    h3:before { content: ""; width: 4px; height: 16px; background: var(--brand-dark); border-radius: 2px; flex: 0 0 auto; }
+    .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; margin: 0; }
+    .kv > div { display: flex; gap: 10px; border-bottom: 1px solid #eeede6; padding: 8px 2px; min-width: 0; }
+    .kv > div.long { grid-column: 1 / -1; }
+    .kv dt { width: 128px; color: var(--muted); flex: 0 0 auto; }
+    .kv dd { margin: 0; font-weight: 500; min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
+    .kv.one { grid-template-columns: 1fr; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+    .feat { white-space: pre-line; line-height: 1.85; font-size: 15px; }
+    .photos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .photos button { padding: 0; border: 0; border-radius: 9px; overflow: hidden; cursor: zoom-in; background: #e6e9e2; aspect-ratio: 4 / 3; }
+    .photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .muted { color: var(--muted); font-size: 14px; }
+    #map { height: 260px; border-radius: 9px; border: 1px solid var(--line); }
+    .agents { display: flex; gap: 12px; flex-wrap: wrap; }
+    .ag { flex: 1 1 200px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+    .ag b { font-size: 15px; } .ag div { color: var(--muted); font-size: 14px; margin-top: 2px; }
+    .ag a, .kv a { color: var(--brand-dark); }
+    .owner-box { border-left: 4px solid #c9a227; }
+    .loading { padding: 50px 0; text-align: center; color: var(--muted); }
+    .err { padding: 30px; text-align: center; color: var(--danger); }
+    #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; z-index: 9000; flex-direction: column; gap: 10px; }
+    #lightbox.on { display: flex; }
+    #lightbox img { max-width: 94vw; max-height: 82vh; border-radius: 6px; }
+    #lightbox .lb-bar { display: flex; gap: 10px; }
+    #lightbox .lb-bar button { height: 38px; padding: 0 16px; border-radius: 9px; border: 0; font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit; }
+    #lightbox .lb-note { color: #ddd; font-size: 14px; }
+    #toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 9999; padding: 12px 18px; border-radius: 10px; background: var(--brand-dark); color: #fff; display: none; max-width: 90%; }
+    #toast.error { background: var(--danger); }
+    @media (max-width: 760px) {
+      body { padding: 14px 12px 50px; }
+      .kv, .grid2 { grid-template-columns: 1fr; }
+      .kv dt { width: 108px; }
+      .photos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .price { text-align: left; margin-left: 0; width: 100%; }
+      .btns { justify-content: flex-start; }
+      .title { font-size: 21px; }
+    }
+  </style>
+  <link rel="stylesheet" href="../lib/leaflet.css">
+  <link rel="icon" type="image/png" href="../lib/img/favicon.png">
+</head>
+<body>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div class="container">
+    <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="../index.html" data-key="home" data-home="1">登入</a>
+    <a href="../listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
+    <a href="../client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
+    <a href="../land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
+    <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
+    <a href="../listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
+    <a href="../summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
+    <a href="../client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="../map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="../meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
+    <a href="../master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
+    <a href="../secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="../help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop();
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+      : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
+    // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
+    window.ruiheUpdateNav_ = function() {
+      var o = null;
+      try { o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
+      var els = document.querySelectorAll('#siteNav [data-auth]');
+      for (var j = 0; j < els.length; j++) {
+        var roles = els[j].getAttribute('data-roles');
+        var okRole = !roles || roles.split(',').indexOf(role) !== -1;
+        els[j].style.display = (loggedIn && okRole) ? '' : 'none';
+      }
+      var home = document.querySelector('#siteNav [data-home]');
+      if (home) home.textContent = loggedIn ? '首頁' : '登入';
+    };
+    // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
+    if (page !== 'listing.html') {
+      setTimeout(function() {
+        try {
+          if (localStorage.getItem('ruihe_listing_options_v1')) return;
+          fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'getListingFormOptions', args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(res) { if (res && res.ok && res.result && res.result.districtData && Object.keys(res.result.districtData).length) localStorage.setItem('ruihe_listing_options_v1', JSON.stringify(res.result)); })
+            .catch(function() {});
+        } catch (e) {}
+      }, 2500);
+    }
+    window.ruiheUpdateNav_();
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
+    <script>try { document.querySelectorAll('#siteNav a.active').forEach(function(a) { a.classList.remove('active'); }); } catch (e) {}</script>
+    <div class="test-banner">測試網站：物件內容頁還在測試，正式網站不受影響。</div>
+    <div class="crumb"><a href="summary.html">← 回物件總表</a><span id="crumbTail"></span></div>
+    <div id="page"><div class="loading">讀取中…</div></div>
+  </div>
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="照片">
+    <img id="lbImg" alt="">
+    <div class="lb-note" id="lbNote"></div>
+    <div class="lb-bar"><button type="button" id="lbPrev">上一張</button><button type="button" id="lbNext">下一張</button><button type="button" id="lbClose">關閉</button></div>
+  </div>
+
+<script src="config.js?v=20261104a"></script>
+<script src="../lib/leaflet.js"></script>
+<script src="../lib/match.js?v=20261021c"></script>
+<script src="dm.js?v=20261104a"></script>
+<script>
+var API_URL = window.RUIHE_TEST_API;
+function $(id) { return document.getElementById(id); }
+function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function runServer(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) }).then(function(r) { return r.json(); }).then(function(res) {
+    if (!res.ok) { var e = new Error(res.message || '系統發生錯誤'); e.fromServer = true; throw e; }
+    return res.result;
+  });
+}
+var toastTimer = null;
+function toast(text, isError) {
+  var el = $('toast'); el.textContent = text; el.className = isError ? 'error' : ''; el.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(function() { el.style.display = 'none'; }, 2600);
+}
+function goHome_() { location.replace('../index.html'); }
+function loginGet_() {
+  try {
+    var o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
+    try { var st = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; if (st && isFinite(Number(st.idleMinutes))) lim = Number(st.idleMinutes); } catch (e2) {}
+    var t = parseInt(localStorage.getItem('ruihe_last_active_v1'), 10) || 0;
+    if (t > 0 && Date.now() - t > lim * 60000) return null;
+    return o && o.name && o.code ? o : null;
+  } catch (e) { return null; }
+}
+// 有動作就算「有在用」（跟其他頁一起算自動登出）
+(function() {
+  var last = 0;
+  ['click', 'keydown', 'touchstart', 'scroll'].forEach(function(ev) {
+    window.addEventListener(ev, function() { var n = Date.now(); if (n - last < 15000) return; last = n; try { localStorage.setItem('ruihe_last_active_v1', String(n)); } catch (e) {} }, { passive: true, capture: true });
+  });
+})();
+
+// ---------------- 數字 ----------------
+var PING = 3.305785;
+function num(v) { var m = String(v == null ? '' : v).replace(/,/g, '').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : null; }
+function r2(n) { return (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+function toWan(text) {
+  var t = String(text == null ? '' : text).replace(/[,\s]/g, '');
+  var yi = t.match(/(\d+(?:\.\d+)?)億(?:(\d+(?:\.\d+)?)萬)?/);
+  if (yi) return parseFloat(yi[1]) * 10000 + (yi[2] ? parseFloat(yi[2]) : 0);
+  var n = num(t); if (n === null) return null;
+  if (/元/.test(t) && !/萬/.test(t)) return n / 10000;
+  return n;
+}
+// 民國或西元日期 → Date
+function parseDate(v) {
+  var s = String(v || '').trim(), m;
+  if ((m = s.match(/^(\d{2,3})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})/))) return new Date(+m[1] + 1911, +m[2] - 1, +m[3]);
+  if ((m = s.match(/^(\d{2,3})[\/.\-](\d{1,2})[\/.\-](\d{1,2})$/))) return new Date(+m[1] + 1911, +m[2] - 1, +m[3]);
+  if ((m = s.match(/^(\d{4})[\/.\-年](\d{1,2})[\/.\-月](\d{1,2})/))) return new Date(+m[1], +m[2] - 1, +m[3]);
+  return null;
+}
+function rocText(d) { return d ? (d.getFullYear() - 1911) + '/' + (d.getMonth() + 1) + '/' + d.getDate() : ''; }
+function daysLeft(d) { var t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((d.getTime() - t.getTime()) / 86400000); }
+function typeClass(t) { return /廠房/.test(t) ? 't-factory' : /土地|農地|建地|工業地/.test(t) ? 't-land' : 't-house'; }
+
+// ---------------- 欄位分組（同一個欄位只出現一次；沒列到的放「其他資料」） ----------------
+var AREA_M2 = ['土地面積(m²)', '全筆土地面積(m²)', '主建物面積(m²)', '附屬建物面積(m²)', '共同使用面積(m²)', '加蓋面積(m²)', '全筆主建物面積(m²)'];
+var SECTIONS = [
+  { id: 'land', title: '土地', labels: ['都市或非都市計畫', '使用分區', '都市計畫細部計畫', '國土功能分區', '產業園區名稱', '產業園區名稱(土地)', '土地類型',
+    '土地面積(m²)', '建蔽率', '容積率', '基地面寬', '基地深度', '面臨路寬', '土地朝向(廠房)', '土地朝向(土地)'] },
+  { id: 'bld', title: '建物', labels: ['建物類別', '房屋類別', '社區大樓名稱', '__建物合計', '主建物面積(m²)', '附屬建物面積(m²)', '共同使用面積(m²)', '加蓋面積(m²)', '加蓋面積位於何處(廠房)',
+    '建築完成日', '所在樓別', '地上樓層', '地下樓層', '主要建材', '外壁材質', '物件格局(廠房)', '物件格局', '加蓋格局', '建物朝向', '大門朝向', '落地窗朝向',
+    '簷高(滴水高度)', '樓地板載重或機具/電梯載重', '電梯數', '每層戶數'] },
+  { id: 'equip', title: '設備與管理', labels: ['可供用水量', '可供用電量', '是否有汙水處理廠', '是否有廠登', '附屬設備', '建築能效標示', '太陽光電發電設備',
+    '管理方式', '管理費', '管理費用', '繳費方式', '是否有留鑰匙'] },
+  { id: 'park', title: '車位', labels: ['有無車位', '車位編號', '車位數量', '車位產權', '車位型態', '停車方式', '車位管理費', '車位說明'] },
+  { id: 'life', title: '生活機能', labels: ['小學', '國中', '高中', '大學', '市場購物', '公園綠地', '醫療機構', '鄰近交通'] },
+  { id: 'env', title: '周邊環境', labels: ['半徑300公尺是否有嫌惡設施', '周圍環境其他說明(土地)', '建物及周圍環境其他說明(廠房)'] },
+  { id: 'deed', title: '謄本資料', labels: ['地段', '地段+地號', '地段+建號', '產權範圍', '持分比例', '全筆土地面積(m²)', '全筆主建物面積(m²)', '取得原因',
+    '所有權人及持分', '他項權利', '屋主是否一年內取得', '取得年月', '取得成交價格', '資訊為實價登錄或屋主提供?'] },
+  { id: 'presale', title: '預售屋／換約', labels: ['建築執照', '換約金額(萬)', '轉讓證明書', '原始簽約日', '原契約總價(萬)'] },
+  { id: 'deal', title: '委託與狀態', labels: ['物件編號', '契約編號', '委託種類', '委託案件種類', '委託類別', '合約起始', '合約到期', '填寫日期', '使用狀態',
+    '使用狀態補充說明(廠房)', '使用狀態補充說明(土地)', '使用狀態補充說明(房屋)', '主要用途', '案件狀態', '狀態日期', '狀態說明', '成交價', '關聯物件'] }
+];
+var OWNER = [['委託人', ['委託人姓名', '身份證字號或統編', '委託人連絡電話', '委託人聯絡地址', '簽約人身分']],
+  ['代理人', ['代理人姓名', '代理人身分證字號', '代理人電話', '代理人地址', '代理人與委託人關係']],
+  ['代理人 2', ['代理人2姓名', '代理人2身分證字號', '代理人2電話', '代理人2地址', '代理人2與委託人關係']]];
+var HEAD_USED = ['案名', '單價', '總價', '案件坐落', '詳細地址', '特色說明', '其他備註說明', '主要業務名稱', '次要業務名稱', '主要業務人員比例', '次要業務人員比例', '中人比例', '類型', '業務人員'];
+var LONG = /說明|嫌惡|環境|交通|他項|所有權人|取得原因/;
+
+var auth = loginGet_();
+var KEY = (function() { var m = location.search.match(/[?&]key=([^&#]+)/); try { return m ? decodeURIComponent(m[1]) : ''; } catch (e) { return ''; } })();
+var D = null;            // listingDetailGet 的結果
+var PH = { thumbs: [], ids: [], loaded: false, big: {} };
+var LISTING = null;      // 給「產生 DM」用（物件總表那一列）
+
+function F(l) { return D && D.fields[l] != null ? String(D.fields[l]) : ''; }
+function areaText(l) {
+  var v = F(l); if (!v) return '';
+  if (AREA_M2.indexOf(l) === -1) return v;
+  var n = num(v); if (n === 0) return ''; return n === null ? v : r2(n) + ' m²（' + r2(n / PING) + ' 坪）';
+}
+function bldTotal() {
+  var s = 0, any = false;
+  ['主建物面積(m²)', '附屬建物面積(m²)', '共同使用面積(m²)'].forEach(function(l) { var n = num(F(l)); if (n !== null) { s += n; any = true; } });
+  if (any && s > 0) return s / PING;
+  var p = num(F('主建物面積(坪)')); return p;
+}
+function valueText(l) {
+  if (l === '__建物合計') { var b = bldTotal(); return b ? r2(b) + ' 坪（主建物＋附屬＋共有）' : ''; }
+  if (l === '建築完成日') { var d = parseDate(F(l)); if (!d) return F(l); var y = (Date.now() - d.getTime()) / (365.25 * 86400000); return F(l) + '（屋齡約 ' + Math.max(0, Math.floor(y)) + ' 年）'; }
+  if (l === '面臨路寬' || l === '基地面寬' || l === '基地深度') { var v = F(l); return v && /^\d+(\.\d+)?$/.test(v) ? v + ' 米' : v; }
+  if (/電話/.test(l)) { var t = F(l); return t ? t.split(/[、,，;；\s]+/).filter(Boolean).map(function(x) { return '<a href="tel:' + esc(x.replace(/[^\d+]/g, '')) + '">' + esc(x) + '</a>'; }).join('、') : ''; }
+  return areaText(l);
+}
+function labelText(l) { return l === '__建物合計' ? '建物面積合計' : l.replace(/\((廠房|土地|房屋)\)$/, '').replace(/\(m²\)$/, ''); }
+function kvHtml(labels, cls) {
+  var rows = labels.map(function(l) {
+    var v = valueText(l); if (!v) return '';
+    var html = /電話/.test(l) ? v : esc(v);
+    return '<div' + (LONG.test(l) || v.length > 30 ? ' class="long"' : '') + '><dt>' + esc(labelText(l)) + '</dt><dd>' + html + '</dd></div>';
+  }).join('');
+  return rows ? '<dl class="kv' + (cls ? ' ' + cls : '') + '">' + rows + '</dl>' : '';
+}
+function usedLabels() {
+  var u = HEAD_USED.slice(); SECTIONS.forEach(function(s) { u = u.concat(s.labels); }); OWNER.forEach(function(o) { u = u.concat(o[1]); });
+  return u;
+}
+function rsText() { var t = F('委託種類'); return /租/.test(t) ? '租' : /買賣|售/.test(t) ? '售' : t; }
+function unitLines() {
+  var total = toWan(F('總價')), out = [];
+  if (D.type === '廠房' && rsText() === '售' && total) {
+    var land = num(F('土地面積(m²)')), b = bldTotal();
+    if (land) out.push('土地均價 ' + r2(total / (land / PING)) + ' 萬/坪');
+    if (b) out.push('建物均價 ' + r2(total / b) + ' 萬/坪');
+  }
+  if (!out.length && F('單價')) out.push('單價 ' + F('單價'));
+  return out;
+}
+
+// ---------------- 畫面 ----------------
+function render() {
+  var types = [D.type].concat(F('建物類別') && F('建物類別') !== D.type ? [F('建物類別')] : []).concat(F('土地類型') ? [F('土地類型')] : []);
+  var exp = parseDate(F('合約到期')), st = parseDate(F('合約起始'));
+  var left = exp ? daysLeft(exp) : null;
+  var place = [F('案件坐落'), F('詳細地址')].filter(Boolean);
+  if (place.length === 2 && F('詳細地址').indexOf(F('案件坐落')) === 0) place = [F('詳細地址')];
+  var subLines = [];
+  subLines.push(esc(place.join('　')) + (F('地段') ? '（' + esc(F('地段')) + '）' : ''));
+  var l2 = [];
+  if (F('契約編號')) l2.push('契約編號 <b>' + esc(F('契約編號')) + '</b>');
+  if (exp) l2.push('委託期間 <b>' + (st ? rocText(st) : '') + '～' + rocText(exp) + '</b>' + (left >= 0 ? '（還有 ' + left + ' 天）' : '（<span style="color:var(--danger)">已過期 ' + (-left) + ' 天</span>）'));
+  if (l2.length) subLines.push(l2.join('　｜　'));
+  var l3 = [];
+  if (F('填寫日期')) l3.push('填寫日期 ' + esc(F('填寫日期')));
+  if (F('關聯物件')) l3.push('關聯物件：' + esc(F('關聯物件')));
+  if (l3.length) subLines.push(l3.join('　｜　'));
+
+  var tags = types.filter(Boolean).map(function(t, i) { return '<span class="' + (i === 0 ? typeClass(t) : '') + '">' + esc(t) + '</span>'; }).join('') +
+    (rsText() ? '<span>' + esc(rsText()) + '</span>' : '') +
+    (F('委託案件種類') ? '<span class="' + (F('委託案件種類') === '委託' ? 'ok' : 'warn') + '">' + esc(F('委託案件種類')) + (F('委託類別') ? '・' + esc(F('委託類別')) : '') + '</span>' : '') +
+    (D.residential ? '<span>住商</span>' : '');
+  var units = unitLines();
+  var h = '';
+  h += '<div class="card"><div class="head"><div class="head-main"><div class="title">' + esc(F('案名') || '（未填案名）') + '</div><div class="tags">' + tags + '</div>' +
+    '<div class="sub">' + subLines.join('<br>') + '</div></div>' +
+    '<div class="price"><div class="big">' + esc(F('總價') || '總價未填') + '</div>' + (units.length ? '<div class="u">' + units.map(esc).join('<br>') + '</div>' : '') +
+    '<div class="btns"><button type="button" class="btn" id="dmBtn">給客戶看（DM）</button><button type="button" class="btn blue" id="tourBtn">帶看資料（業務用）</button></div>' +
+    (D.canEdit ? '<div class="btns" style="margin-top:8px;"><a class="btn ghost" href="../listing.html?mode=edit&key=' + encodeURIComponent(D.key) + '">修改</a></div>' : '') +
+    '</div></div></div>';
+
+  if (F('特色說明')) h += '<div class="card"><h3>特色說明</h3><div class="feat">' + esc(F('特色說明')) + '</div></div>';
+
+  h += '<div class="grid2"><div class="card"><h3>照片</h3><div id="photoBox"><div class="muted">照片讀取中…（大約 10 秒）</div></div></div>' +
+    '<div class="card"><h3>位置</h3>' + (D.coord ? '<div id="map"></div><div class="muted" style="margin-top:6px;"><a href="../map.html?k=' + encodeURIComponent(D.key) + '">在物件地圖上看附近物件</a>　｜　<a href="https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a></div>' : '<div class="muted">還沒有座標。</div>') + '</div></div>';
+
+  var secs = SECTIONS.map(function(s) {
+    var body = kvHtml(s.labels); return body ? '<div class="card"><h3>' + esc(s.title) + '</h3>' + body + '</div>' : '';
+  }).filter(Boolean);
+  // 兩欄排：土地＋建物在最前面
+  h += secs.join('');
+
+  if (F('其他備註說明')) h += '<div class="card"><h3>其他備註說明</h3><div class="feat">' + esc(F('其他備註說明')) + '</div></div>';
+
+  // 負責業務
+  var ratio = { };
+  if (F('主要業務人員比例')) ratio.main = F('主要業務人員比例');
+  if (F('次要業務人員比例')) ratio.sub = F('次要業務人員比例');
+  h += '<div class="card"><h3>負責業務</h3><div class="agents">' + (D.agents || []).map(function(a) {
+    var r = a.main ? ratio.main : ratio.sub;
+    return '<div class="ag"><b>' + esc(a.name) + '</b>' + (D.residential ? '' : (a.main ? '（主要）' : '（次要）')) +
+      (a.phone ? '<div><a href="tel:' + esc(a.phone.replace(/[^\d+]/g, '')) + '">' + esc(a.phone) + '</a></div>' : '') +
+      (r ? '<div>業務比例 ' + esc(r) + '</div>' : '') + '</div>';
+  }).join('') + (F('中人比例') ? '<div class="ag"><b>中人比例</b><div>' + esc(F('中人比例')) + '</div></div>' : '') + '</div></div>';
+
+  // 委託人（只有這件的業務、秘書、管理員；其他人整段不出現）
+  if (D.canSeeOwner) {
+    var ob = OWNER.map(function(o, i) { var b = kvHtml(o[1], 'one'); return b ? '<div>' + (i ? '<div class="muted" style="font-weight:700;margin-top:4px;">' + esc(o[0]) + '</div>' : '') + b + '</div>' : ''; }).filter(Boolean);
+    if (ob.length) h += '<div class="card owner-box"><h3>委託人</h3>' + (ob.length > 1 ? '<div class="grid2">' + ob.join('') + '</div>' : ob[0].replace('class="kv one"', 'class="kv"')) + '</div>';
+  }
+
+  // 其他資料（上面沒列到的欄位）
+  var used = usedLabels();
+  var rest = (D.order || []).filter(function(l) { return used.indexOf(l) === -1 && F(l); });
+  if (rest.length) h += '<div class="card"><h3>其他資料</h3>' + kvHtml(rest) + '</div>';
+
+  $('page').innerHTML = h;
+  $('crumbTail').textContent = '　／　' + (D.type || '') + '　／　' + (F('案名') || '');
+  document.title = (F('案名') || '物件內容') + '（測試）｜瑞禾業務系統';
+  $('dmBtn').addEventListener('click', openDM);
+  $('tourBtn').addEventListener('click', openTour);
+  if (D.coord) initMap();
+  renderPhotos();
+}
+
+function initMap() {
+  try {
+    var map = L.map('map', { center: D.coord, zoom: 16, scrollWheelZoom: false });
+    L.tileLayer('https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}', { maxZoom: 19, attribution: '© 內政部國土測繪中心' }).addTo(map);
+    L.circleMarker(D.coord, { radius: 10, weight: 3, color: '#fff', fillColor: '#b3261e', fillOpacity: 0.95 }).addTo(map);
+  } catch (e) {}
+}
+
+// ---------------- 照片 ----------------
+function loadPhotos() {
+  if (D.residential) { PH.loaded = true; renderPhotos('住商物件沒有照片資料。'); return; }
+  runServer('dmGetData', auth.name, auth.code, D.key, { thumbs: true }).then(function(r) {
+    PH.thumbs = (r && r.photos) || []; PH.ids = (r && r.photoIds) || []; PH.loaded = true; renderPhotos(r && r.photoNote);
+  }).catch(function(err) { PH.loaded = true; renderPhotos('照片讀取失敗：' + (err.message || '')); });
+}
+function renderPhotos(note) {
+  var box = $('photoBox'); if (!box) return;
+  if (!PH.loaded) return;
+  if (!PH.thumbs.length) { box.innerHTML = '<div class="muted">' + esc(note || '沒有照片。') + '</div>'; return; }
+  box.innerHTML = '<div class="photos">' + PH.thumbs.map(function(src, i) { return '<button type="button" data-ph="' + i + '" aria-label="放大第 ' + (i + 1) + ' 張"><img src="' + src + '" alt=""></button>'; }).join('') + '</div>' +
+    '<div class="muted" style="margin-top:6px;">共 ' + PH.thumbs.length + ' 張，點照片放大</div>';
+}
+var lbAt = 0;
+function showPhoto(i) {
+  lbAt = (i + PH.thumbs.length) % PH.thumbs.length;
+  $('lbImg').src = PH.big[lbAt] || PH.thumbs[lbAt];
+  $('lbNote').textContent = (lbAt + 1) + '／' + PH.thumbs.length + (PH.big[lbAt] ? '' : '　清晰版讀取中…');
+  $('lightbox').classList.add('on');
+  if (PH.big[lbAt] || !PH.ids[lbAt]) { if (!PH.ids[lbAt]) $('lbNote').textContent = (lbAt + 1) + '／' + PH.thumbs.length; return; }
+  var want = lbAt;
+  runServer('dmGetPhotos', auth.name, auth.code, D.key, [PH.ids[want]]).then(function(r) {
+    var src = r && r.photos && r.photos[0]; if (!src) return;
+    PH.big[want] = src;
+    if (lbAt === want && $('lightbox').classList.contains('on')) { $('lbImg').src = src; $('lbNote').textContent = (want + 1) + '／' + PH.thumbs.length; }
+  }).catch(function() { if (lbAt === want) $('lbNote').textContent = (want + 1) + '／' + PH.thumbs.length + '　（清晰版讀不到，顯示小圖）'; });
+}
+document.addEventListener('click', function(e) { var b = e.target.closest('[data-ph]'); if (b) showPhoto(parseInt(b.getAttribute('data-ph'), 10)); });
+$('lbClose').addEventListener('click', function() { $('lightbox').classList.remove('on'); });
+$('lbPrev').addEventListener('click', function() { showPhoto(lbAt - 1); });
+$('lbNext').addEventListener('click', function() { showPhoto(lbAt + 1); });
+$('lightbox').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('on'); });
+document.addEventListener('keydown', function(e) {
+  if (!$('lightbox').classList.contains('on')) return;
+  if (e.key === 'Escape') $('lightbox').classList.remove('on'); else if (e.key === 'ArrowLeft') showPhoto(lbAt - 1); else if (e.key === 'ArrowRight') showPhoto(lbAt + 1);
+});
+
+// ---------------- 給客戶看（DM）：跟物件總表的「產生 DM」一樣 ----------------
+function findListing_(c) {
+  if (!c || !c.keys || !c.rows) return null;
+  var i = c.keys.indexOf(KEY); if (i === -1) return null;
+  var L0 = RuiheMatch.parseListing(c.columns, c.rows[i], (c.dates || [])[i], i);
+  L0.coord = L0.coord || (c.coords || [])[i] || null;
+  return L0;
+}
+function openDM() {
+  if (!window.RuiheDM) return;
+  if (!LISTING) { try { LISTING = findListing_(JSON.parse(localStorage.getItem('ruihe_summary_cache_v1') || 'null')); } catch (e) {} }
+  if (LISTING) { RuiheDM.open(auth, LISTING, KEY); return; }
+  var btn = $('dmBtn'); btn.disabled = true; btn.textContent = '準備中…';
+  runServer('summaryGetListings', auth.name, auth.code, '').then(function(res) {
+    LISTING = findListing_(res);
+    if (!LISTING) throw new Error('物件總表裡找不到這一件（可能已經下架）。');
+    RuiheDM.open(auth, LISTING, KEY);
+  }).catch(function(err) { toast(err.message || '讀取失敗', true); }).then(function() { btn.disabled = false; btn.textContent = '給客戶看（DM）'; });
+}
+
+// ---------------- 帶看資料（業務用）：另開視窗，可以列印或存成 PDF ----------------
+var CHECKS = {
+  '廠房': ['大車、貨櫃車能不能進出，迴車空間夠不夠', '電力：可供用電量、受電箱位置、有沒有高壓電', '用水、排水、汙水處理', '簷高、樑下淨高、有沒有天車', '地坪載重、地面狀況',
+    '消防設備、逃生動線', '加蓋或違建的位置', '隔壁鄰居在做什麼、有沒有嫌惡設施', '鑰匙在哪裡、現場要先聯絡誰'],
+  '土地': ['界址、地界樁（實際範圍跟地籍圖一不一樣）', '地上物、有沒有被占用', '臨路情形、出入口位置', '地勢高低、排水', '水電可不可以接', '周邊嫌惡設施', '使用分區的限制（能蓋什麼）'],
+  '房屋': ['漏水、壁癌、牆面裂縫', '採光、通風、噪音', '水電管線、熱水器、冷氣', '車位能不能實際停（尺寸、坡道）', '管委會規定、管理費', '鄰居、社區環境', '鑰匙在哪裡、現場要先聯絡誰']
+};
+function openTour() {
+  var w = window.open('', '_blank');
+  if (!w) { toast('瀏覽器擋住了新視窗，請允許這個網站開新視窗。', true); return; }
+  w.document.write('<!DOCTYPE html><meta charset="utf-8"><title>帶看資料</title><p style="font-family:sans-serif;padding:20px;">準備中…</p>');
+  var ids = PH.ids.slice(0, 4);
+  var p = ids.length ? runServer('dmGetPhotos', auth.name, auth.code, D.key, ids).then(function(r) { return (r && r.photos) || []; }).catch(function() { return PH.thumbs.slice(0, 4); }) : Promise.resolve(PH.thumbs.slice(0, 4));
+  p.then(function(photos) {
+    photos = photos.map(function(s, i) { return s || PH.thumbs[i]; }).filter(Boolean);
+    w.document.open(); w.document.write(tourHtml(photos)); w.document.close();
+  });
+}
+function tourHtml(photos) {
+  var exp = parseDate(F('合約到期')), st = parseDate(F('合約起始'));
+  var units = unitLines();
+  var specs = SECTIONS.filter(function(s) { return s.id !== 'deal'; }).map(function(s) { var b = kvHtml(s.labels); return b ? '<h3>' + esc(s.title) + '</h3>' + b : ''; }).join('');
+  var checks = CHECKS[D.type] || CHECKS['房屋'];
+  var css = 'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:#1c2b22;margin:0;padding:24px;font-size:13.5px;line-height:1.5}' +
+    '.bar{display:flex;gap:8px;margin-bottom:14px}.bar button{height:36px;padding:0 16px;border-radius:8px;border:1px solid #1e4a32;background:#1e4a32;color:#fff;font-weight:700;cursor:pointer;font-family:inherit}' +
+    '.inner{border-bottom:3px solid #1e4a32;padding-bottom:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px}' +
+    '.inner b{font-size:20px}.inner span{color:#a3352c;font-weight:700;font-size:12.5px;border:1px solid #a3352c;border-radius:6px;padding:2px 8px;white-space:nowrap}' +
+    '.top{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-bottom:8px}.top div b{font-weight:700}' +
+    '.ph{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px}' +
+    'h3{font-size:14px;margin:12px 0 4px;color:#1e4a32;border-left:4px solid #1e4a32;padding-left:6px}' +
+    '.kv{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;margin:0}.kv>div{display:flex;gap:8px;border-bottom:1px solid #e6e6df;padding:3px 0}.kv>div.long{grid-column:1/-1}' +
+    '.kv dt{width:118px;color:#66776c;flex:0 0 auto}.kv dd{margin:0;white-space:pre-line}.kv a{color:inherit;text-decoration:none}' +
+    '.txt{white-space:pre-line}.chk div{padding:3px 0}.lines div{border-bottom:1px solid #bbb;height:26px}' +
+    '@media print{.bar{display:none}body{padding:0}@page{size:A4;margin:12mm}h3{break-after:avoid}.kv>div{break-inside:avoid}}';
+  var top = [
+    ['類型', [D.type, F('建物類別')].filter(Boolean).filter(function(x, i, a) { return a.indexOf(x) === i; }).join('・') + (rsText() ? '・' + rsText() : '')],
+    ['開價', (F('總價') || '') + (units.length ? '（' + units.join('；') + '）' : '')],
+    ['地址', F('詳細地址') || F('案件坐落')],
+    ['契約編號', F('契約編號')],
+    ['委託期間', exp ? (st ? rocText(st) : '') + '～' + rocText(exp) : ''],
+    ['使用狀態', F('使用狀態')],
+    ['負責業務', (D.agents || []).map(function(a) { return a.name + (a.phone ? ' ' + a.phone : ''); }).join('、')],
+    ['位置', D.coord ? 'https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] : '']
+  ].filter(function(x) { return x[1]; }).map(function(x) { return '<div><b>' + esc(x[0]) + '：</b>' + esc(x[1]) + '</div>'; }).join('');
+  return '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>帶看資料－' + esc(F('案名')) + '</title><style>' + css + '</style></head><body>' +
+    '<div class="bar"><button onclick="window.print()">列印／存成 PDF</button><button onclick="window.close()">關閉</button></div>' +
+    '<div class="inner"><b>' + esc(F('案名')) + '</b><span>業務帶看用・不要交給客戶</span></div>' +
+    '<div class="top">' + top + '</div>' +
+    (photos.length ? '<div class="ph">' + photos.map(function(s) { return '<img src="' + s + '">'; }).join('') + '</div>' : '') +
+    (F('特色說明') ? '<h3>特色說明</h3><div class="txt">' + esc(F('特色說明')) + '</div>' : '') +
+    specs +
+    (F('其他備註說明') ? '<h3>其他備註說明</h3><div class="txt">' + esc(F('其他備註說明')) + '</div>' : '') +
+    '<h3>帶看前確認</h3><div class="chk">' + checks.map(function(c) { return '<div>☐ ' + esc(c) + '</div>'; }).join('') + '</div>' +
+    '<h3>現場紀錄（客戶反應、要回覆的問題）</h3><div class="lines">' + new Array(7).join('<div></div>') + '</div>' +
+    '</body></html>';
+}
+
+// ---------------- 開始 ----------------
+(function start() {
+  if (!API_URL) { $('page').innerHTML = '<div class="err">測試網站還沒設定後端網址（config.js）。</div>'; return; }
+  if (!auth) { goHome_(); return; }
+  if (!KEY) { $('page').innerHTML = '<div class="err">網址少了物件編號，請從物件總表點案名進來。</div>'; return; }
+  runServer('listingDetailGet', auth.name, auth.code, KEY).then(function(res) {
+    D = res; render(); loadPhotos();
+  }).catch(function(err) {
+    if (err.fromServer && /通關碼|姓名|登入/.test(err.message)) { goHome_(); return; }
+    $('page').innerHTML = '<div class="err">' + esc(err.message || '讀取失敗') + '<br><a href="summary.html">回物件總表</a></div>';
+  });
+})();
+</script>
+</body>
+</html>
