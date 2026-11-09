@@ -408,14 +408,12 @@
       <h2>登入</h2>
       <div id="chooseBox">
         <div class="g-box"><div id="googleBtn"></div><div class="g-note" id="googleNote"></div></div>
-        <div class="or-line">或</div>
-        <button type="button" class="btn" id="showCodeBtn" style="width:100%;">使用通關碼登入</button>
       </div>
       <div id="codeBox" hidden>
         <button type="button" class="back-link" id="backBtn">← 其他登入方式</button>
         <div class="field">
           <label class="required" for="loginName">姓名</label>
-          <select id="loginName"><option value="">載入中…</option></select>
+          <input type="text" id="loginName" autocomplete="off" spellcheck="false" maxlength="20">
         </div>
         <div class="field">
           <label class="required" for="loginCode">通關碼</label>
@@ -861,7 +859,8 @@ function logoutToLogin(msg) {
 }
 function login(auto) {
   var name = auto ? auto.name : $('loginName').value, code = auto ? auto.code : $('loginCode').value.replace(/\s+/g, '');
-  if (!name || !code) { showLoginMsg('請選擇姓名並輸入通關碼。', true); return; }
+  name = String(name || '').trim();
+  if (!name || !code) { showLoginMsg('請輸入姓名和通關碼。', true); return; }
   var btn = $('loginBtn'); btn.disabled = true; btn.textContent = '登入中…'; showLoginMsg('');
   post(OBJ_API, 'summaryVerifyLogin', auto ? [name, code] : [name, code, clientInfo()]).then(function(res) {
     afterLogin(res, res.token || code);   // 用通關碼登入會拿到登入憑證，之後網頁只暫存憑證；用憑證驗證（換頁）沿用原本的
@@ -1031,12 +1030,12 @@ function whenGoogle() {
 function inAppBrowser() { return /Line\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent || ''); }
 function renderGoogleLogin() {
   var note = $('googleNote');
-  if (inAppBrowser()) { note.className = 'g-note warn'; note.textContent = '在 LINE 等 App 裡打開時，Google 登入可能沒辦法用，請改用 Chrome 或 Safari 開啟，或用下面的通關碼登入。'; }
+  if (inAppBrowser()) { note.className = 'g-note warn'; note.textContent = '在 LINE 等 App 裡打開時，Google 登入可能沒辦法用，請改用 Chrome 或 Safari 開啟。'; }
   whenGoogle().then(function(gid) {
     gid.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin, auto_select: false, cancel_on_tap_outside: true });
     $('googleBtn').innerHTML = '';
     gid.renderButton($('googleBtn'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', width: 280, locale: 'zh_TW' });
-  }).catch(function() { if (!inAppBrowser()) { note.className = 'g-note'; note.textContent = 'Google 登入暫時無法使用，請用通關碼登入。'; } });
+  }).catch(function() { if (!inAppBrowser()) { note.className = 'g-note'; note.textContent = 'Google 登入暫時無法使用，請稍後再試或找管理員。'; } });
 }
 function onGoogleLogin(resp) {
   if (!resp || !resp.credential) return;
@@ -1075,12 +1074,14 @@ $('gUnbindBtn').addEventListener('click', function() {
     .catch(function(err) { toast(err.message || '解除失敗', true); });
 });
 
-function showLoginChoice(code) {
+// 115/11/09：通關碼登入不放在畫面上（不讓外部的人看到、試）；只有用管理員給的網址（index.html?code=1）打開才出現
+var CODE_LOGIN_ = /[?&]code(=|&|$)/.test(location.search);
+function showLoginChoice(code, force) {
+  if (!force) code = code || CODE_LOGIN_;
   $('chooseBox').hidden = !!code; $('codeBox').hidden = !code;
   if (code) setTimeout(function() { try { $('loginName').focus(); } catch (e) {} }, 0);
 }
-$('showCodeBtn').addEventListener('click', function() { showLoginChoice(true); });
-$('backBtn').addEventListener('click', function() { showLoginChoice(false); });
+$('backBtn').addEventListener('click', function() { showLoginChoice(false, true); });
 
 // ---------------- 事件 ----------------
 $('loginBtn').addEventListener('click', function() { login(); });
@@ -1100,9 +1101,9 @@ $('scopeSeg').addEventListener('click', function(e) {
 // 起始：被功能頁帶回來時顯示原因（例如 30 分鐘沒動作自動登出）
 (function init() {
   var msg = ''; try { msg = sessionStorage.getItem('ruihe_login_msg') || ''; } catch (e) {}
-  loadLoginNames_($('loginName'), function() {
-    return post(OBJ_API, 'getEditLoginOptions', []).then(function(res) { return res.personList || []; });
-  }, function(err) { $('loginName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>'; showLoginMsg(err.message || '連不上系統', true); });
+  // 115/11/09：不再載入同仁名單（姓名自己輸入），外部的人看不到名單
+  try { $('loginName').value = localStorage.getItem('ruihe_summary_last_name') || ''; } catch (e) {}
+  showLoginChoice(false);
   idleWatch_(function() { return !!auth; }, function(m) { logoutToLogin(m); });
   var saved = sharedLoginGet_();
   if (!saved) renderGoogleLogin();

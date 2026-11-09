@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>產生中…｜瑞禾業務系統</title>
+  <!-- 115/11/09：物件內容頁的 DM、業務銷講另開這一頁顯示（內容由物件內容頁傳過來），可以下載圖片或列印／存成 PDF -->
+  <script src="lib/html2canvas.min.js"></script>
+  <style>body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0;padding:24px;background:#f4f3ee;color:#1c2b22}#wait{color:#66776c}</style>
+</head>
+<body>
+  <p id="wait">產生中…</p>
+<script>
+(function() {
+  var shown = false;
+  function bind(fname) {
+    var btn = document.getElementById('imgBtn'), st = document.getElementById('st');
+    if (btn) btn.onclick = function() {
+      if (!window.html2canvas) { st.textContent = '圖片工具沒有載入，請重新整理'; return; }
+      btn.disabled = true; st.textContent = '產生圖片中…';
+      html2canvas(document.getElementById('sheet'), { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function(c) {
+        var a = document.createElement('a'); a.download = fname; a.href = c.toDataURL('image/png');
+        document.body.appendChild(a); a.click(); a.remove(); st.textContent = '已下載';
+      }).catch(function(e) { st.textContent = '產生圖片失敗：' + (e && e.message || e); }).then(function() { btn.disabled = false; });
+    };
+    var pr = document.getElementById('prBtn'); if (pr) pr.onclick = function() { window.print(); };
+    var cl = document.getElementById('clBtn'); if (cl) cl.onclick = function() { window.close(); };
+  }
+  function show(d) {
+    if (shown) return; shown = true;
+    document.title = d.title || '瑞禾業務系統';
+    var st = document.createElement('style'); st.textContent = d.css || ''; document.head.appendChild(st);
+    document.body.innerHTML = d.body || '';
+    bind(d.fname || '物件.png');
+  }
+  window.addEventListener('message', function(e) {
+    if (e.origin !== location.origin || !e.data) return;
+    if (e.data.ruiheSheet) show(e.data.ruiheSheet);
+    if (e.data.ruiheSheetError) document.getElementById('wait').textContent = e.data.ruiheSheetError;
+  });
+  if (window.opener) { try { window.opener.postMessage({ ruiheSheetReady: true }, location.origin); } catch (e) {} }
+  else document.getElementById('wait').textContent = '請從物件內容頁按「給客戶看（DM）」或「業務銷講」打開。';
+})();
+</script>
+</body>
+</html>

@@ -533,6 +533,7 @@
       <div class="edit-login-actions"><button type="button" class="edit-btn" id="editLoginBtn" style="flex:1;">登入</button></div>
       <div class="msg" id="editLoginMsg"></div>
     </div>
+    <div class="card" id="editOpeningView" style="display:none;padding:40px 20px;text-align:center;color:#5D6B62;">正在打開這一件…</div>
     <div class="card" id="editListView" style="display:none;">
       <div class="edit-list-head">
         <h2 id="editListTitle">我的案件</h2>
@@ -5035,6 +5036,7 @@ function editShow_(view) {
   // view：'login' | 'list' | 'form'
   document.getElementById('editLoginView').style.display = view === 'login' ? '' : 'none';
   document.getElementById('editListView').style.display = view === 'list' ? '' : 'none';
+  document.getElementById('editOpeningView').style.display = view === 'opening' ? '' : 'none'; // 115/11/09 從物件內容頁、資料維護按「修改」進來
   document.getElementById('editBar').style.display = view === 'form' ? '' : 'none';
   document.getElementById('listingForm').style.display = view === 'form' ? '' : 'none';
   document.getElementById('typeNow').style.display = view === 'form' ? '' : 'none'; // 修改頁：清單、登入畫面不顯示「正在填寫」
@@ -5071,9 +5073,8 @@ function editOpenFromUrl_() {
   if (!m || editTab_ === 'needs') return;
   // 115/11/09：從物件內容頁、資料維護按「修改」進來：不用等清單讀完，直接打開那一件（有沒有權限由後端判斷）
   var key = decodeURIComponent(m[1]);
-  var box = document.getElementById('editCaseList');
-  if (box) box.innerHTML = '<div class="hint">正在打開這一件…</div>';
-  editOpenCase_(key, null);
+  editShow_('opening'); // 不顯示清單，直接顯示「正在打開這一件…」，打開後就是修改畫面
+  editOpenCase_(key, null, function() { editShow_('list'); }); // 打不開（沒有權限、找不到）才回到清單
 }
 function editLogin_(auto) {
   var name = auto ? auto.name : document.getElementById('editName').value;
@@ -5439,7 +5440,7 @@ function editApplyCurrentValue_(label, value) {
   return false;
 }
 
-function editOpenCase_(key, btn) {
+function editOpenCase_(key, btn, onFail) {
   if (!editAuth_) return;
   if (btn) { btn.disabled = true; btn.textContent = '載入中…'; }
   Promise.all([runServer('editLoadCase', editAuth_.name, editAuth_.code, key), initReady_])
@@ -5519,7 +5520,7 @@ function editOpenCase_(key, btn) {
       editShow_('form');
       editDirty_ = false;
     })
-    .catch(function(err) { showToast(err.message, 'error'); })
+    .catch(function(err) { showToast(err.message, 'error'); if (onFail) onFail(err); })
     .then(function() { if (btn) { btn.disabled = false; btn.textContent = '修改'; } });
 }
 

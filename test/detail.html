@@ -155,9 +155,10 @@
     <div class="lb-bar"><button type="button" id="lbPrev">上一張</button><button type="button" id="lbNext">下一張</button><button type="button" id="lbClose">關閉</button></div>
   </div>
 
+<script src="lib/outputs.js?v=20261109a"></script>
 <script src="lib/leaflet.js"></script>
 <script src="lib/match.js?v=20261021c"></script>
-<script src="lib/dm.js?v=20261109a"></script>
+<script src="lib/dm.js?v=20261109b"></script>
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 function $(id) { return document.getElementById(id); }
@@ -218,23 +219,7 @@ function typeClass(t) { return /廠房/.test(t) ? 't-factory' : /土地|農地|�
 
 // ---------------- 欄位分組（同一個欄位只出現一次；沒列到的放「其他資料」） ----------------
 var AREA_M2 = ['土地面積(m²)', '全筆土地面積(m²)', '主建物面積(m²)', '附屬建物面積(m²)', '共同使用面積(m²)', '加蓋面積(m²)', '全筆主建物面積(m²)'];
-var SECTIONS = [
-  { id: 'land', title: '土地', labels: ['都市或非都市計畫', '使用分區', '都市計畫細部計畫', '國土功能分區', '產業園區名稱', '產業園區名稱(土地)', '土地類型',
-    '土地面積(m²)', '建蔽率', '容積率', '基地面寬', '基地深度', '面臨路寬', '土地朝向(廠房)', '土地朝向(土地)'] },
-  { id: 'bld', title: '建物', labels: ['建物類別', '房屋類別', '社區大樓名稱', '__建物合計', '主建物面積(m²)', '附屬建物面積(m²)', '共同使用面積(m²)', '加蓋面積(m²)', '加蓋面積位於何處(廠房)',
-    '建築完成日', '__屋齡', '所在樓別', '地上樓層', '地下樓層', '主要建材', '外壁材質', '物件格局(廠房)', '物件格局', '加蓋格局', '建物朝向', '大門朝向', '落地窗朝向',
-    '簷高(滴水高度)', '樓地板載重或機具/電梯載重', '電梯數', '每層戶數'] },
-  { id: 'equip', title: '設備與管理', labels: ['可供用水量', '可供用電量', '是否有汙水處理廠', '是否有廠登', '附屬設備', '建築能效標示', '太陽光電發電設備',
-    '管理方式', '管理費', '管理費用', '繳費方式', '是否有留鑰匙'] },
-  { id: 'park', title: '車位', labels: ['有無車位', '車位編號', '車位數量', '車位產權', '車位型態', '停車方式', '車位管理費', '車位說明'] },
-  { id: 'life', title: '生活機能', labels: ['小學', '國中', '高中', '大學', '市場購物', '公園綠地', '醫療機構', '鄰近交通'] },
-  { id: 'env', title: '周邊環境', labels: ['半徑300公尺是否有嫌惡設施', '周圍環境其他說明(土地)', '建物及周圍環境其他說明(廠房)'] },
-  { id: 'deed', title: '謄本資料', labels: ['地段', '地段+地號', '地段+建號', '產權範圍', '持分比例', '全筆土地面積(m²)', '全筆主建物面積(m²)', '取得原因',
-    '所有權人及持分', '他項權利', '屋主是否一年內取得', '取得年月', '取得成交價格', '資訊為實價登錄或屋主提供?'] },
-  { id: 'presale', title: '預售屋／換約', labels: ['建築執照', '換約金額(萬)', '轉讓證明書', '原始簽約日', '原契約總價(萬)'] },
-  { id: 'deal', title: '委託與狀態', labels: ['物件編號', '契約編號', '委託種類', '委託案件種類', '委託類別', '合約到期', '使用狀態',
-    '使用狀態補充說明(廠房)', '使用狀態補充說明(土地)', '使用狀態補充說明(房屋)', '主要用途', '案件狀態', '狀態日期', '狀態說明', '成交價', '關聯物件'] }
-];
+var SECTIONS = RuiheOutputs.SECTIONS; // 欄位分組放在 lib/outputs.js（DM、業務銷講、後台設定共用）
 var OWNER = [['委託人', ['委託人姓名', '身份證字號或統編', '委託人連絡電話', '委託人聯絡地址', '簽約人身分']],
   ['代理人', ['代理人姓名', '代理人身分證字號', '代理人電話', '代理人地址', '代理人與委託人關係']],
   ['代理人 2', ['代理人2姓名', '代理人2身分證字號', '代理人2電話', '代理人2地址', '代理人2與委託人關係']]];
@@ -322,7 +307,7 @@ function render() {
   h += '<div class="card"><div class="head"><div class="head-main"><div class="title">' + esc(F('案名') || '（未填案名）') + '</div><div class="tags">' + tags + '</div>' +
     '<div class="sub">' + subLines.join('<br>') + '</div></div>' +
     '<div class="price"><div class="big">' + esc(F('總價') || '總價未填') + '</div>' + (units.length ? '<div class="u">' + units.map(esc).join('<br>') + '</div>' : '') +
-    '<div class="btns"><button type="button" class="btn" id="dmBtn">給客戶看（DM）</button><button type="button" class="btn blue" id="tourBtn">帶看資料（業務用）</button></div>' +
+    '<div class="btns"><button type="button" class="btn" id="dmBtn">給客戶看（DM）</button><button type="button" class="btn blue" id="tourBtn">業務銷講</button></div>' +
     (D.canEdit ? '<div class="btns" style="margin-top:8px;"><a class="btn ghost" href="listing.html?mode=edit&key=' + encodeURIComponent(D.key) + '">修改</a></div>' : '') +
     '</div></div></div>';
 
@@ -426,79 +411,186 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') $('lightbox').classList.remove('on'); else if (e.key === 'ArrowLeft') showPhoto(lbAt - 1); else if (e.key === 'ArrowRight') showPhoto(lbAt + 1);
 });
 
-// ---------------- 給客戶看（DM）：跟物件總表的「產生 DM」一樣 ----------------
-function findListing_(c) {
-  if (!c || !c.keys || !c.rows) return null;
-  var i = c.keys.indexOf(KEY); if (i === -1) return null;
-  var L0 = RuiheMatch.parseListing(c.columns, c.rows[i], (c.dates || [])[i], i);
-  L0.coord = L0.coord || (c.coords || [])[i] || null;
-  return L0;
+// ---------------- DM（給客戶看）、業務銷講：同一種表格排版（115/11/09 改版） ----------------
+// 要放哪些內容：管理員在後台管理「系統設定」勾選（outputConfigGet）；沒設定過用 lib/outputs.js 的預設值。
+var OUT = { cfg: null, requester: null, company: null, loaded: false };
+var OUT_P = null;
+function loadOutputConfig_() {
+  if (!OUT_P) OUT_P = runServer('outputConfigGet', auth.name, auth.code).then(function(r) {
+    OUT.cfg = r.cfg || null; OUT.requester = r.requester || null; OUT.company = r.company || null; OUT.loaded = true; return OUT;
+  }).catch(function() { OUT.loaded = true; return OUT; });
+  return OUT_P;
 }
-function openDM() {
-  if (!window.RuiheDM) return;
-  if (!LISTING) { try { LISTING = findListing_(JSON.parse(localStorage.getItem('ruihe_summary_cache_v1') || 'null')); } catch (e) {} }
-  if (LISTING) { RuiheDM.open(auth, LISTING, KEY); return; }
-  var btn = $('dmBtn'); btn.disabled = true; btn.textContent = '準備中…';
-  runServer('summaryGetListings', auth.name, auth.code, '').then(function(res) {
-    LISTING = findListing_(res);
-    if (!LISTING) throw new Error('物件總表裡找不到這一件（可能已經下架）。');
-    RuiheDM.open(auth, LISTING, KEY);
-  }).catch(function(err) { toast(err.message || '讀取失敗', true); }).then(function() { btn.disabled = false; btn.textContent = '給客戶看（DM）'; });
-}
-
-// ---------------- 帶看資料（業務用）：另開視窗，可以列印或存成 PDF ----------------
 var CHECKS = {
   '廠房': ['大車、貨櫃車能不能進出，迴車空間夠不夠', '電力：可供用電量、受電箱位置、有沒有高壓電', '用水、排水、汙水處理', '簷高、樑下淨高、有沒有天車', '地坪載重、地面狀況',
     '消防設備、逃生動線', '加蓋或違建的位置', '隔壁鄰居在做什麼、有沒有嫌惡設施', '鑰匙在哪裡、現場要先聯絡誰'],
   '土地': ['界址、地界樁（實際範圍跟地籍圖一不一樣）', '地上物、有沒有被占用', '臨路情形、出入口位置', '地勢高低、排水', '水電可不可以接', '周邊嫌惡設施', '使用分區的限制（能蓋什麼）'],
   '房屋': ['漏水、壁癌、牆面裂縫', '採光、通風、噪音', '水電管線、熱水器、冷氣', '車位能不能實際停（尺寸、坡道）', '管委會規定、管理費', '鄰居、社區環境', '鑰匙在哪裡、現場要先聯絡誰']
 };
-function openTour() {
-  var w = window.open('', '_blank');
-  if (!w) { toast('瀏覽器擋住了新視窗，請允許這個網站開新視窗。', true); return; }
-  w.document.write('<!DOCTYPE html><meta charset="utf-8"><title>帶看資料</title><p style="font-family:sans-serif;padding:20px;">準備中…</p>');
-  var ids = PH.ids.slice(0, 4);
-  var p = ids.length ? runServer('dmGetPhotos', auth.name, auth.code, D.key, ids).then(function(r) { return (r && r.photos) || []; }).catch(function() { return PH.thumbs.slice(0, 4); }) : Promise.resolve(PH.thumbs.slice(0, 4));
-  p.then(function(photos) {
-    photos = photos.map(function(s, i) { return s || PH.thumbs[i]; }).filter(Boolean);
-    w.document.open(); w.document.write(tourHtml(photos)); w.document.close();
-  });
+var SHEET_CSS = 'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:#1c2b22;margin:0;padding:24px;font-size:13.5px;line-height:1.5;background:#f4f3ee}' +
+  '.bar{display:flex;gap:8px;margin:0 auto 14px;max-width:794px;flex-wrap:wrap;align-items:center}.bar button{height:36px;padding:0 16px;border-radius:8px;border:1px solid #1e4a32;background:#1e4a32;color:#fff;font-weight:700;cursor:pointer;font-family:inherit}' +
+  '.bar button.g{background:#fff;color:#1e4a32}.bar span{color:#66776c;font-size:13px}' +
+  '#sheet{background:#fff;max-width:794px;margin:0 auto;padding:26px 30px;box-sizing:border-box}' +
+  '.brand{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #e2e1d8;padding-bottom:8px;margin-bottom:10px}.brand img{height:40px}.brand span{color:#1e4a32;font-weight:700;font-size:14px}' +
+  '.inner{border-bottom:3px solid #1e4a32;padding-bottom:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px}' +
+  '.inner b{font-size:20px}.inner .tag{color:#a3352c;font-weight:700;font-size:12.5px;border:1px solid #a3352c;border-radius:6px;padding:2px 8px;white-space:nowrap}' +
+  '.inner .price{text-align:right;white-space:nowrap}.inner .price b{color:#b3261e;font-size:22px}.inner .price div{color:#66776c;font-size:12.5px}' +
+  '.top{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-bottom:8px}.top div b{font-weight:700}' +
+  '.ph{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px;display:block}' +
+  '.ph.big{grid-template-columns:repeat(2,1fr)}' +
+  'h3{font-size:14px;margin:12px 0 4px;color:#1e4a32;border-left:4px solid #1e4a32;padding-left:6px}' +
+  '.kv{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;margin:0}.kv>div{display:flex;gap:8px;border-bottom:1px solid #e6e6df;padding:3px 0}.kv>div.long{grid-column:1/-1}' +
+  '.kv dt{width:118px;color:#66776c;flex:0 0 auto}.kv dd{margin:0;white-space:pre-line}.kv a{color:inherit;text-decoration:none}' +
+  '.txt{white-space:pre-line}.chk div{padding:3px 0}.lines div{border-bottom:1px solid #bbb;height:26px}' +
+  '.map img{width:100%;border-radius:4px;display:block}' +
+  '.contact{margin-top:14px;border-top:3px solid #1e4a32;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;font-size:13px}.contact b{font-size:14px}.contact .broker{grid-column:1/-1;color:#66776c;font-size:12px}' +
+  '@media print{body{padding:0;background:#fff}.bar{display:none}#sheet{max-width:none;padding:0}@page{size:A4;margin:10mm}h3{break-after:avoid}.kv>div{break-inside:avoid}.ph img{break-inside:avoid}}';
+// 規格區塊：kind＝'dm' 或 'talk'
+function specBlocks_(on, kind) {
+  return SECTIONS.map(function(s) {
+    if (kind === 'talk' && s.id === 'deal') return ''; // 委託與狀態的欄位放在最上面
+    if (kind === 'dm' && s.id === 'deal') {
+      var dl = s.labels.filter(on); var b0 = dl.length ? kvHtml(dl) : ''; return b0 ? '<h3>其他</h3>' + b0 : '';
+    }
+    var labels = s.labels.filter(on);
+    var b = labels.length ? kvHtml(labels) : '';
+    return b ? '<h3>' + esc(s.title) + '</h3>' + b : '';
+  }).join('');
 }
-function tourHtml(photos) {
+function sheetPage_(title, body, kind) {
+  var fname = (kind === 'dm' ? 'DM_' : '業務銷講_') + String(F('案名') || '物件').replace(/[\\/:*?"<>|]/g, '') + '.png';
+  return { title: title, css: SHEET_CSS, fname: fname,
+    body: '<div class="bar"><button id="imgBtn">下載圖片</button><button class="g" id="prBtn">列印／存成 PDF</button><button class="g" id="clBtn">關閉</button><span id="st"></span></div>' +
+      '<div id="sheet">' + body + '</div>' };
+}
+// 另開 sheet.html，內容準備好再傳過去（不用 document.write，下載圖片才能用）
+function openSheet_(contentP) {
+  var w = window.open('sheet.html', '_blank');
+  if (!w) { toast('瀏覽器擋住了新視窗，請允許這個網站開新視窗。', true); return; }
+  var readyP = new Promise(function(ok) {
+    var h = function(e) { if (e.source === w && e.data && e.data.ruiheSheetReady) { window.removeEventListener('message', h); ok(); } };
+    window.addEventListener('message', h);
+  });
+  Promise.all([readyP, contentP]).then(function(all) { w.postMessage({ ruiheSheet: all[1] }, location.origin); })
+    .catch(function(err) { readyP.then(function() { w.postMessage({ ruiheSheetError: '產生失敗：' + (err && err.message || err) }, location.origin); }); });
+}
+// 地址只寫到路名
+function roadPlace_() {
+  var road = window.RuiheDM && RuiheDM.roadOnly ? RuiheDM.roadOnly(F('詳細地址')) : '';
+  return road ? (/^.{2}[縣市]/.test(road) ? road : F('案件坐落') + road) : F('案件坐落');
+}
+function mapP_(on) { return on('__map') && D.coord && window.RuiheDM && RuiheDM.mapImage ? RuiheDM.mapImage(D.coord, 760, 360, 16).catch(function() { return null; }) : Promise.resolve(null); }
+// 業務銷講（內部用，不要交給客戶）
+function talkHtml(photos, mapUrl) {
+  var on = RuiheOutputs.chooser(OUT.cfg, 'talk');
   var units = unitLines();
-  var specs = SECTIONS.filter(function(s) { return s.id !== 'deal'; }).map(function(s) { var b = kvHtml(s.labels); return b ? '<h3>' + esc(s.title) + '</h3>' + b : ''; }).join('');
   var checks = CHECKS[D.type] || CHECKS['房屋'];
-  var css = 'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:#1c2b22;margin:0;padding:24px;font-size:13.5px;line-height:1.5}' +
-    '.bar{display:flex;gap:8px;margin-bottom:14px}.bar button{height:36px;padding:0 16px;border-radius:8px;border:1px solid #1e4a32;background:#1e4a32;color:#fff;font-weight:700;cursor:pointer;font-family:inherit}' +
-    '.inner{border-bottom:3px solid #1e4a32;padding-bottom:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px}' +
-    '.inner b{font-size:20px}.inner span{color:#a3352c;font-weight:700;font-size:12.5px;border:1px solid #a3352c;border-radius:6px;padding:2px 8px;white-space:nowrap}' +
-    '.top{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-bottom:8px}.top div b{font-weight:700}' +
-    '.ph{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px}' +
-    'h3{font-size:14px;margin:12px 0 4px;color:#1e4a32;border-left:4px solid #1e4a32;padding-left:6px}' +
-    '.kv{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;margin:0}.kv>div{display:flex;gap:8px;border-bottom:1px solid #e6e6df;padding:3px 0}.kv>div.long{grid-column:1/-1}' +
-    '.kv dt{width:118px;color:#66776c;flex:0 0 auto}.kv dd{margin:0;white-space:pre-line}.kv a{color:inherit;text-decoration:none}' +
-    '.txt{white-space:pre-line}.chk div{padding:3px 0}.lines div{border-bottom:1px solid #bbb;height:26px}' +
-    '@media print{.bar{display:none}body{padding:0}@page{size:A4;margin:12mm}h3{break-after:avoid}.kv>div{break-inside:avoid}}';
   var top = [
     ['類型', [D.type, F('建物類別')].filter(Boolean).filter(function(x, i, a) { return a.indexOf(x) === i; }).join('・') + (rsText() ? '・' + rsText() : '')],
     ['開價', (F('總價') || '') + (units.length ? '（' + units.join('；') + '）' : '')],
-    ['地址', F('詳細地址') || F('案件坐落')],
-    ['契約編號', F('契約編號')],
-    ['使用狀態', F('使用狀態')],
-    ['負責業務', (D.agents || []).map(function(a) { return a.name + (a.phone ? ' ' + a.phone : ''); }).join('、')],
-    ['位置', D.coord ? 'https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] : '']
-  ].filter(function(x) { return x[1]; }).map(function(x) { return '<div><b>' + esc(x[0]) + '：</b>' + esc(x[1]) + '</div>'; }).join('');
-  return '<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>帶看資料－' + esc(F('案名')) + '</title><style>' + css + '</style></head><body>' +
-    '<div class="bar"><button onclick="window.print()">列印／存成 PDF</button><button onclick="window.close()">關閉</button></div>' +
-    '<div class="inner"><b>' + esc(F('案名')) + '</b><span>業務帶看用・不要交給客戶</span></div>' +
+    on('__addrFull') ? ['地址', F('詳細地址') || F('案件坐落')] : (on('__road') ? ['位置', roadPlace_()] : null),
+    on('契約編號') ? ['契約編號', F('契約編號')] : null,
+    on('委託種類') ? ['委託種類', F('委託種類')] : null,
+    on('使用狀態') ? ['使用狀態', F('使用狀態')] : null,
+    on('主要用途') ? ['主要用途', F('主要用途')] : null,
+    on('__agents') ? ['負責業務', (D.agents || []).map(function(a) { return a.name + (a.phone ? ' ' + a.phone : ''); }).join('、')] : null,
+    on('__gmap') && D.coord ? ['位置', 'https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1]] : null
+  ].filter(function(x) { return x && x[1]; }).map(function(x) { return '<div><b>' + esc(x[0]) + '：</b>' + esc(x[1]) + '</div>'; }).join('');
+  var dealExtra = SECTIONS.filter(function(s) { return s.id === 'deal'; })[0].labels.filter(function(l) { return on(l) && ['契約編號', '委託種類', '使用狀態', '主要用途'].indexOf(l) === -1; });
+  var body = '<div class="inner"><b>' + esc(F('案名')) + '</b><span class="tag">業務銷講・不要交給客戶</span></div>' +
     '<div class="top">' + top + '</div>' +
-    (photos.length ? '<div class="ph">' + photos.map(function(s) { return '<img src="' + s + '">'; }).join('') + '</div>' : '') +
-    (F('特色說明') ? '<h3>特色說明</h3><div class="txt">' + esc(F('特色說明')) + '</div>' : '') +
-    specs +
-    (F('其他備註說明') ? '<h3>其他備註說明</h3><div class="txt">' + esc(F('其他備註說明')) + '</div>' : '') +
-    '<h3>帶看前確認</h3><div class="chk">' + checks.map(function(c) { return '<div>☐ ' + esc(c) + '</div>'; }).join('') + '</div>' +
-    '<h3>現場紀錄（客戶反應、要回覆的問題）</h3><div class="lines">' + new Array(7).join('<div></div>') + '</div>' +
-    '</body></html>';
+    (on('__photos') && photos.length ? '<div class="ph">' + photos.map(function(s) { return '<img src="' + s + '">'; }).join('') + '</div>' : '') +
+    (on('特色說明') && F('特色說明') ? '<h3>特色說明</h3><div class="txt">' + esc(F('特色說明')) + '</div>' : '') +
+    specBlocks_(on, 'talk') +
+    (dealExtra.length && kvHtml(dealExtra) ? '<h3>委託與狀態</h3>' + kvHtml(dealExtra) : '') +
+    (on('__map') && mapUrl ? '<h3>位置圖</h3><div class="map"><img src="' + mapUrl + '"></div>' : '') +
+    (on('其他備註說明') && F('其他備註說明') ? '<h3>其他備註說明</h3><div class="txt">' + esc(F('其他備註說明')) + '</div>' : '') +
+    (on('__checks') ? '<h3>帶看前確認</h3><div class="chk">' + checks.map(function(c) { return '<div>☐ ' + esc(c) + '</div>'; }).join('') + '</div>' : '') +
+    (on('__notes') ? '<h3>現場紀錄（客戶反應、要回覆的問題）</h3><div class="lines">' + new Array(7).join('<div></div>') + '</div>' : '');
+  return sheetPage_('業務銷講－' + F('案名'), body, 'talk');
+}
+// DM（給客戶看）：不放地址門牌、契約、謄本、委託人、內部備註；公司、經紀人資訊一定放
+function dmHtml(photos, mapUrl) {
+  var on = RuiheOutputs.chooser(OUT.cfg, 'dm');
+  var units = unitLines();
+  var place = roadPlace_();
+  var top = [
+    ['類型', [D.type, F('建物類別')].filter(Boolean).filter(function(x, i, a) { return a.indexOf(x) === i; }).join('・') + (rsText() ? '・' + rsText() : '')],
+    on('__road') ? ['位置', place] : null,
+    on('使用狀態') ? ['使用狀態', F('使用狀態')] : null,
+    on('主要用途') ? ['主要用途', F('主要用途')] : null
+  ].filter(function(x) { return x && x[1]; }).map(function(x) { return '<div><b>' + esc(x[0]) + '：</b>' + esc(x[1]) + '</div>'; }).join('');
+  var dmOn = function(l) { return on(l) && ['使用狀態', '主要用途'].indexOf(l) === -1; };
+  var req = OUT.requester || { name: auth.name, phone: '' }, co = OUT.company || {};
+  var logo = new URL('lib/img/logo-full.png', location.href).href;
+  var ph = on('__photos') ? photos : [];
+  var body = '<div class="brand"><img src="' + logo + '" alt=""><span>物件介紹</span></div>' +
+    '<div class="inner"><b>' + esc(F('案名')) + '</b><div class="price"><b>' + esc(F('總價') || '') + '</b>' + (units.length ? '<div>' + units.map(esc).join('<br>') + '</div>' : '') + '</div></div>' +
+    '<div class="top">' + top + '</div>' +
+    (ph.length ? '<div class="ph' + (ph.length <= 2 ? ' big' : '') + '">' + ph.map(function(s) { return '<img src="' + s + '">'; }).join('') + '</div>' : '') +
+    (on('特色說明') && F('特色說明') ? '<h3>物件特色</h3><div class="txt">' + esc(F('特色說明')) + '</div>' : '') +
+    specBlocks_(dmOn, 'dm') +
+    (on('__map') && mapUrl ? '<h3>位置圖</h3><div class="map"><img src="' + mapUrl + '"></div>' : '') +
+    '<div class="contact"><div><b>聯絡業務　' + esc(req.name || '') + '</b>' + (req.phone ? '　' + esc(req.phone) : '') + '</div>' +
+    '<div><b>' + esc(co.name || '瑞禾不動產經紀股份有限公司') + '</b></div>' +
+    '<div>' + (co.phone ? '電話 ' + esc(co.phone) : '') + '</div><div>' + esc(co.addr || '') + '</div>' +
+    '<div class="broker">' + esc(co.broker || '') + '</div></div>';
+  return sheetPage_('DM－' + F('案名'), body, 'dm');
+}
+// 挑照片（DM 用；最多 8 張，預設前 4 張）
+function pickPhotos_(done) {
+  if (PH.thumbs.length <= 1) { done(PH.ids.slice(0, 1), PH.thumbs.slice(0, 1)); return; }
+  var LIMIT = 8;
+  var items = PH.thumbs.map(function(src, i) { return { src: src, id: PH.ids[i] || '', on: i < 4 }; });
+  var box = document.createElement('div');
+  box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;';
+  document.body.appendChild(box);
+  var paint = function() {
+    var nOn = items.filter(function(x) { return x.on; }).length;
+    box.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:16px 18px;">' +
+      '<div style="font-weight:700;font-size:16px;margin-bottom:6px;">DM 要放哪些照片</div>' +
+      '<div class="muted" style="margin-bottom:10px;">勾選照片（最多 ' + LIMIT + ' 張，已選 ' + nOn + ' 張），◀ ▶ 調順序</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + items.map(function(it, k) {
+        return '<div style="width:112px;border:1px solid #ddd;border-radius:8px;padding:5px;opacity:' + (it.on ? 1 : .45) + '"><img src="' + it.src + '" style="width:100%;height:76px;object-fit:cover;border-radius:5px;display:block;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:12.5px;"><label><input type="checkbox" data-on="' + k + '"' + (it.on ? ' checked' : '') + '> 用</label>' +
+          '<span><button type="button" data-up="' + k + '">◀</button><button type="button" data-dn="' + k + '">▶</button></span></div></div>';
+      }).join('') + '</div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button type="button" class="btn ghost" id="pkCancel">取消</button><button type="button" class="btn" id="pkGo">產生 DM</button></div></div>';
+    box.querySelectorAll('[data-on]').forEach(function(cb) { cb.onchange = function() {
+      if (cb.checked && items.filter(function(x) { return x.on; }).length >= LIMIT) { cb.checked = false; toast('最多選 ' + LIMIT + ' 張', true); return; }
+      items[+cb.getAttribute('data-on')].on = cb.checked; paint(); }; });
+    box.querySelectorAll('[data-up]').forEach(function(b) { b.onclick = function() { var k = +b.getAttribute('data-up'); if (k > 0) { var t = items[k]; items[k] = items[k - 1]; items[k - 1] = t; paint(); } }; });
+    box.querySelectorAll('[data-dn]').forEach(function(b) { b.onclick = function() { var k = +b.getAttribute('data-dn'); if (k < items.length - 1) { var t = items[k]; items[k] = items[k + 1]; items[k + 1] = t; paint(); } }; });
+    $('pkCancel').onclick = function() { box.remove(); };
+    $('pkGo').onclick = function() { var sel = items.filter(function(x) { return x.on; }); box.remove(); done(sel.map(function(x) { return x.id; }), sel.map(function(x) { return x.src; })); };
+  };
+  paint();
+}
+function bigPhotos_(ids, thumbs) {
+  ids = ids.filter(Boolean).slice(0, 8);
+  if (!ids.length) return Promise.resolve(thumbs);
+  return runServer('dmGetPhotos', auth.name, auth.code, D.key, ids).then(function(r) {
+    var big = (r && r.photos) || []; return thumbs.map(function(t, i) { return big[i] || t; });
+  }).catch(function() { return thumbs; });
+}
+function openDM() {
+  if (!D) return;
+  if (!PH.loaded) { toast('照片還在讀取，請稍等一下再按。', true); return; }
+  var go = function(ids, thumbs) {
+    openSheet_(loadOutputConfig_().then(function() {
+      return Promise.all([bigPhotos_(ids, thumbs), mapP_(RuiheOutputs.chooser(OUT.cfg, 'dm'))]);
+    }).then(function(all) { return dmHtml(all[0], all[1]); }));
+  };
+  var on = RuiheOutputs.chooser(OUT.cfg, 'dm');
+  if (OUT.loaded && !on('__photos')) { go([], []); return; }
+  pickPhotos_(go);
+}
+function openTour() {
+  if (!D) return;
+  openSheet_(loadOutputConfig_().then(function() {
+    var on = RuiheOutputs.chooser(OUT.cfg, 'talk');
+    return Promise.all([on('__photos') ? bigPhotos_(PH.ids.slice(0, 4), PH.thumbs.slice(0, 4)) : Promise.resolve([]), mapP_(on)]);
+  }).then(function(all) { return talkHtml(all[0], all[1]); }));
 }
 
 // ---------------- 開始 ----------------
@@ -506,6 +598,7 @@ function tourHtml(photos) {
   if (!auth) { goHome_(); return; }
   if (!KEY) { $('page').innerHTML = '<div class="err">網址少了物件編號，請從物件總表點案名進來。</div>'; return; }
   loadPhotos();
+  loadOutputConfig_();
   runServer('listingDetailGet', auth.name, auth.code, KEY).then(function(res) {
     D = res; render(); if (PH.loaded) renderPhotos(PH_NOTE);
   }).catch(function(err) {

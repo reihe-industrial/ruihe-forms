@@ -551,5 +551,5 @@
       });
     }).catch(function(err) { dlg.body.innerHTML = '<div style="color:#B3261E;">產生失敗：' + esc(err.message || '連不上系統') + '</div>'; });
   }
-  window.RuiheDM = { open: open, compose: compose, roadOnly: roadOnly, draw: draw, makeDocx: makeDocx };
+  window.RuiheDM = { open: open, compose: compose, roadOnly: roadOnly, draw: draw, makeDocx: makeDocx, mapImage: mapImage }; // 115/11/09 mapImage 給物件內容頁的新 DM 用
 })();
