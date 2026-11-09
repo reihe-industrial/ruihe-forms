@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>物件總表（測試）｜瑞禾業務系統</title>
+  <title>物件總表｜瑞禾業務系統</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -202,39 +202,38 @@
     dl.kv dt { background: #E6F0E9; color: #1E4A32 !important; font-weight: 700; font-size: 12.5px !important; padding: 4px 8px; }
     dl.kv dd { padding: 6px 8px !important; font-size: 14px !important; white-space: pre-wrap; }
     dl.kv div.long { grid-column: span 2; }
-      .test-banner { background: #fff4d6; border: 1px solid #e0c341; color: #6b5300; border-radius: 10px; padding: 8px 12px; font-size: 14px; margin: 0 0 12px; }
-    a.name-link { color: var(--brand-dark); text-decoration: none; border-bottom: 1px solid rgba(30,74,50,.35); }
+      a.name-link { color: var(--brand-dark); text-decoration: none; border-bottom: 1px solid rgba(30,74,50,.35); }
     a.name-link:hover { color: var(--brand); border-bottom-color: var(--brand); }
     .grp-only { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; margin-left: 12px; cursor: pointer; }
     .grp-only[hidden] { display: none; }
   </style>
-  <link rel="stylesheet" href="../lib/ui.css?v=20261021a">
-  <link rel="icon" type="image/png" href="../lib/img/favicon.png">
-  <link rel="apple-touch-icon" href="../lib/img/apple-touch-icon.png">
+  <link rel="stylesheet" href="lib/ui.css?v=20261021a">
+  <link rel="icon" type="image/png" href="lib/img/favicon.png">
+  <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
 </head>
 <body>
   <div id="toast" role="status" aria-live="polite"></div>
   <div class="container">
     <nav class="site-nav" id="siteNav" aria-label="表單選單">
-    <a href="../index.html" data-key="home" data-home="1">登入</a>
-    <a href="../listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
-    <a href="../client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
-    <a href="../land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
+    <a href="index.html" data-key="home" data-home="1">登入</a>
+    <a href="listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
+    <a href="client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
+    <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
-    <a href="../listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="../summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="../client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
-    <a href="../map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="../meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="../master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="../secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
-    <a href="../help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
+    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
+    <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
+    <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -273,7 +272,6 @@
   })();
   </script>
 
-    <div class="test-banner">測試網站：這裡的「物件總表」「物件內容頁」還在測試，正式網站不受影響。</div>
     <h1>物件總表</h1>
     <div class="subtitle">全公司銷售中的物件，點案名看物件內容</div>
 
@@ -387,11 +385,10 @@
     </div>
   </div>
 
-<script src="config.js?v=20261104a"></script>
-<script src="../lib/match.js?v=20261021c"></script>
-<script src="dm.js?v=20261104a"></script>
+<script src="lib/match.js?v=20261021c"></script>
+<script src="lib/dm.js?v=20261109a"></script>
 <script>
-var API_URL = window.RUIHE_TEST_API; // 測試網站：用測試用部署
+var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 
 // ---------- 讀資料等太久自動重試（115/10/15）----------
 // 只針對「讀資料」的請求（不會改到資料的），超過 20 秒沒回應就放棄這次、自動再試一次；
@@ -469,7 +466,7 @@ function sharedRole_() {
 function ruiheGoHome_(msg) {
   try { if (msg) sessionStorage.setItem('ruihe_login_msg', msg); } catch (e) {}
   var here = location.pathname.split('/').pop() + location.search;
-  location.replace('../index.html');
+  location.replace('index.html?next=' + encodeURIComponent(here));
 }
 // 資料安全：物件簡表、地圖、客需簡表的暫存放在這台電腦（關掉瀏覽器還在，為了下次打開比較快）；
 // 登出、自動登出會清掉，超過 12 小時沒更新也清掉（沒按登出就關瀏覽器的情況）
@@ -546,7 +543,7 @@ var filters = emptyFilters();
 var pollTimer = null;
 var busy = false;
 var lastCheckFailed = false;
-var groupOnly_ = false, groupNames_ = null; // 主管：只看同組（測試）
+var groupOnly_ = false, groupNames_ = null; // 主管：只看同組（115/11/09）
 
 function $(id) { return document.getElementById(id); }
 function esc(v) {
@@ -852,6 +849,7 @@ function tagSummaryCols_(box) {
     });
   });
 }
+// 115/11/09 物件總表：案名點開物件內容頁
 function detailHref_(it) { var k = (data.keys || [])[it.order]; return k ? 'detail.html?key=' + encodeURIComponent(k) : ''; }
 function nameLink_(it, v) { var h = detailHref_(it); return h ? '<a class="name-link" href="' + h + '">' + esc(v) + '</a>' : esc(v); }
 function typeTagHtml(row) {
@@ -1094,6 +1092,7 @@ document.addEventListener('click', function(e) {
   // 配對改到「修改物件／客需」清單（115/10/16）
 });
 
+// 主管：「只看同組」（看自己組員負責的物件）
 function loadGroupNames_() {
   if (sharedRole_() !== '主管') return;
   runServer('myVisibleNames', auth.name, auth.code).then(function(res) {

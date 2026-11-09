@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>物件內容（測試）｜瑞禾業務系統</title>
+  <title>物件內容｜瑞禾業務系統</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -19,7 +19,6 @@
     .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 14px; }
     .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
     .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
-    .test-banner { background: #fff4d6; border: 1px solid #e0c341; color: #6b5300; border-radius: 10px; padding: 8px 12px; font-size: 14px; margin: 0 0 12px; }
     .crumb { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
     .crumb a { color: var(--brand-dark); font-weight: 700; text-decoration: none; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; }
@@ -86,32 +85,33 @@
       .title { font-size: 21px; }
     }
   </style>
-  <link rel="stylesheet" href="../lib/leaflet.css">
-  <link rel="icon" type="image/png" href="../lib/img/favicon.png">
+  <link rel="stylesheet" href="lib/leaflet.css">
+  <link rel="icon" type="image/png" href="lib/img/favicon.png">
+  <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
 </head>
 <body>
   <div id="toast" role="status" aria-live="polite"></div>
   <div class="container">
     <nav class="site-nav" id="siteNav" aria-label="表單選單">
-    <a href="../index.html" data-key="home" data-home="1">登入</a>
-    <a href="../listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
-    <a href="../client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
-    <a href="../land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
+    <a href="index.html" data-key="home" data-home="1">登入</a>
+    <a href="listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
+    <a href="client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
+    <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
-    <a href="../listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="../summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="../client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
-    <a href="../map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
-    <a href="../meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="../master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="../secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
-    <a href="../help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
+    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
+    <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
+    <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -149,8 +149,6 @@
     }
   })();
   </script>
-    <script>try { document.querySelectorAll('#siteNav a.active').forEach(function(a) { a.classList.remove('active'); }); } catch (e) {}</script>
-    <div class="test-banner">測試網站：物件內容頁還在測試，正式網站不受影響。</div>
     <div class="crumb"><a href="summary.html">← 回物件總表</a><span id="crumbTail"></span></div>
     <div id="page"><div class="loading">讀取中…</div></div>
   </div>
@@ -160,12 +158,11 @@
     <div class="lb-bar"><button type="button" id="lbPrev">上一張</button><button type="button" id="lbNext">下一張</button><button type="button" id="lbClose">關閉</button></div>
   </div>
 
-<script src="config.js?v=20261104a"></script>
-<script src="../lib/leaflet.js"></script>
-<script src="../lib/match.js?v=20261021c"></script>
-<script src="dm.js?v=20261104a"></script>
+<script src="lib/leaflet.js"></script>
+<script src="lib/match.js?v=20261021c"></script>
+<script src="lib/dm.js?v=20261109a"></script>
 <script>
-var API_URL = window.RUIHE_TEST_API;
+var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 function $(id) { return document.getElementById(id); }
 function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function runServer(fn) {
@@ -180,7 +177,7 @@ function toast(text, isError) {
   var el = $('toast'); el.textContent = text; el.className = isError ? 'error' : ''; el.style.display = 'block';
   clearTimeout(toastTimer); toastTimer = setTimeout(function() { el.style.display = 'none'; }, 2600);
 }
-function goHome_() { location.replace('../index.html'); }
+function goHome_() { var here = location.pathname.split('/').pop() + location.search; location.replace('index.html?next=' + encodeURIComponent(here)); }
 function loginGet_() {
   try {
     var o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'), lim = 30;
@@ -329,7 +326,7 @@ function render() {
     '<div class="sub">' + subLines.join('<br>') + '</div></div>' +
     '<div class="price"><div class="big">' + esc(F('總價') || '總價未填') + '</div>' + (units.length ? '<div class="u">' + units.map(esc).join('<br>') + '</div>' : '') +
     '<div class="btns"><button type="button" class="btn" id="dmBtn">給客戶看（DM）</button><button type="button" class="btn blue" id="tourBtn">帶看資料（業務用）</button></div>' +
-    (D.canEdit ? '<div class="btns" style="margin-top:8px;"><a class="btn ghost" href="../listing.html?mode=edit&key=' + encodeURIComponent(D.key) + '">修改</a></div>' : '') +
+    (D.canEdit ? '<div class="btns" style="margin-top:8px;"><a class="btn ghost" href="listing.html?mode=edit&key=' + encodeURIComponent(D.key) + '">修改</a></div>' : '') +
     '</div></div></div>';
 
 
@@ -340,7 +337,7 @@ function render() {
   h += '<div class="secs">' + secs.join('') + '</div>';
 
   // 位置：接在物件資訊下面（115/11/04）
-  h += '<div class="card"><h3>位置</h3>' + (D.coord ? '<div id="map"></div><div class="muted" style="margin-top:6px;"><a href="../map.html?k=' + encodeURIComponent(D.key) + '">在物件地圖上看附近物件</a>　｜　<a href="https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a></div>' : '<div class="muted">還沒有座標。</div>') + '</div>';
+  h += '<div class="card"><h3>位置</h3>' + (D.coord ? '<div id="map"></div><div class="muted" style="margin-top:6px;"><a href="map.html?k=' + encodeURIComponent(D.key) + '">在物件地圖上看附近物件</a>　｜　<a href="https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a></div>' : '<div class="muted">還沒有座標。</div>') + '</div>';
 
   var h0 = h; h = '';
   if (F('其他備註說明')) h += '<div class="card"><h3>其他備註說明</h3><div class="feat">' + esc(F('其他備註說明')) + '</div></div>';
@@ -377,7 +374,7 @@ function render() {
 
   $('page').innerHTML = h;
   $('crumbTail').textContent = '　／　' + (D.type || '') + '　／　' + (F('案名') || '');
-  document.title = (F('案名') || '物件內容') + '（測試）｜瑞禾業務系統';
+  document.title = (F('案名') || '物件內容') + '｜瑞禾業務系統';
   $('dmBtn').addEventListener('click', openDM);
   $('tourBtn').addEventListener('click', openTour);
   if (D.coord) initMap();
@@ -509,7 +506,6 @@ function tourHtml(photos) {
 
 // ---------------- 開始 ----------------
 (function start() {
-  if (!API_URL) { $('page').innerHTML = '<div class="err">測試網站還沒設定後端網址（config.js）。</div>'; return; }
   if (!auth) { goHome_(); return; }
   if (!KEY) { $('page').innerHTML = '<div class="err">網址少了物件編號，請從物件總表點案名進來。</div>'; return; }
   loadPhotos();

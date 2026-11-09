@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>首頁｜瑞禾業務系統</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --ink: #1c2b22;
+      --muted: #66776c;
+      --paper: #f3f1e9;
+      --card: #ffffff;
+      --line: #dfe2d7;
+      --brand: #2f6f4e;
+      --brand-dark: #1e4a32;
+      --brand-soft: #e9f1ec;
+      --danger: #a3352c;
+      --danger-soft: #fbebe9;
+      --radius: 10px;
+      --t-factory: #3d5a80;  --t-factory-soft: #e6ecf4;
+      --t-land: #8a6a1f;     --t-land-soft: #f5eedb;
+      --t-house: #8c3f5a;    --t-house-soft: #f6e7ec;
+    }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: var(--paper); margin: 0; padding: 20px 16px 60px;
+      color: var(--ink); line-height: 1.5;
+    }
+    .container { max-width: 1180px; margin: 0 auto; }
+    .narrow { max-width: 640px; }
+
+    .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+    .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line);
+      color: var(--ink); font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+    .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
+    .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+    h1 {
+      font-family: "Noto Serif TC", "Noto Sans TC", serif;
+      font-size: 23px; font-weight: 700; letter-spacing: 0.02em;
+      margin: 4px 0 6px; color: var(--brand-dark);
+    }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
+    .card h2 { font-size: 15px; font-weight: 700; margin: 0 0 16px; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
+    .card h2::before { content: ""; display: inline-block; width: 4px; height: 15px; background: var(--brand); border-radius: 2px; flex-shrink: 0; }
+
+    .field { margin-bottom: 16px; }
+    label, .flabel { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
+    label.required::after { content: " *"; color: var(--danger); font-weight: 700; }
+    .hint { font-size: 12.5px; color: var(--muted); margin: 2px 0 6px; line-height: 1.55; }
+    input, select {
+      width: 100%; padding: 10px 12px; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font-family: inherit;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+    select { appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366776c' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 10px center; background-size: 18px; padding-right: 34px; }
+    button { font-family: inherit; }
+    button:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid var(--brand-soft); outline-offset: 2px; }
+
+    .btn { border: none; border-radius: 8px; background: var(--brand); color: #fff; font-size: 15px; font-weight: 700; padding: 11px 18px; cursor: pointer; }
+    .btn:disabled { background: #b9c3ba; cursor: not-allowed; }
+    .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); font-weight: 600; font-size: 13.5px; padding: 7px 13px; }
+    .btn.ghost:hover { border-color: var(--brand); color: var(--brand); }
+    .btn.ghost:disabled { background: #fff; color: #a9b0a2; }
+
+    .msg { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+    .msg.error { display: block; background: var(--danger-soft); color: var(--danger); }
+    .login-note { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+
+    /* 登入後的頂列 */
+    .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 14px; }
+    .topbar .who { font-weight: 700; font-size: 14px; }
+    .topbar .status { font-size: 13px; color: var(--muted); flex: 1 1 auto; }
+    .topbar .status.warn { color: var(--danger); }
+    .topbar .actions { display: flex; gap: 6px; }
+
+    /* 篩選 */
+    .filters { padding: 16px 18px; }
+    .filter-toggle { display: none; }
+    .filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 18px; align-items: end; }
+    .filter-grid .span2 { grid-column: span 2; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chips button {
+      border: 1px solid var(--line); background: #fbfaf6; color: var(--ink); border-radius: 999px;
+      padding: 6px 13px; font-size: 13.5px; cursor: pointer;
+    }
+    .chips button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+    .range { display: flex; align-items: center; gap: 6px; }
+    .range input { padding: 9px 10px; }
+    .range span { color: var(--muted); flex: 0 0 auto; }
+    .row-sel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .filter-foot { grid-column: 2 / -1; display: flex; justify-content: flex-end; }
+    @media (max-width: 899px) { .filter-foot { grid-column: auto; } }
+
+    /* 結果列 */
+    .resultbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 4px 2px 10px; }
+    .count { font-size: 15px; font-weight: 700; color: var(--brand-dark); }
+    .count small { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 6px; }
+    .sort-mobile { display: none; max-width: 180px; padding: 7px 30px 7px 10px; font-size: 13.5px; }
+
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 5px; padding: 1px 7px; white-space: nowrap; background: #eef0ea; color: var(--muted); }
+    .tag.t-factory { background: var(--t-factory-soft); color: var(--t-factory); }
+    .tag.t-land { background: var(--t-land-soft); color: var(--t-land); }
+    .tag.t-house { background: var(--t-house-soft); color: var(--t-house); }
+    .tag.rs { background: #fff; border: 1px solid var(--line); color: var(--ink); }
+    .tag.ct-warn { background: #fff2cc; border: 1px solid #e0c341; color: #6b5200; }
+
+    /* 電腦：表格 */
+    .table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; max-height: calc(100vh - 120px); }
+    table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; background: #f8f7f2; z-index: 1; white-space: nowrap; padding: 0; }
+    th button { all: unset; display: block; padding: 10px; font-weight: 700; font-size: 13px; color: var(--brand-dark); cursor: pointer; white-space: nowrap; }
+    th button:focus-visible { outline: 3px solid var(--brand-soft); }
+    th .arrow { color: var(--brand); margin-left: 3px; font-size: 11px; }
+    td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    td { white-space: nowrap; }
+    td.name { font-weight: 700; white-space: normal; min-width: 8em; max-width: 14em; }
+    tbody tr:hover { background: #fafaf5; }
+
+    /* 手機：卡片 */
+    .cards { display: grid; gap: 10px; }
+    .item { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+    .item > summary { list-style: none; cursor: pointer; padding: 14px 14px 12px; }
+    .item > summary::-webkit-details-marker { display: none; }
+    .item-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .item-name { font-size: 16px; font-weight: 700; margin-right: auto; }
+    .item-price { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+    .item-price b { font-size: 19px; color: var(--brand-dark); }
+    .item-price span { font-size: 13.5px; color: var(--muted); }
+    .item-meta { font-size: 13.5px; color: var(--ink); margin-top: 3px; }
+    .item-meta.muted { color: var(--muted); }
+    .item-more-hint { font-size: 12.5px; color: var(--brand); margin-top: 6px; }
+    .item[open] .item-more-hint .open-t { display: none; }
+    .item:not([open]) .item-more-hint .close-t { display: none; }
+    .item-more { margin: 0; padding: 4px 14px 14px; border-top: 1px dashed var(--line); display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13.5px; }
+    .item-more dt { color: var(--muted); padding-top: 6px; }
+    .item-more dd { margin: 0; padding-top: 6px; }
+
+    .empty { text-align: center; padding: 40px 16px; color: var(--muted); background: var(--card); border: 1px dashed var(--line); border-radius: var(--radius); }
+    .loading { text-align: center; padding: 40px 16px; color: var(--muted); }
+
+    #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 50; background: var(--brand-dark); color: #fff;
+      padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,.18); display: none; max-width: 90%; text-align: center; }
+    #toast.error { background: var(--danger); }
+
+    @media (max-width: 899px) {
+      .filter-toggle { display: flex; width: 100%; justify-content: space-between; align-items: center; background: none; border: none; padding: 0; font-size: 15px; font-weight: 700; color: var(--brand-dark); cursor: pointer; }
+      .filters:not(.open) .filter-body { display: none; }
+      .filters.open .filter-toggle { margin-bottom: 14px; }
+      .filter-grid { grid-template-columns: 1fr; gap: 14px; }
+      .filter-grid .span2 { grid-column: auto; }
+      .sort-mobile { display: block; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .item[open] .item-more { animation: open .15s ease-out; }
+      @keyframes open { from { opacity: 0; } to { opacity: 1; } }
+    }
+  
+    .hello { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 14px; }
+    .hello .who { font-size: 16px; font-weight: 700; color: var(--brand-dark); }
+    .hello .role { font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--brand-soft); color: var(--brand-dark); }
+    .hello .grow { flex: 1 1 auto; }
+    .seg { display: inline-flex; gap: 3px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+    .seg button { border: none; background: none; border-radius: 999px; padding: 5px 14px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; font-family: inherit; }
+    .seg button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-dark); }
+    .sec-title { display: flex; align-items: center; gap: 10px; margin: 18px 2px 10px; flex-wrap: wrap; }
+    .sec-title h2 { margin: 0; font-size: 17px; color: var(--brand-dark); font-family: "Noto Serif TC", "Noto Sans TC", serif; }
+    .sec-title .note { font-size: 12.5px; color: var(--muted); }
+    .rem { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px; }
+    .rem > summary { list-style: none; cursor: pointer; padding: 13px 16px; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+    .rem > summary::-webkit-details-marker { display: none; }
+    .rem > summary::after { content: "▾"; margin-left: auto; color: var(--muted); font-size: 13px; }
+    .rem[open] > summary::after { content: "▴"; }
+    .badge { min-width: 24px; text-align: center; border-radius: 999px; padding: 1px 9px; font-size: 13px; font-weight: 700; background: #eef0ea; color: var(--muted); }
+    .badge.hot { background: #fbe4e1; color: var(--danger); }
+    .badge.warn { background: #fff2cc; color: #6b5200; }
+    .rem-body { border-top: 1px solid var(--line); }
+    .rem-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 7px 14px; border-bottom: 1px solid var(--line); align-items: center; }
+    /* 寬螢幕：每一筆一行（案名｜業務、類型｜日期）（115/10/20） */
+    @media (min-width: 900px) {
+      .rem-row { grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.6fr) minmax(0, 1.4fr) auto; gap: 12px; }
+      .rem-row .nm, .rem-row .meta, .rem-row .when { grid-column: auto !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .rem-row .go { grid-column: 4; grid-row: 1; }
+    }
+    .rem-row:last-child { border-bottom: none; }
+    .rem-row .nm { font-weight: 700; word-break: break-all; }
+    .rem-row .meta { grid-column: 1; font-size: 13px; color: var(--muted); }
+    .rem-row .when { grid-column: 1; font-size: 13.5px; }
+    .rem-row .when b { color: var(--danger); }
+    /* 115/10/27：相同／需要確認的說明比較長，改成名稱、類型、說明上下排、說明會換行，不會擠在一起重疊 */
+    .rem-row.dup { grid-template-columns: minmax(0, 1fr) auto !important; gap: 2px 12px !important; }
+    .rem-row.dup .nm, .rem-row.dup .meta, .rem-row.dup .when { grid-column: 1 !important; white-space: normal !important; overflow: visible !important; }
+    .rem-row.dup .go { grid-column: 2 !important; grid-row: 1 / 4 !important; }
+    .rem-row .go { grid-row: 1 / 4; grid-column: 2; align-self: center; }
+    .rem-empty { padding: 14px 16px; color: var(--muted); font-size: 13.5px; }
+    .rem-error { padding: 14px 16px; color: var(--danger); font-size: 13.5px; }
+    .link-btn { display: inline-block; border: 1px solid var(--brand); color: var(--brand); border-radius: 8px; padding: 6px 12px; font-size: 13.5px; font-weight: 700; text-decoration: none; background: #fff; white-space: nowrap; }
+    .link-btn:hover { background: var(--brand-soft); }
+    .entries { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+    .entry { display: block; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; text-decoration: none; color: var(--ink); }
+    .entry:hover { border-color: var(--brand); box-shadow: 0 2px 10px rgba(30,74,50,.08); }
+    .entry b { display: block; font-size: 15.5px; color: var(--brand-dark); margin-bottom: 3px; }
+    .entry span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .g-box { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 2px 0 14px; min-height: 44px; }
+    .g-note { font-size: 12.5px; color: var(--muted); text-align: center; line-height: 1.5; }
+    .g-note.warn { color: #8a5a00; }
+    .back-link { border: none; background: none; padding: 0; margin: 0 0 12px; font-family: inherit; font-size: 14px; color: var(--brand); cursor: pointer; }
+    .or-line { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; margin: 4px 0 14px; }
+    .or-line::before, .or-line::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--line); }
+    .method-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+    .method-card .lbl { font-weight: 700; color: var(--brand-dark); }
+    .method-card .st { font-size: 14px; }
+    .method-card .grow { flex: 1 1 auto; }
+    .notice { background: #fff8e1; border: 1px solid #e0c341; border-radius: 10px; padding: 11px 14px; margin: 0 0 14px; font-size: 13.5px; color: #5a4a00; }
+      .ann { background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--brand); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; }
+    .ann.important { border-left-color: #B3261E; background: #FFF6F5; }
+    .ann h3 { margin: 0 0 4px; font-size: 16px; }
+    .ann .ann-tag { display: inline-block; background: #B3261E; color: #fff; font-size: 12px; border-radius: 6px; padding: 1px 7px; margin-right: 6px; vertical-align: 2px; }
+    .ann .ann-body { white-space: pre-wrap; font-size: 14.5px; line-height: 1.7; }
+    .ann .ann-meta { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+      /* 待辦數字卡片：點了下面才展開那一類（115/10/16） */
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0 0 14px; } /* 卡片撐滿整排 */
+    .tile { text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 10px; cursor: pointer; font: inherit; color: var(--ink); }
+    .tile .n { font-size: 30px; font-weight: 800; line-height: 1.1; color: var(--muted); }
+    .tile .t { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+    .tile.hot .n { color: #B3261E; } .tile.warn .n { color: #B45309; } .tile.ok .n { color: var(--brand); }
+    .tile[aria-selected="true"] { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+    .tile:hover { border-color: #A9CDB6; }
+    #remWrap details.rem > summary { display: none; }
+    #remWrap details.rem:not([open]) { display: none; }
+      .login-banner { display: block; width: 100%; max-width: 1180px; height: auto; border-radius: 14px; margin: 0 0 16px; box-shadow: 0 2px 10px rgba(31,42,36,0.08); }
+    .login-banner[hidden] { display: none; }
+    #loginView.card.narrow { margin-left: auto; margin-right: auto; }
+      /* 首頁上方：公告（窄）＋行事曆（寬）（115/10/19） */
+    .home-top { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 14px 0 8px; }
+    /* 115/10/27：公告改成橫排在上面（一則一張卡片），行事曆整排放大 */
+    .home-top.no-ann { grid-template-columns: 1fr; }
+    .home-top.no-ann .home-ann { display: none; }
+    .home-ann, .home-cal { display: flex; flex-direction: column; min-width: 0; }
+    .home-ann .ann-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+    .home-ann .ann-card #annBox { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; max-height: 340px; overflow-y: auto; }
+    .home-ann .ann-card #annBox[hidden] { display: none; }
+    .home-ann .ann-card #annBox > * { margin: 0; }
+    .home-cal .cal-card { flex: 1 1 auto; }
+
+    .cal-card { container-type: inline-size; }
+    .cal-body { display: block; }
+    @container (min-width: 660px) {
+      .cal-body { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 14px; align-items: start; }
+      .cal-side { border-left: 1px solid var(--line); padding-left: 14px; }
+      .cal-day { margin-top: 0 !important; border-top: none !important; padding-top: 0 !important; max-height: 300px; overflow-y: auto; }
+    }
+    @container (min-width: 1000px) {
+      .cal-body { grid-template-columns: minmax(0, 1fr) 280px; gap: 18px; }
+      .cal-card .cal-grid .cal-cell { min-height: 96px; padding: 5px 6px; }
+      .cal-card .cal-grid .cal-cell .dn { font-size: 14px; }
+      .cal-card .cal-grid .cal-chip { font-size: 12.5px; padding: 2px 6px; }
+      .cal-card .cal-side .cal-day { max-height: 420px; }
+    }
+    .cal-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .cal-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .cal-head b { font-size: 17px; min-width: 7.5em; text-align: center; }
+    .cal-nav { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink); }
+    .cal-head .btn { height: 34px; padding: 0 12px; font-size: 13.5px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .cal-grid .wd { text-align: center; font-size: 12.5px; color: var(--muted); padding: 4px 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #FAFAF6; }
+    .cal-cell { min-height: 66px; padding: 3px 4px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); cursor: pointer; background: #fff; text-align: left; font: inherit; color: inherit; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+    .cal-cell:hover { background: #F6FAF7; }
+    .cal-cell.out { background: #FBFBF8; color: #A6ABA4; }
+    .cal-cell.sel { outline: 2px solid var(--brand); outline-offset: -2px; }
+    .cal-cell .dn { font-size: 12.5px; font-weight: 700; }
+    .cal-cell.today .dn { background: var(--brand); color: #fff; border-radius: 10px; padding: 0 6px; align-self: flex-start; }
+    .cal-chip { font-size: 11.5px; line-height: 1.35; border-radius: 4px; padding: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cal-chip.co { background: #E6F0E9; color: #1E4A32; }
+    .cal-chip.me { background: #FDEBD3; color: #8A4B08; }
+    .cal-more { font-size: 11px; color: var(--muted); }
+    /* 值班（115/10/22） */
+    .cal-chip.duty { background: #E3EEF8; color: #1F4E79; font-weight: 700; }
+    .cal-legend .dot.duty { background: #E3EEF8; border: 1px solid #9DBBD8; }
+    .cal-off { font-size: 11px; color: #B3261E; font-weight: 700; }
+    .cal-duty { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+    .cal-duty h3 { font-size: 15px; margin: 0 0 6px; display: flex; align-items: center; gap: 6px; }
+    .cal-duty h3 .btn { margin-left: auto; height: 28px; padding: 0 10px; font-size: 12.5px; }
+    .duty-today { background: #E3EEF8; color: #1F4E79; border-radius: 8px; padding: 6px 10px; font-weight: 700; margin-bottom: 6px; }
+    .duty-list { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13.5px; }
+    .duty-list .d { color: var(--muted); white-space: nowrap; }
+    .duty-list .sel { font-weight: 700; color: var(--ink); }
+    .duty-line { font-size: 13.5px; color: #1F4E79; font-weight: 700; margin: -2px 0 6px; }
+    .duty-edit { max-height: 60vh; overflow-y: auto; display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin: 8px 0; }
+    .duty-edit .d { white-space: nowrap; font-size: 14px; }
+    .duty-edit .d.sun { color: #B3261E; }
+    .duty-edit select { height: auto; min-height: 42px; padding: 8px 36px 8px 12px; line-height: 1.5; font-size: 15px; }
+    .cal-legend { font-size: 12.5px; color: var(--muted); margin: 8px 2px 0; }
+    .cal-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+    .dot.co { background: #CFE3D6; } .dot.me { background: #F7D3A6; }
+    .cal-day { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+    .cal-day h3 { font-size: 15px; margin: 2px 0 6px; }
+    .cal-ev { display: flex; gap: 10px; align-items: flex-start; padding: 8px 6px; border-radius: 8px; cursor: pointer; }
+    .cal-ev:hover { background: #F6FAF7; }
+    .cal-ev .k { flex: 0 0 auto; font-size: 12px; border-radius: 6px; padding: 1px 6px; }
+    .cal-ev .k.co { background: #E6F0E9; color: #1E4A32; } .cal-ev .k.me { background: #FDEBD3; color: #8A4B08; }
+    .cal-ev .t { font-weight: 700; } .cal-ev .s { font-size: 13px; color: var(--muted); white-space: pre-wrap; }
+    @media (max-width: 640px) { .cal-cell { min-height: 54px; } .cal-chip { font-size: 10.5px; } }
+      /* 公告：只顯示前兩行，點一下看完整內容（115/10/19） */
+    #annBox .ann { cursor: pointer; }
+    #annBox .ann .ann-body { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    #annBox .ann.open .ann-body { display: block; -webkit-line-clamp: unset; overflow: visible; }
+    #annBox .ann:not(.short) .ann-meta::after { content: "　點一下看全部"; color: var(--brand); font-weight: 700; }
+    #annBox .ann.open .ann-meta::after { content: "　點一下收起"; }
+    /* 待辦清單：全部顯示，但格子縮小、排成好幾欄（115/10/20） */
+    #remWrap .rem-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+    #remWrap .rem-row { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 0; padding: 7px 12px; padding-right: 84px; position: relative;
+      border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); min-width: 0; }
+    #remWrap .rem-row .nm { flex: 1 1 100%; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #remWrap .rem-row .meta { flex: 0 1 auto; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 100%; }
+    #remWrap .rem-row .when { flex: 0 0 auto; font-size: 12.5px; }
+    #remWrap .rem-row .go { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
+    #remWrap .rem-row .go .link-btn, #remWrap .rem-row .go a, #remWrap .rem-row .go button { height: 30px; padding: 0 10px; font-size: 13px; }
+    #remWrap .rem-empty, #remWrap .rem-error { grid-column: 1 / -1; }
+      .cal-cell.hol .dn { color: #B3261E; }
+    .cal-cell .hn { font-size: 10.5px; font-weight: 700; margin-left: 4px; color: #B3261E; }
+    .cal-cell.today.hol .dn { color: #fff; } .cal-cell.today .hn { color: #fff; }
+    .hol-tag { font-size: 12px; color: #B3261E; background: #FDECEA; border-radius: 6px; padding: 1px 7px; margin-left: 6px; font-weight: 700; }
+      .cf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; align-items: center; }
+    .cf-chip { border: 1px solid var(--line); border-radius: 999px; padding: 7px 13px; background: #fff; cursor: pointer; font: inherit; font-size: 14px; color: var(--ink); }
+    .cf-chip:hover { border-color: var(--brand); }
+    .cf-chip.on { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 700; }
+    .trip-form label { display: block; }
+  </style>
+  <link rel="stylesheet" href="lib/ui.css?v=20261021a">
+  <link rel="icon" type="image/png" href="lib/img/favicon.png">
+  <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
+</head>
+<body>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div class="container">
+    <nav class="site-nav" id="siteNav" aria-label="表單選單">
+    <a href="index.html" data-key="home" data-home="1">登入</a>
+    <a href="listing.html" data-key="listing" data-auth="1" style="display:none;">新增物件</a>
+    <a href="client-needs.html" data-key="needs" data-auth="1" style="display:none;">新增客需</a>
+    <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
+    <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
+    <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
+    <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
+    <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
+    <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
+  </nav>
+  <script>
+  (function() {
+    var page = location.pathname.split('/').pop() || 'index.html';
+    var edit = /[?&]mode=edit(&|$)/.test(location.search);
+    var key = page === 'index.html' ? 'home' : page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
+      : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
+      : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
+      : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
+      : (edit ? 'edit' : 'listing');
+    // 登入後才看得到的連結（data-auth）；再依身分（data-roles）顯示：這個分頁登入的人、身分，存在 sessionStorage
+    window.ruiheUpdateNav_ = function() {
+      var o = null;
+      try { o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null'); } catch (e) {}
+      var loggedIn = !!(o && o.name && o.code), role = (o && o.role) || '';
+      var els = document.querySelectorAll('#siteNav [data-auth]');
+      for (var j = 0; j < els.length; j++) {
+        var roles = els[j].getAttribute('data-roles');
+        var okRole = !roles || roles.split(',').indexOf(role) !== -1;
+        els[j].style.display = (loggedIn && okRole) ? '' : 'none';
+      }
+      var home = document.querySelector('#siteNav [data-home]');
+      if (home) home.textContent = loggedIn ? '首頁' : '登入';
+    };
+    // 預先把「新增物件」表單的選項（業務名單、地段）載到這台裝置，第一次打開新增物件就不用等
+    if (page !== 'listing.html') {
+      setTimeout(function() {
+        try {
+          if (localStorage.getItem('ruihe_listing_options_v1')) return;
+          fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'getListingFormOptions', args: [] }) })
+            .then(function(r) { return r.json(); })
+            .then(function(res) { if (res && res.ok && res.result && res.result.districtData && Object.keys(res.result.districtData).length) localStorage.setItem('ruihe_listing_options_v1', JSON.stringify(res.result)); })
+            .catch(function() {});
+        } catch (e) {}
+      }, 2500);
+    }
+    window.ruiheUpdateNav_();
+    var links = document.querySelectorAll('#siteNav a');
+    for (var i = 0; i < links.length; i++) {
+      if (links[i].getAttribute('data-key') === key) { links[i].className = 'active'; links[i].setAttribute('aria-current', 'page'); }
+    }
+  })();
+  </script>
+    <h1>瑞禾不動產　業務系統</h1>
+    <div class="subtitle" id="subtitle">登入後可以使用物件、客需的各項功能</div>
+
+    <img class="login-banner" id="loginBanner" src="lib/img/banner.jpg" alt="瑞禾不動產經紀股份有限公司：瑞禾開發｜精準投資，從選對土地開始">
+    <div class="card narrow" id="loginView">
+      <h2>登入</h2>
+      <div id="chooseBox">
+        <div class="g-box"><div id="googleBtn"></div><div class="g-note" id="googleNote"></div></div>
+        <div class="or-line">或</div>
+        <button type="button" class="btn" id="showCodeBtn" style="width:100%;">使用通關碼登入</button>
+      </div>
+      <div id="codeBox" hidden>
+        <button type="button" class="back-link" id="backBtn">← 其他登入方式</button>
+        <div class="field">
+          <label class="required" for="loginName">姓名</label>
+          <select id="loginName"><option value="">載入中…</option></select>
+        </div>
+        <div class="field">
+          <label class="required" for="loginCode">通關碼</label>
+          <div class="hint">英文和數字，不分大小寫</div>
+          <input type="password" id="loginCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20">
+        </div>
+        <button type="button" class="btn" id="loginBtn" style="width:100%;">登入</button>
+      </div>
+      <div class="msg" id="loginMsg"></div>
+      <div class="login-note">在共用電腦上用完，請按「登出」。30 分鐘沒有動作會自動登出。</div>
+    </div>
+
+    <div id="portal" hidden>
+      <div class="notice" id="portalNotice" style="display:none;"></div>
+      <div class="hello">
+        <span class="who" id="whoName"></span><span class="role" id="whoRole"></span>
+        <span class="grow"></span>
+        <span class="seg" id="scopeSeg" style="display:none;" role="group" aria-label="待辦範圍">
+          <button type="button" data-scope="mine" aria-pressed="true">我的</button>
+          <button type="button" data-scope="all" aria-pressed="false">全公司</button>
+        </span>
+        <button type="button" class="btn ghost" id="refreshBtn">重新整理</button>
+        <button type="button" class="btn ghost" id="logoutBtn">登出</button>
+      </div>
+
+      <div class="sec-title"><h2>待辦提醒</h2><span class="note" id="remNote"></span></div>
+      <div class="tiles" id="remTiles" role="tablist" aria-label="待辦"></div>
+      <div id="remWrap">
+      <details class="rem" id="remDue">
+        <summary>客需：今天要聯絡<span class="badge" id="cntDue">…</span></summary>
+        <div class="rem-body" id="bodyDue"><div class="rem-empty loading">讀取中…</div></div>
+      </details>
+      <details class="rem" id="remStale">
+        <summary>客需：超過 30 天沒追蹤<span class="badge" id="cntStale">…</span></summary>
+        <div class="rem-body" id="bodyStale"><div class="rem-empty loading">讀取中…</div></div>
+      </details>
+      <details class="rem" id="remContract">
+        <summary>物件：合約 30 天內到期<span class="badge" id="cntContract">…</span></summary>
+        <div class="rem-body" id="bodyContract"><div class="rem-empty loading">讀取中…</div></div>
+      </details>
+      <details class="rem" id="remMatch" hidden>
+        <summary>新物件符合你的客需（最近 <span id="matchDays">7</span> 天）<span class="badge" id="cntMatch">…</span></summary>
+        <div class="rem-body" id="bodyMatch"></div>
+      </details>
+      <details class="rem" id="remReq" hidden>
+        <summary>人員異動申請（待審核）<span class="badge" id="cntReq">…</span></summary>
+        <div class="rem-body" id="bodyReq"></div>
+      </details>
+      <details class="rem" id="remDup" hidden>
+        <summary>物件：相同、需要確認或相似<span class="badge" id="cntDup">…</span></summary>
+        <div class="rem-body" id="bodyDup"><div class="rem-empty loading">讀取中…</div></div>
+      </details>
+      <details class="rem" id="remCcP" hidden>
+        <summary>契變書待收件<span class="badge" id="cntCcP">…</span></summary>
+        <div class="rem-body" id="bodyCcP"><div class="rem-empty loading">讀取中…</div></div>
+      </details>
+      <details class="rem" id="remDelP" hidden>
+        <summary>刪除申請待審核<span class="badge" id="cntDelP">…</span></summary>
+        <div class="rem-body" id="bodyDelP"><div class="rem-empty loading">讀取中…</div></div>
+      </details>
+      <details class="rem" id="remRegP" hidden>
+        <summary>調謄本：待申請<span class="badge" id="cntRegP">…</span></summary>
+        <div class="rem-body" id="bodyRegP"><div class="rem-empty loading">讀取中…</div></div>
+      </details>
+      </div>
+      <div class="home-top no-ann" id="homeTop">
+        <div class="home-ann">
+          <div class="sec-title"><h2>公告</h2></div>
+          <div class="ann-card"><div id="annBox" hidden></div>
+          <div class="rem-empty" id="annEmpty">目前沒有公告。</div></div>
+        </div>
+        <div class="home-cal">
+          <div class="sec-title"><h2>行事曆</h2><span class="note" id="calNote"></span></div>
+          <div class="cal-card" id="calCard">
+            <div class="cal-head">
+              <button type="button" class="cal-nav" id="calPrev" aria-label="上個月">‹</button>
+              <b id="calTitle"></b>
+              <button type="button" class="cal-nav" id="calNext" aria-label="下個月">›</button>
+              <button type="button" class="btn ghost cal-today" id="calToday">今天</button>
+              <span style="flex:1"></span>
+              <button type="button" class="btn ghost" id="calAddMine">＋ 我的行程</button>
+              <button type="button" class="btn" id="calAddCo" hidden>＋ 公司活動</button>
+            </div>
+            <div class="cal-body">
+              <div class="cal-main">
+                <div class="cal-grid" id="calGrid"></div>
+                <div class="cal-legend"><span class="dot duty"></span>值班　<span class="dot co"></span>公司活動　<span class="dot me"></span><span id="calLegendMe">我的行程</span></div>
+              </div>
+              <div class="cal-side">
+                <div class="cal-day" id="calDay"></div>
+                <div class="cal-duty" id="calDuty"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div hidden><!-- 首頁不顯示登入方式（115/10/19） -->
+      <div class="sec-title"><h2>登入方式</h2></div>
+      <div class="method-card" id="methodCard">
+        <span class="lbl">Google 帳號</span>
+        <span class="st" id="gStatus">讀取中…</span>
+        <span class="grow"></span>
+        <div id="gBindBtn"></div>
+        <button type="button" class="btn ghost" id="gUnbindBtn" style="display:none;">解除綁定</button>
+      </div>
+      </div>
+    </div>
+  </div>
+
+<script src="lib/match.js?v=20261021c"></script>
+<script>
+var GOOGLE_CLIENT_ID = '145144542151-spm8h66cenm8pdshn3rrf4p3964emp55.apps.googleusercontent.com';
+var OBJ_API = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';      // 物件後端（登入、合約提醒）
+var REG_API = 'https://script.google.com/macros/s/AKfycbxBxEn3c_mfLtT_gH-O2MgT6byDTNdJCWEf0IxFtYVp1oqYJxmFbGXuXzcX3SEam93E/exec';   // 調謄本後端（秘書專區預先載入）
+var CLIENT_API = 'https://script.google.com/macros/s/AKfycbz6EXnxZb40rln8q9xTaD_TiABT5leWT-R20P5DAQmgLwhiyLvVsI8mqC4Df4wT01zP/exec';   // 客需後端（客需提醒）
+// ---------- 讀資料等太久自動重試（115/10/15）----------
+// 只針對「讀資料」的請求（不會改到資料的），超過 20 秒沒回應就放棄這次、自動再試一次；
+// 兩次都沒回應就回「連線比較慢，請按重新整理」。送出、儲存這類會改資料的請求不重試（避免重複）。
+(function() {
+  if (window.__ruiheFetchWrapped || !window.fetch) return;
+  window.__ruiheFetchWrapped = true;
+  var orig = window.fetch.bind(window);
+  var READS = ['summaryGetListings', 'clientSummaryGet', 'masterTableGet', 'adminListPeople', 'regListRequests', 'editListCases', 'clientEditList',
+    'editLoadCase', 'clientEditLoad', 'clientReminders', 'contractReminders', 'googleStatus', 'getEditLoginOptions', 'getListingFormOptions',
+    'getListingFormPersons', 'myVisibleNames', 'adminLoginLog', 'clientTracksView', 'submissionStatus', 'getLandRegistryFormOptions'];
+  function once(url, opts) {
+    if (!window.AbortController) return orig(url, opts);
+    var ctrl = new AbortController(), timer = setTimeout(function() { ctrl.abort(); }, 20000);
+    var o = {}; for (var k in opts) o[k] = opts[k]; o.signal = ctrl.signal;
+    return orig(url, o).then(function(r) { clearTimeout(timer); return r; }, function(e) { clearTimeout(timer); throw e; });
+  }
+  window.fetch = function(url, opts) {
+    var fn = '';
+    try { if (opts && opts.method === 'POST' && typeof opts.body === 'string' && /script\.google\.com/.test(String(url))) fn = (JSON.parse(opts.body) || {}).fn || ''; } catch (e) {}
+    var isTokenVerify = fn === 'summaryVerifyLogin' && /"S_[A-Z0-9]+"/.test(opts.body);   // 換頁時用登入憑證驗證＝只讀
+    if (READS.indexOf(fn) === -1 && !isTokenVerify) return orig(url, opts);
+    return once(url, opts).catch(function() {
+      return new Promise(function(res) { setTimeout(res, 600); }).then(function() { return once(url, opts); });
+    }).catch(function() { throw new Error('連線比較慢，請按「重新整理」或重新打開這一頁再試一次。'); });
+  };
+})();
+// ---------- 共用登入（同一個瀏覽器分頁裡，登入一次就能用修改物件／客需、物件簡表、客需簡表） ----------
+// 存在 sessionStorage：只在這個分頁有效，關掉分頁就清掉；按「登出」也會清掉（連同兩個簡表的快取）。
+var SHARED_LOGIN_KEY = 'ruihe_login_v1';
+// 30 分鐘沒有動作（點、打字、捲動、移動滑鼠）自動登出；同一個分頁裡的頁面一起算
+// 系統參數（管理員在秘書專區「系統設定」改的；首頁登入時讀一次存在這個瀏覽器）
+function ruiheSetting_(k, def) {
+  try { var v = (JSON.parse(localStorage.getItem('ruihe_settings_v1') || 'null') || {}).values; return v && isFinite(Number(v[k])) ? Number(v[k]) : def; } catch (e) { return def; }
+}
+var IDLE_LIMIT_MS = ruiheSetting_('idleMinutes', 30) * 60 * 1000;
+var IDLE_KEY = 'ruihe_last_active_v1';
+var idleLastWrite_ = 0;
+function idleTouch_(force) {
+  var now = Date.now();
+  if (!force && now - idleLastWrite_ < 15000) return;
+  idleLastWrite_ = now;
+  try { localStorage.setItem(IDLE_KEY, String(now)); } catch (e) {}
+}
+function idleExpired_() {
+  var t = 0;
+  try { t = parseInt(localStorage.getItem(IDLE_KEY), 10) || 0; } catch (e) {}
+  return t > 0 && Date.now() - t > IDLE_LIMIT_MS;
+}
+// isLoggedIn()：這一頁現在有沒有登入；onTimeout(訊息)：這一頁的登出
+function idleWatch_(isLoggedIn, onTimeout) {
+  ['click', 'keydown', 'input', 'touchstart', 'scroll', 'mousemove'].forEach(function(ev) {
+    window.addEventListener(ev, function() { if (isLoggedIn()) idleTouch_(); }, { passive: true, capture: true });
+  });
+  function check() { if (isLoggedIn() && idleExpired_()) onTimeout(Math.round(IDLE_LIMIT_MS / 60000) + ' 分鐘沒有動作，已自動登出，請重新登入。'); }
+  setInterval(check, 30000);
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) check(); });
+}
+function sharedLoginGet_() {
+  if (idleExpired_()) { sharedLoginClear_(); return null; }
+  try { var o = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
+  catch (e) { return null; }
+}
+function sharedLoginSet_(name, code, role) {
+  setTimeout(function() { if (window.ruiheUpdateNav_) window.ruiheUpdateNav_(); }, 0);
+  if (!role) { var prev = null; try { prev = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null'); } catch (e) {} role = prev && prev.name === name ? prev.role : ''; }
+  try { localStorage.setItem(SHARED_LOGIN_KEY, JSON.stringify({ name: name, code: code, role: role || '業務' })); } catch (e) {}
+  if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
+  try { localStorage.setItem('ruihe_summary_last_name', name); } catch (e) {}
+  idleTouch_(true);
+}
+function sharedRole_() {
+  try { var o = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return (o && o.role) || '業務'; } catch (e) { return '業務'; }
+}
+// 沒登入、或登入失效（通關碼失效、30 分鐘沒動作）：回首頁登入，登入後回到原本的頁面
+function ruiheGoHome_(msg) {
+  try { if (msg) sessionStorage.setItem('ruihe_login_msg', msg); } catch (e) {}
+  var here = location.pathname.split('/').pop() + location.search;
+  location.replace('index.html?next=' + encodeURIComponent(here));
+}
+// 資料安全：物件簡表、地圖、客需簡表的暫存放在這台電腦（關掉瀏覽器還在，為了下次打開比較快）；
+// 登出、自動登出會清掉，超過 12 小時沒更新也清掉（沒按登出就關瀏覽器的情況）
+(function() {
+  try {
+    ['ruihe_summary_cache_v1', 'ruihe_client_summary_cache_v1', 'ruihe_map_cache_v1'].forEach(function(k) {
+      var c = JSON.parse(localStorage.getItem(k) || 'null');
+      if (c && (!c.checkedAt || Date.now() - c.checkedAt > 12 * 3600 * 1000)) localStorage.removeItem(k);
+    });
+  } catch (e) {}
+})();
+function sharedLoginClear_() {
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_edit_lists_v1'].forEach(function(k) { localStorage.removeItem(k); }); Object.keys(localStorage).filter(function(k) { return k.indexOf('ruihe_cal_') === 0; }).forEach(function(k) { localStorage.removeItem(k); }); } catch (e) {} // 登出時清掉快取（115/10/29）
+  // 登出：讓後端的登入憑證馬上失效（憑證才會失效，不影響通關碼）
+  try {
+    var o_ = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null');
+    if (o_ && /^S_/.test(o_.code || '')) fetch('https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec', { method: 'POST', body: JSON.stringify({ fn: 'sessionLogout', args: [o_.name, o_.code] }), keepalive: true }).catch(function() {});
+  } catch (e) {}
+  try { ['ruihe_home_cache_v1', 'ruihe_master_cache_v1', 'ruihe_secretary_cache_v1', 'ruihe_prefetch_at'].forEach(function(k) { sessionStorage.removeItem(k); }); localStorage.removeItem(SHARED_LOGIN_KEY); localStorage.removeItem(IDLE_KEY); } catch (e) {}
+  if (window.ruiheUpdateNav_) window.ruiheUpdateNav_();
+  try { localStorage.removeItem('ruihe_summary_cache_v1'); localStorage.removeItem('ruihe_client_summary_cache_v1'); localStorage.removeItem('ruihe_map_cache_v1'); } catch (e) {}
+  try { sessionStorage.removeItem('ruihe_edit_lists_v1'); } catch (e) {}
+}
+// 姓名清單：先用上次存在這台裝置的清單（馬上可以選），同時到後端拿最新的換上
+var LOGIN_NAMES_KEY = 'ruihe_login_names_v1';
+function fillLoginNames_(sel, names) {
+  var keep = sel.value, last = '';
+  try { last = localStorage.getItem('ruihe_summary_last_name') || ''; } catch (e) {}
+  sel.innerHTML = '';
+  var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '請選擇'; sel.appendChild(o0);
+  names.forEach(function(n) { var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+  var want = keep || last;
+  if (want && names.indexOf(want) !== -1) sel.value = want;
+}
+function loadLoginNames_(sel, fetchNames, onError) {
+  var cached = null;
+  try { cached = JSON.parse(localStorage.getItem(LOGIN_NAMES_KEY) || 'null'); } catch (e) {}
+  var hasCache = Array.isArray(cached) && cached.length > 0;
+  if (hasCache) fillLoginNames_(sel, cached);
+  fetchNames().then(function(names) {
+    try { localStorage.setItem(LOGIN_NAMES_KEY, JSON.stringify(names)); } catch (e) {}
+    fillLoginNames_(sel, names);
+  }).catch(function(err) { if (!hasCache) onError(err); });
+}
+
+var HOME_CACHE_KEY = 'ruihe_home_cache_v1';
+var ALLOWED_NEXT = ['listing.html', 'client-needs.html', 'land-registry.html', 'summary.html', 'detail.html', 'client-summary.html', 'map.html', 'master-table.html', 'secretary.html', 'help.html', 'meeting.html'];
+var ENTRIES = [
+  { href: 'listing.html?mode=edit', title: '修改物件／客需／物件配對', desc: '修改自己負責的物件和客需，記錄客需追蹤、配對', secDesc: '修改全部人的物件和客需，記錄客需追蹤' },
+  { href: 'summary.html', title: '物件總表', desc: '全公司銷售中的物件，點案名看物件內容' },
+  { href: 'client-summary.html', title: '客需總表', desc: '全公司的客戶需求' },
+  { href: 'map.html', title: '物件地圖', desc: '銷售中的物件放在地圖上，點標記看簡介' },
+  { href: 'master-table.html', title: '資料維護', desc: '總彙整表的所有欄位，改狀態、業務、契約', roles: ['秘書', '管理員'] },
+  { href: 'secretary.html', title: '後台管理', desc: '申調謄本清單、人員管理', roles: ['秘書', '管理員'] }
+];
+var auth = null, role = '', scope = 'mine';
+var state = { client: null, contract: null, clientErr: '', contractErr: '' };
+
+function $(id) { return document.getElementById(id); }
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function post(url, fn, args) {
+  return fetch(url, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.ok) { var e = new Error(res.message || '系統發生錯誤'); e.fromServer = true; throw e; }
+      return res.result;
+    });
+}
+function isAuthError(err) { return err && err.fromServer && /通關碼|請選擇姓名/.test(err.message); }
+var toastTimer = null;
+function toast(text, isError) {
+  var el = $('toast'); el.textContent = text; el.className = isError ? 'error' : ''; el.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(function() { el.style.display = 'none'; }, 2600);
+}
+function showLoginMsg(text, isError) { var m = $('loginMsg'); m.textContent = text; m.className = text ? ('msg ' + (isError === false ? 'success' : 'error')) : 'msg'; }
+function nextUrl() {
+  var m = location.search.match(/[?&]next=([^&]+)/);
+  if (!m) return '';
+  var n = ''; try { n = decodeURIComponent(m[1]); } catch (e) { return ''; }
+  var file = n.split('?')[0];
+  return ALLOWED_NEXT.indexOf(file) !== -1 ? n : '';   // 只允許回到系統裡的功能頁
+}
+
+// ---------------- 功能入口 ----------------
+function renderEntries() {
+  if (!$('entries')) return; // 首頁的「功能」區拿掉了（上面的選單列就有）
+  $('entries').innerHTML = ENTRIES.filter(function(e) { return !e.roles || e.roles.indexOf(role) !== -1; }).map(function(e) {
+    return '<a class="entry" href="' + esc(e.href) + '"><b>' + esc(e.title) + '</b><span>' + esc((role === '秘書' || role === '管理員') && e.secDesc ? e.secDesc : e.desc) + '</span></a>';
+  }).join('');
+}
+
+// ---------------- 待辦提醒 ----------------
+// 待辦數字卡片：從下面每一類（details.rem）讀標題和數字畫成卡片；點卡片只展開那一類
+var tileOpen = '';
+function renderTiles() {
+  var box = $('remTiles'); if (!box) return;
+  var list = [].filter.call(document.querySelectorAll('#remWrap details.rem'), function(d) { return !d.hidden; });
+  if (tileOpen && !list.some(function(d) { return d.id === tileOpen; })) tileOpen = '';
+  box.innerHTML = list.map(function(d) {
+    var sum = d.querySelector('summary'), badge = sum.querySelector('.badge');
+    var title = sum.cloneNode(true); var bb = title.querySelector('.badge'); if (bb) bb.remove();
+    var n = badge ? badge.textContent : '…', cls = badge && /hot/.test(badge.className) ? 'hot' : (badge && /warn/.test(badge.className) ? 'warn' : (n === '0' ? '' : 'ok'));
+    return '<button type="button" class="tile ' + cls + '" role="tab" data-rem="' + d.id + '" aria-selected="' + (tileOpen === d.id) + '"><div class="n">' + esc(n) + '</div><div class="t">' + esc(title.textContent.trim()) + '</div></button>';
+  }).join('');
+  list.forEach(function(d) { d.open = d.id === tileOpen; });
+}
+document.addEventListener('click', function(e) {
+  var t = e.target.closest('.tile[data-rem]'); if (!t) return;
+  tileOpen = tileOpen === t.getAttribute('data-rem') ? '' : t.getAttribute('data-rem');
+  renderTiles();
+  if (tileOpen) $(tileOpen).scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+var tileTimer = null;
+new MutationObserver(function() { clearTimeout(tileTimer); tileTimer = setTimeout(renderTiles, 50); })
+  .observe(document.getElementById('remWrap'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'class'] });
+function setBadge(id, n, kind) { var b = $(id); b.textContent = n; b.className = 'badge' + (n > 0 && kind ? ' ' + kind : ''); }
+function clientLink(it) { return 'client-needs.html?mode=edit&key=' + encodeURIComponent(it.key); }
+function renderClient() {
+  var c = state.client;
+  if (state.clientErr && !c) {
+    ['Due', 'Stale'].forEach(function(k) { $('body' + k).innerHTML = '<div class="rem-error">讀取失敗：' + esc(state.clientErr) + '</div>'; setBadge('cnt' + k, '!', 'hot'); });
+    return;
+  }
+  if (!c) return;
+  c.due = c.due || []; c.stale = c.stale || []; c.newMatches = c.newMatches || [];
+  var all = c.scope === 'all';
+  function row(it, whenHtml) {
+    var canEdit = it.editable !== false;   // 主管看同組的客需：不顯示客戶資料、不能改
+    return '<div class="rem-row"><div class="nm">' + (it.clientName ? esc(it.clientName) : '<span style="color:var(--muted);font-weight:400;">（' + esc(it.business || '同組') + ' 的客需）</span>') + '</div>' +
+      '<div class="meta">' + esc([all ? it.business : '', it.types, it.demand].filter(Boolean).join('｜')) + '</div>' +
+      '<div class="when">' + whenHtml + '</div>' +
+      '<div class="go">' + (canEdit ? '<a class="link-btn" href="' + esc(clientLink(it)) + '">修改／追蹤</a>' : '') + '</div></div>';
+  }
+  $('bodyDue').innerHTML = c.due.length ? c.due.map(function(it) {
+    return row(it, '下次聯絡 ' + esc(it.nextText) + '　' + (it.days > 0 ? '<b>已逾期 ' + it.days + ' 天</b>' : '<b>今天</b>'));
+  }).join('') : '<div class="rem-empty">' + (all ? '目前沒有要聯絡的客需。' : '目前沒有要聯絡的客需，太好了。') + '</div>';
+  $('bodyStale').innerHTML = c.stale.length ? c.stale.map(function(it) {
+    return row(it, (it.fromFill ? '從沒追蹤過，填表 ' + esc(it.fillText) : '最後追蹤 ' + esc(it.lastText)) + '　<b>' + it.days + ' 天</b>');
+  }).join('') : '<div class="rem-empty">目前沒有超過 30 天沒追蹤的客需。</div>';
+  setBadge('cntDue', c.due.length, 'hot'); setBadge('cntStale', c.stale.length, 'warn');
+}
+function renderContract() {
+  var c = state.contract;
+  if (state.contractErr && !c) { $('bodyContract').innerHTML = '<div class="rem-error">讀取失敗：' + esc(state.contractErr) + '</div>'; setBadge('cntContract', '!', 'hot'); return; }
+  if (!c) return;
+  c.items = c.items || []; // 後端回傳不完整時不要整頁出錯（115/10/27）
+  var all = c.scope === 'all';
+  $('bodyContract').innerHTML = c.items.length ? c.items.map(function(it) {
+    var go = it.editable ? '<div class="go"><a class="link-btn" href="listing.html?mode=edit&key=' + encodeURIComponent(it.key) + '">修改</a></div>' : '<div class="go"></div>';
+    return '<div class="rem-row"><div class="nm">' + esc(it.name) + '</div>' +
+      '<div class="meta">' + esc([all ? it.agents.join('、') : '', it.type, it.contract].filter(Boolean).join('｜')) + '</div>' +
+      '<div class="when">合約到期 ' + esc(it.expText) + '　<b>' + (it.days === 0 ? '今天' : '還有 ' + it.days + ' 天') + '</b></div>' + go + '</div>';
+  }).join('') : '<div class="rem-empty">目前沒有 30 天內到期的物件。</div>';
+  setBadge('cntContract', c.items.length, c.items.length ? 'warn' : '');
+}
+function renderReminders() {
+  renderClient(); renderContract();
+  $('remNote').textContent = scope === 'all' ? (role === '主管' ? '你那一組' : '全公司') : '只有你負責的';
+}
+function saveHomeCache() { try { localStorage.setItem(HOME_CACHE_KEY, JSON.stringify({ name: auth.name, scope: scope, client: state.client, contract: state.contract })); } catch (e) {} }
+function loadReminders(manual) {
+  if (!auth) return;
+  $('refreshBtn').disabled = true;
+  var pending = 2;
+  function done() { if (--pending === 0) { $('refreshBtn').disabled = false; saveHomeCache(); if (manual) toast('已更新'); } }
+  var wantScope = scope;
+  post(CLIENT_API, 'clientReminders', [auth.name, auth.code, wantScope]).then(function(res) {
+    if (wantScope !== scope) return;
+    state.client = res; state.clientErr = ''; if (res.role) onRole(res.role); renderClient();
+  }).catch(function(err) {
+    if (isAuthError(err)) { logoutToLogin(err.message); return; }
+    state.clientErr = err.message || '連不上系統'; renderClient();
+  }).then(done);
+  post(OBJ_API, 'contractReminders', [auth.name, auth.code, wantScope]).then(function(res) {
+    if (wantScope !== scope) return;
+    state.contract = res; state.contractErr = ''; if (res.role) onRole(res.role); renderContract();
+  }).catch(function(err) {
+    if (isAuthError(err)) { logoutToLogin(err.message); return; }
+    state.contractErr = err.message || '連不上系統'; renderContract();
+  }).then(done);
+}
+function onRole(r) {
+  if (r === role) return;
+  role = r; $('whoRole').textContent = role;
+  renderDupReminder();
+  $('scopeSeg').style.display = (role === '主管' || role === '秘書' || role === '管理員') ? '' : 'none';
+  $('scopeSeg').querySelector('[data-scope="all"]').textContent = role === '主管' ? '全組' : '全公司';
+  if (auth) sharedLoginSet_(auth.name, auth.code, role);
+  renderEntries();
+}
+
+// ---------------- 登入／登出 ----------------
+// 首頁公告（管理員在秘書專區「公告」發的）
+function loadAnnouncements() {
+  if (!auth) return;
+  post(OBJ_API, 'announcementsGet', [auth.name, auth.code]).then(function(res) {
+    var items = res.items || [];
+    $('annBox').hidden = !items.length;
+    $('annEmpty').hidden = !!items.length;
+    $('homeTop').classList.toggle('no-ann', !items.length); // 沒有公告：行事曆佔滿整排
+    setTimeout(function() { [].forEach.call(document.querySelectorAll('#annBox .ann'), function(el) { var b = el.querySelector('.ann-body'); el.classList.toggle('short', !b || b.scrollHeight <= b.clientHeight + 2); }); }, 0);
+    $('annBox').innerHTML = items.map(function(a) {
+      return '<div class="ann' + (a.important ? ' important' : '') + '" tabindex="0" role="button" aria-expanded="false" title="點一下看完整內容"><h3>' + (a.important ? '<span class="ann-tag">重要</span>' : '') + esc(a.title) + '</h3>' +
+        (a.body ? '<div class="ann-body">' + esc(a.body) + '</div>' : '') + '<div class="ann-meta">' + esc(a.by) + '｜' + esc(a.updated) + '</div></div>';
+    }).join('');
+  }).catch(function() {});
+}
+// 系統參數：沒登入也讀得到，存在這個瀏覽器給各頁用（自動登出時間、配對、提醒天數）
+function loadSettings() {
+  post(OBJ_API, 'getPublicSettings', []).then(function(res) {
+    try { localStorage.setItem('ruihe_settings_v1', JSON.stringify({ values: res.values, at: Date.now() })); } catch (e) {}
+    IDLE_LIMIT_MS = ruiheSetting_('idleMinutes', 30) * 60 * 1000;
+  }).catch(function() {});
+}
+loadSettings();
+function enterPortal(name, code, r) {
+  auth = { name: name, code: code };
+  role = ''; scope = 'mine';
+  $('loginView').hidden = true; $('portal').hidden = false; $('loginBanner').hidden = true;
+  $('subtitle').textContent = '今天要處理的事情';
+  $('whoName').textContent = name;
+  onRole(r || '業務');
+  [].forEach.call(document.querySelectorAll('#scopeSeg button'), function(b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-scope') === 'mine')); });
+  // 先顯示這個分頁上次的內容（換頁回來馬上看得到），同時背景更新
+  var cached = null; try { cached = JSON.parse(localStorage.getItem(HOME_CACHE_KEY) || 'null'); } catch (e) {}
+  state = { client: null, contract: null, clientErr: '', contractErr: '' };
+  if (cached && cached.name === name && cached.scope === 'mine') { state.client = cached.client; state.contract = cached.contract; renderReminders(); }
+  loadReminders(false);
+  loadGoogleStatus();
+  loadAnnouncements();
+  renderDupReminder();
+  renderMatchReminder();
+  setTimeout(prefetchPages, 1500);   // 待辦先讀，再預先載入各頁資料
+}
+function logoutToLogin(msg) {
+  setTimeout(function() { if (window.ruiheUpdateNav_) window.ruiheUpdateNav_(); }, 0);
+  sharedLoginClear_();
+  auth = null; role = ''; state = { client: null, contract: null, clientErr: '', contractErr: '' };
+  $('portal').hidden = true; $('loginView').hidden = false; $('loginBanner').hidden = false;
+  $('subtitle').textContent = '登入後可以使用物件、客需的各項功能';
+  showLoginMsg(msg || '', true);
+  try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch (e) {}
+  showLoginChoice(false);
+  renderGoogleLogin();
+}
+function login(auto) {
+  var name = auto ? auto.name : $('loginName').value, code = auto ? auto.code : $('loginCode').value.replace(/\s+/g, '');
+  if (!name || !code) { showLoginMsg('請選擇姓名並輸入通關碼。', true); return; }
+  var btn = $('loginBtn'); btn.disabled = true; btn.textContent = '登入中…'; showLoginMsg('');
+  post(OBJ_API, 'summaryVerifyLogin', auto ? [name, code] : [name, code, clientInfo()]).then(function(res) {
+    afterLogin(res, res.token || code);   // 用通關碼登入會拿到登入憑證，之後網頁只暫存憑證；用憑證驗證（換頁）沿用原本的
+  }).catch(function(err) {
+    if (auto && isAuthError(err)) { sharedLoginClear_(); }
+    if (auto) renderGoogleLogin();
+    showLoginMsg(err.message || '連不上系統', true);
+  }).then(function() { btn.disabled = false; btn.textContent = '登入'; });
+}
+
+function afterLogin(res, stored) {
+  sharedLoginSet_(res.name, stored, res.role);
+  $('loginCode').value = '';
+  var next = nextUrl();
+  var msg = ''; try { msg = sessionStorage.getItem('ruihe_login_msg') || ''; sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {}
+  if (next && !msg) { location.replace(next); return; }   // 從功能頁被帶回來登入：登入後回原頁面
+  enterPortal(res.name, stored, res.role);
+  if (msg) { var n = $('portalNotice'); n.textContent = msg; n.style.display = 'block'; }
+}
+
+// ---------------- 秘書、管理員：可能重複或相似的物件（用預先載入的物件總表資料算） ----------------
+// 最近 7 天新登錄的物件，符合自己負責的客需（用首頁預先載入的物件簡表、客需簡表算）
+function renderMatchReminder() {
+  var box = $('remMatch');
+  if (!auth || !window.RuiheMatch) { box.hidden = true; return; }
+  var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), cc = readJson(localStorage, 'ruihe_client_summary_cache_v1');
+  if (!sc || !sc.dates || !cc) { box.hidden = true; return; }
+  var nd = ruiheSetting_('newMatchDays', 7); $('matchDays').textContent = nd;
+  var since = new Date(Date.now() - nd * 864e5).toISOString().slice(0, 10);
+  var mine = cc.rows.map(function(r) { return RuiheMatch.parseClient(cc.columns, r); }).filter(function(c) { return !c.closed && c.agents.indexOf(auth.name) !== -1; });
+  var items = [];
+  sc.rows.forEach(function(r, i) {
+    var d = sc.dates[i];
+    if (!d || d < since) return;
+    var L = RuiheMatch.parseListing(sc.columns, r, d, i);
+    RuiheMatch.matchesForListing(L, mine).forEach(function(x) { items.push({ L: L, c: x.client, m: x.m }); });
+  });
+  items.sort(function(a, b) { return b.m.score - a.m.score || String(b.L.date).localeCompare(String(a.L.date)); });
+  box.hidden = !items.length;
+  if (!items.length) return;
+  setBadge('cntMatch', items.length, 'warn');
+  $('bodyMatch').innerHTML = items.slice(0, 8).map(function(x) {
+    return '<div class="rem-row"><div class="nm">' + esc(x.L.name || '（未填案名）') + '</div>' +
+      '<div class="meta">' + esc([x.L.typesText, x.L.rs, x.L.placeText, x.L.priceText, x.L.date + ' 登錄'].filter(Boolean).join('｜')) + '</div>' +
+      '<div class="when">符合你的客需：' + esc(x.c.types.join('、') + '・' + x.c.demand.join('、') + (x.c.regionText ? '（' + x.c.regionText + '）' : '')) +
+      (x.m.warn ? '　<b>' + esc(x.m.warn) + '</b>' : '') + '</div>' +
+      '<div class="go"><a class="link-btn" href="client-needs.html?mode=edit&key=' + encodeURIComponent(x.c.key) + '">看這筆客需</a></div></div>';
+  }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 筆，請到客需的「配對物件」看。</div>' : '');
+}
+function renderReqReminder() {
+  var box = $('remReq');
+  var c = auth ? readJson(sessionStorage, 'ruihe_secretary_cache_v1') : null;
+  var reqs = (role === '管理員' && c && c.name === auth.name && c.people && c.people.requests) ? c.people.requests.filter(function(r) { return r.status === '待審核'; }) : [];
+  box.hidden = !reqs.length;
+  if (!reqs.length) return;
+  setBadge('cntReq', reqs.length, 'hot');
+  $('bodyReq').innerHTML = reqs.slice(0, 8).map(function(r) {
+    var ch = [];
+    if (r.fromRole !== r.toRole) ch.push('身分 ' + r.fromRole + ' → ' + r.toRole);
+    if (r.fromGroups !== r.toGroups) ch.push('組別 ' + (r.fromGroups || '（無）') + ' → ' + (r.toGroups || '（無）'));
+    return '<div class="rem-row"><div class="nm">' + esc(r.target) + '</div><div class="meta">' + esc(r.by) + ' 申請｜' + esc(r.at) + '</div>' +
+      '<div class="when"><b>' + esc(ch.join('；')) + '</b></div><div class="go"><a class="link-btn" href="secretary.html?tab=people">審核</a></div></div>';
+  }).join('');
+}
+function renderDupReminder() {
+  renderReqReminder();
+  var box = $('remDup');
+  var can = role === '秘書' || role === '管理員';
+  box.hidden = !can;
+  if (!can || !auth) return;
+  var c = readJson(sessionStorage, 'ruihe_master_cache_v1');
+  if (!c || c.name !== auth.name || !c.tabs) { $('bodyDup').innerHTML = '<div class="rem-empty loading">讀取中…</div>'; $('cntDup').textContent = '…'; $('cntDup').className = 'badge'; return; }
+  var items = [];
+  c.tabs.forEach(function(t) {
+    var ni = (t.columns || []).indexOf('案名');
+    (t.dup || []).forEach(function(d, i) { if (d) items.push({ name: ni === -1 ? '' : t.rows[i][ni], type: t.type, why: d }); });
+  });
+  var order = { '相同': 0, '需要確認': 1, '相似': 2 };
+  items.sort(function(a, b) { return order[a.why.split('｜')[0]] - order[b.why.split('｜')[0]]; });
+  setBadge('cntDup', items.length, items.length ? 'hot' : '');
+  if (!items.length) { $('bodyDup').innerHTML = '<div class="rem-empty">目前沒有相同、需要確認或相似的物件。</div>'; return; }
+  $('bodyDup').innerHTML = items.slice(0, 8).map(function(it) {
+    return '<div class="rem-row dup"><div class="nm">' + esc(it.name || '（未填案名）') + '</div><div class="meta">' + esc(it.type) + '</div>' +
+      '<div class="when"><b>' + esc(it.why.split('｜')[0]) + '</b>　' + esc(it.why.split('｜').slice(1).join('｜')) + '</div><div class="go"><a class="link-btn" href="master-table.html?dup=1">到資料維護看</a></div></div>';
+  }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 件，請到資料維護勾「只看相同、需要確認或相似的」。</div>' : '');
+}
+
+// ---------------- 預先載入各功能頁的資料 ----------------
+// 登入首頁後，在背景把物件簡表／物件地圖、客需簡表（主管以上再加物件總表，秘書、管理員再加秘書專區）的資料先抓好，
+// 存在各頁面原本就會用的暫存位置，點進去就直接顯示。已經是最新的（版本一樣）後端只回「沒變」，不會重抓整份。
+// 3 分鐘內預先載入過就不再做。
+function readJson(store, key) { try { return JSON.parse(store.getItem(key) || 'null'); } catch (e) { return null; } }
+function prefetchPages() {
+  if (!auth) return;
+  var last = parseInt(sessionStorage.getItem('ruihe_prefetch_at') || '0', 10);
+  if (Date.now() - last < 3 * 60 * 1000) return;
+  try { sessionStorage.setItem('ruihe_prefetch_at', String(Date.now())); } catch (e) {}
+  var who = auth.name, code = auth.code, r = role;
+  // 物件簡表＋物件地圖：同一份資料，地圖多了座標
+  var sc = readJson(localStorage, 'ruihe_summary_cache_v1'), mc = readJson(localStorage, 'ruihe_map_cache_v1');
+  var known = (sc && mc && sc.version === mc.version && mc.coords && mc.keys && sc.dates && sc.keys && sc.coords) ? sc.version : '';
+  post(OBJ_API, 'summaryGetListings', [who, code, known]).then(function(res) {
+    if (res.unchanged || !auth) return;
+    var now = Date.now();
+    try {
+      localStorage.setItem('ruihe_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], dates: res.dates || [], keys: res.keys || [], coords: res.coords || [], checkedAt: now }));
+      localStorage.setItem('ruihe_map_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], coords: res.coords || [], keys: res.keys || [], checkedAt: now }));
+    } catch (e) {}
+  }).then(function() { renderMatchReminder(); }, function() {});
+  // 客需簡表
+  var cc = readJson(localStorage, 'ruihe_client_summary_cache_v1');
+  post(CLIENT_API, 'clientSummaryGet', [who, code, cc && cc.version ? cc.version : '']).then(function(res) {
+    if (res.unchanged || !auth) return;
+    try { localStorage.setItem('ruihe_client_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], checkedAt: Date.now() })); } catch (e) {}
+  }).then(function() { renderMatchReminder(); }, function() {});
+  // 資料維護（物件）（只存在這個分頁；115/11/09 只有秘書、管理員）
+  if (r === '秘書' || r === '管理員') {
+    var tc = readJson(sessionStorage, 'ruihe_master_cache_v1');
+    post(OBJ_API, 'masterTableGet', [who, code, tc && tc.name === who ? tc.version : '']).then(function(res) {
+      if (res.unchanged || !auth) return;
+      try { localStorage.setItem('ruihe_master_cache_v1', JSON.stringify({ name: who, role: res.role || r, version: res.version, tabs: res.tabs || [] })); } catch (e) {}
+      renderDupReminder();
+    }).then(function() { renderDupReminder(); }, function() {});
+  }
+  // 秘書專區（只存在這個分頁）
+  if (r === '秘書' || r === '管理員') {
+    Promise.all([post(OBJ_API, 'adminListPeople', [who, code]), post(REG_API, 'regListRequests', [who, code])]).then(function(all) {
+      if (!auth) return;
+      try { localStorage.setItem('ruihe_secretary_cache_v1', JSON.stringify({ name: who, people: all[0], reg: all[1] })); } catch (e) {}
+      renderReqReminder();
+    }).catch(function() {});
+  }
+}
+
+// ---------------- 登入紀錄用：裝置、IP（IP 是網頁自己向外部服務問來的，只能參考） ----------------
+function deviceText() {
+  var ua = navigator.userAgent || '';
+  var os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : '其他';
+  var br = /Line\//.test(ua) ? 'LINE 內建瀏覽器' : /FBAN|FBAV/.test(ua) ? 'Facebook 內建瀏覽器' : /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung 瀏覽器' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : '其他瀏覽器';
+  return os + '・' + br;
+}
+var clientIp = '';
+(function lookupIp() {
+  try {
+    var done = false;
+    setTimeout(function() { done = true; }, 3000);
+    fetch('https://api.ipify.org?format=json').then(function(r) { return r.json(); }).then(function(j) { if (!done && j && j.ip) clientIp = String(j.ip); }).catch(function() {});
+  } catch (e) {}
+})();
+function clientInfo() { return { device: deviceText(), ip: clientIp }; }
+
+// ---------------- Google 登入、綁定 ----------------
+// 登入畫面和首頁的「登入方式」不會同時出現，所以每次畫按鈕前重新設定這次按下去要做什麼
+var googleReady = null;
+function whenGoogle() {
+  if (googleReady) return googleReady;
+  googleReady = new Promise(function(resolve, reject) {
+    var t0 = Date.now();
+    (function wait() {
+      if (window.google && google.accounts && google.accounts.id) { resolve(google.accounts.id); return; }
+      if (Date.now() - t0 > 10000) { googleReady = null; reject(new Error('Google 登入元件載入失敗')); return; }
+      setTimeout(wait, 200);
+    })();
+  });
+  return googleReady;
+}
+function inAppBrowser() { return /Line\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent || ''); }
+function renderGoogleLogin() {
+  var note = $('googleNote');
+  if (inAppBrowser()) { note.className = 'g-note warn'; note.textContent = '在 LINE 等 App 裡打開時，Google 登入可能沒辦法用，請改用 Chrome 或 Safari 開啟，或用下面的通關碼登入。'; }
+  whenGoogle().then(function(gid) {
+    gid.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin, auto_select: false, cancel_on_tap_outside: true });
+    $('googleBtn').innerHTML = '';
+    gid.renderButton($('googleBtn'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', width: 280, locale: 'zh_TW' });
+  }).catch(function() { if (!inAppBrowser()) { note.className = 'g-note'; note.textContent = 'Google 登入暫時無法使用，請用通關碼登入。'; } });
+}
+function onGoogleLogin(resp) {
+  if (!resp || !resp.credential) return;
+  showLoginMsg('Google 登入中…', false);
+  post(OBJ_API, 'googleLogin', [resp.credential, clientInfo()]).then(function(res) {
+    showLoginMsg('');
+    afterLogin(res, res.token);
+  }).catch(function(err) { showLoginMsg(err.message || '連不上系統', true); });
+}
+function loadGoogleStatus() {
+  if (!auth) return;
+  $('gStatus').textContent = '讀取中…'; $('gUnbindBtn').style.display = 'none'; $('gBindBtn').innerHTML = '';
+  post(OBJ_API, 'googleStatus', [auth.name, auth.code]).then(function(st) {
+    // Google 帳號由管理員在人員管理設定；這裡只顯示狀態
+    if (st.bound) $('gStatus').textContent = (st.email || '') + '（由管理員設定）' + (st.linked ? '，可以直接按「使用 Google 帳戶登入」' : '，第一次按「使用 Google 帳戶登入」後就完成連結');
+    else $('gStatus').textContent = '還沒設定。要用 Google 登入，請洽管理員設定你的 Gmail。';
+  }).catch(function(err) {
+    if (isAuthError(err)) { logoutToLogin(err.message); return; }
+    $('gStatus').textContent = '讀取失敗：' + (err.message || '連不上系統');
+  });
+}
+function onGoogleBind(resp) {
+  if (!resp || !resp.credential || !auth) return;
+  $('gStatus').textContent = '綁定中…';
+  post(OBJ_API, 'googleBind', [auth.name, auth.code, resp.credential]).then(function(st) {
+    toast('已綁定 Google 帳號 ' + (st.email || ''));
+    loadGoogleStatus();
+  }).catch(function(err) {
+    if (isAuthError(err)) { logoutToLogin(err.message); return; }
+    toast(err.message || '綁定失敗', true); loadGoogleStatus();
+  });
+}
+$('gUnbindBtn').addEventListener('click', function() {
+  if (!auth || !confirm('確定要解除 Google 帳號綁定嗎？之後要用通關碼登入，或再綁定一次。')) return;
+  post(OBJ_API, 'googleUnbind', [auth.name, auth.code]).then(function() { toast('已解除綁定'); loadGoogleStatus(); })
+    .catch(function(err) { toast(err.message || '解除失敗', true); });
+});
+
+function showLoginChoice(code) {
+  $('chooseBox').hidden = !!code; $('codeBox').hidden = !code;
+  if (code) setTimeout(function() { try { $('loginName').focus(); } catch (e) {} }, 0);
+}
+$('showCodeBtn').addEventListener('click', function() { showLoginChoice(true); });
+$('backBtn').addEventListener('click', function() { showLoginChoice(false); });
+
+// ---------------- 事件 ----------------
+$('loginBtn').addEventListener('click', function() { login(); });
+$('loginCode').addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
+$('refreshBtn').addEventListener('click', function() { loadReminders(true); loadAnnouncements(); });
+$('logoutBtn').addEventListener('click', function() { logoutToLogin(''); });
+$('scopeSeg').addEventListener('click', function(e) {
+  var b = e.target.closest('button'); if (!b) return;
+  scope = b.getAttribute('data-scope');
+  [].forEach.call(document.querySelectorAll('#scopeSeg button'), function(x) { x.setAttribute('aria-pressed', String(x === b)); });
+  state.client = null; state.contract = null; state.clientErr = ''; state.contractErr = '';
+  ['Due', 'Stale', 'Contract'].forEach(function(k) { $('body' + k).innerHTML = '<div class="rem-empty loading">讀取中…</div>'; $('cnt' + k).textContent = '…'; $('cnt' + k).className = 'badge'; });
+  $('remNote').textContent = scope === 'all' ? (role === '主管' ? '你那一組' : '全公司') : '只有你負責的';
+  loadReminders(false);
+});
+
+// 起始：被功能頁帶回來時顯示原因（例如 30 分鐘沒動作自動登出）
+(function init() {
+  var msg = ''; try { msg = sessionStorage.getItem('ruihe_login_msg') || ''; } catch (e) {}
+  loadLoginNames_($('loginName'), function() {
+    return post(OBJ_API, 'getEditLoginOptions', []).then(function(res) { return res.personList || []; });
+  }, function(err) { $('loginName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>'; showLoginMsg(err.message || '連不上系統', true); });
+  idleWatch_(function() { return !!auth; }, function(m) { logoutToLogin(m); });
+  var saved = sharedLoginGet_();
+  if (!saved) renderGoogleLogin();
+  if (saved && saved.role) {
+    // 已經登入過：先直接進首頁（或回原本的功能頁），背景再確認登入憑證；憑證失效才跳回登入畫面（115/10/16 加快）
+    var nx = nextUrl();
+    if (nx && !msg) { location.replace(nx); return; }
+    enterPortal(saved.name, saved.code, saved.role);
+    if (msg) { var pn = $('portalNotice'); pn.textContent = msg; pn.style.display = 'block'; try { sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {} }
+    post(OBJ_API, 'summaryVerifyLogin', [saved.name, saved.code]).then(function(res) {
+      sharedLoginSet_(res.name, res.token || saved.code, res.role);
+      if (res.role && res.role !== saved.role) onRole(res.role);
+    }).catch(function(err) {
+      if (isAuthError(err)) { sharedLoginClear_(); logoutToLogin(err.message); }
+    });
+  } else if (saved) { login(saved); }
+  else if (msg) { showLoginMsg(msg, true); try { sessionStorage.removeItem('ruihe_login_msg'); } catch (e) {} }
+})();
+</script>
+
+<script>
+// ===== 首頁行事曆（115/10/19）：公司活動（秘書、管理員新增）、我的行程（自己、秘書、管理員看得到） =====
+var cal = { month: null, sel: '', data: null, range: '' };
+// 國定假日（依行政院人事行政總處 115、116 年辦公日曆表；off＝放假日，沒有 off 的是放在週末的節日）
+var HOLIDAYS = {
+  '2026-01-01': ['元旦', 1], '2026-02-14': ['春節', 1], '2026-02-15': ['春節', 1], '2026-02-16': ['除夕', 1], '2026-02-17': ['春節', 1], '2026-02-18': ['春節', 1],
+  '2026-02-19': ['春節', 1], '2026-02-20': ['春節', 1], '2026-02-21': ['春節', 1], '2026-02-22': ['春節', 1], '2026-02-27': ['和平紀念日補假', 1], '2026-02-28': ['和平紀念日', 1],
+  '2026-04-03': ['兒童節補假', 1], '2026-04-04': ['兒童節', 1], '2026-04-05': ['清明節', 1], '2026-04-06': ['清明節補假', 1], '2026-05-01': ['勞動節', 1],
+  '2026-06-19': ['端午節', 1], '2026-09-25': ['中秋節', 1], '2026-09-28': ['教師節', 1], '2026-10-09': ['國慶日補假', 1], '2026-10-10': ['國慶日', 1],
+  '2026-10-25': ['光復節', 1], '2026-10-26': ['光復節補假', 1], '2026-12-25': ['行憲紀念日', 1],
+  '2027-01-01': ['元旦', 1], '2027-02-04': ['小年夜', 1], '2027-02-05': ['除夕', 1], '2027-02-06': ['春節', 1], '2027-02-07': ['春節', 1], '2027-02-08': ['春節', 1],
+  '2027-02-09': ['春節', 1], '2027-02-10': ['春節', 1], '2027-02-28': ['和平紀念日', 1], '2027-03-01': ['和平紀念日補假', 1], '2027-04-04': ['兒童節', 1],
+  '2027-04-05': ['清明節', 1], '2027-04-06': ['兒童節補假', 1], '2027-05-01': ['勞動節', 1], '2027-06-09': ['端午節', 1], '2027-09-15': ['中秋節', 1],
+  '2027-09-28': ['教師節', 1], '2027-10-10': ['國慶日', 1], '2027-10-11': ['國慶日補假', 1], '2027-10-25': ['光復節', 1], '2027-12-24': ['行憲紀念日補假', 1],
+  '2027-12-25': ['行憲紀念日', 1], '2027-12-31': ['元旦補假', 1]
+};
+var CAL_TYPES = ['開發拜訪', '帶看', '客戶拜訪', '簽約', '議價', '勘查現場', '送件／辦手續', '公司內部', '其他'];
+function calIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function calIsSec() { return role === '秘書' || role === '管理員'; }
+function calRange() {
+  var first = new Date(cal.month.getFullYear(), cal.month.getMonth(), 1);
+  var start = new Date(first); start.setDate(1 - first.getDay());
+  var end = new Date(start); end.setDate(start.getDate() + 41);
+  return { start: start, end: end, from: calIso(start), to: calIso(end) };
+}
+function calEventsOn(iso) { return ((cal.data && cal.data.events) || []).filter(function(e) { return e.start <= iso && e.end >= iso; }).sort(function(a, b) { return (a.kind === b.kind ? 0 : a.kind === '公司' ? -1 : 1) || String(a.time).localeCompare(String(b.time)); }); }
+function calLabel(e) { return (e.kind === '行程' && calIsSec() && e.owner !== auth.name ? e.owner + '：' : '') + (e.kind === '行程' && e.type ? e.type + ' ' : '') + (e.time ? e.time + ' ' : '') + e.title; }
+function calRender() {
+  if (!cal.month) return;
+  var r = calRange(), today = calIso(new Date());
+  $('calTitle').textContent = cal.month.getFullYear() + ' 年 ' + (cal.month.getMonth() + 1) + ' 月';
+  $('calAddCo').hidden = !calIsSec();
+  $('calLegendMe').textContent = calIsSec() ? '業務的行程' : '我的行程（只有自己和秘書看得到）';
+  var h = ['日', '一', '二', '三', '四', '五', '六'].map(function(w) { return '<div class="wd">' + w + '</div>'; }).join('');
+  for (var i = 0; i < 42; i++) {
+    var d = new Date(r.start); d.setDate(r.start.getDate() + i);
+    var iso = calIso(d), evs = calEventsOn(iso);
+    var hol = HOLIDAYS[iso];
+    h += '<button type="button" class="cal-cell' + (d.getMonth() !== cal.month.getMonth() ? ' out' : '') + (iso === today ? ' today' : '') + (iso === cal.sel ? ' sel' : '') + (hol ? ' hol' : '') + '" data-day="' + iso + '" aria-label="' + iso + (hol ? '，' + hol[0] : '') + '，' + evs.length + ' 個活動">' +
+      '<span class="dn">' + d.getDate() + (hol ? '<span class="hn">' + esc(hol[0]) + '</span>' : '') + '</span>' +
+      calDutyCell(iso, d) +
+      evs.slice(0, 3).map(function(e) { return '<span class="cal-chip ' + (e.kind === '公司' ? 'co' : 'me') + '">' + esc(calLabel(e)) + '</span>'; }).join('') +
+      (evs.length > 3 ? '<span class="cal-more">還有 ' + (evs.length - 3) + ' 個</span>' : '') + '</button>';
+  }
+  $('calGrid').innerHTML = h;
+  calRenderDay();
+  calRenderDuty();
+}
+// ===== 值班人員（115/10/22）：每一格顯示當天值班，右下角看這一週、秘書和管理員可以編輯整個月 =====
+function calDutyOf(iso) { return ((cal.data && cal.data.duties) || {})[iso] || ''; }
+function calDutyCell(iso, d) {
+  var n = calDutyOf(iso);
+  if (n) return '<span class="cal-chip duty" title="值班：' + esc(n) + '">' + esc(n) + '</span>';
+  return (d.getDay() === 0 && d.getMonth() === cal.month.getMonth()) ? '<span class="cal-off">公休</span>' : '';
+}
+function calRenderDuty() {
+  var box = $('calDuty'); if (!box) return;
+  var today = calIso(new Date()), inMonth = function(iso) { var x = new Date(iso + 'T00:00:00'); return x.getFullYear() === cal.month.getFullYear() && x.getMonth() === cal.month.getMonth(); };
+  // 看哪一週：選的那天在這個月就用它，不然用今天（也在這個月的話），再不然用這個月 1 日
+  var base = (cal.sel && inMonth(cal.sel)) ? cal.sel : (inMonth(today) ? today : calIso(cal.month));
+  var sel = new Date(base + 'T00:00:00');
+  if (base === calIso(cal.month) && sel.getDay() === 0) sel.setDate(2); // 1 日是星期日：看下一週（這個月的第一週）
+  var mon = new Date(sel); mon.setDate(sel.getDate() - ((sel.getDay() + 6) % 7)); // 這一週的星期一
+  var rows = '';
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(mon); d.setDate(mon.getDate() + i);
+    var iso = calIso(d), n = calDutyOf(iso);
+    var cls = iso === cal.sel ? ' sel' : '';
+    rows += '<span class="d' + cls + '">' + (d.getMonth() + 1) + '/' + d.getDate() + '（' + '日一二三四五六'[d.getDay()] + '）</span><span class="' + cls.trim() + '"' + (!n && d.getDay() === 0 ? ' style="color:#B3261E;"' : '') + '>' + esc(n || (d.getDay() === 0 ? '公休' : '—')) + '</span>';
+  }
+  var tn = calDutyOf(today);
+  box.innerHTML = '<h3>值班人員' + (calIsSec() ? '<button type="button" class="btn ghost" id="dutyEditBtn">編輯 ' + (cal.month.getMonth() + 1) + ' 月</button>' : '') + '</h3>' +
+    (tn ? '<div class="duty-today">今天值班：' + esc(tn) + '</div>' : '') +
+    '<div class="duty-list">' + rows + '</div>';
+  var b = $('dutyEditBtn'); if (b) b.addEventListener('click', calDutyEdit);
+}
+var dutyPeople_ = null;
+function calDutyEdit() {
+  var y = cal.month.getFullYear(), m = cal.month.getMonth(), days = new Date(y, m + 1, 0).getDate();
+  var month = y + '-' + String(m + 1).padStart(2, '0');
+  var dlg = RuiheMatch.showModal('編輯 ' + (y - 1911) + ' 年 ' + (m + 1) + ' 月值班', '<div class="note">讀取業務名單中…</div>');
+  var ready = dutyPeople_ ? Promise.resolve(dutyPeople_) : post(OBJ_API, 'getListingFormPersons', []).then(function(res) { dutyPeople_ = (res && res.personList) || []; return dutyPeople_; });
+  ready.catch(function() { return []; }).then(function(people) {
+    var list = (people || []).slice();
+    Object.keys((cal.data && cal.data.duties) || {}).forEach(function(k) { var n = cal.data.duties[k]; if (n && list.indexOf(n) === -1) list.push(n); });
+    var opts = function(cur) { return '<option value="">（沒人值班）</option>' + list.map(function(n) { return '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join(''); };
+    var h = '<div class="note">每一天選值班的人，星期日公休不用選。可以先用下面的「照順序排」一次排好，再逐日修改。</div>' +
+      '<details style="margin:8px 0;"><summary style="cursor:pointer;font-weight:700;">照順序排</summary>' +
+      '<div class="note" style="margin:6px 0;">依序填值班的人，用「、」分開；從第幾日開始排，星期日跳過。</div>' +
+      '<textarea id="dutyOrder" rows="3" style="width:100%;">' + esc(list.join('、')) + '</textarea>' +
+      '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;">從 <input type="number" id="dutyFrom" min="1" max="' + days + '" value="1" style="width:70px;height:34px;"> 日開始 <button type="button" class="btn ghost" id="dutyFill" style="height:34px;">排進去</button></div></details>' +
+      '<div class="duty-edit">';
+    for (var i = 1; i <= days; i++) {
+      var d = new Date(y, m, i), iso = calIso(d), hol = HOLIDAYS[iso];
+      h += '<span class="d' + (d.getDay() === 0 || hol ? ' sun' : '') + '">' + (m + 1) + '/' + i + '（' + '日一二三四五六'[d.getDay()] + '）' + (hol ? esc(hol[0]) : '') + '</span>' +
+        '<select data-duty="' + iso + '">' + opts(calDutyOf(iso)) + '</select>';
+    }
+    h += '</div><div class="notice" id="dutyMsg" style="display:none;margin-top:8px;"></div>' +
+      '<button type="button" class="btn" id="dutySave" style="width:100%;margin-top:6px;">儲存 ' + (m + 1) + ' 月值班</button>';
+    dlg.body.innerHTML = h;
+    var b = dlg.body;
+    b.querySelector('#dutyFill').addEventListener('click', function() {
+      var names = b.querySelector('#dutyOrder').value.split(/[、,，\s]+/).map(function(x) { return x.trim(); }).filter(Boolean);
+      if (!names.length) return;
+      names.forEach(function(n) { if (list.indexOf(n) === -1) { list.push(n); b.querySelectorAll('select[data-duty]').forEach(function(sel) { var o = document.createElement('option'); o.textContent = n; sel.appendChild(o); }); } });
+      var from = Math.max(1, Math.min(days, parseInt(b.querySelector('#dutyFrom').value, 10) || 1)), k = 0;
+      for (var i = from; i <= days; i++) {
+        var d = new Date(y, m, i); if (d.getDay() === 0) continue;
+        b.querySelector('select[data-duty="' + calIso(d) + '"]').value = names[k % names.length]; k++;
+      }
+    });
+    b.querySelector('#dutySave').addEventListener('click', function() {
+      var btn = this, duties = {};
+      b.querySelectorAll('select[data-duty]').forEach(function(sel) { if (sel.value) duties[sel.getAttribute('data-duty')] = sel.value; });
+      btn.disabled = true; btn.textContent = '儲存中…';
+      var r = calRange();
+      post(OBJ_API, 'calendarSetDuty', [auth.name, auth.code, month, duties, r.from, r.to]).then(function(res) {
+        cal.data = res; try { localStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {}
+        calRender(); dlg.close(); toast('值班表已儲存');
+      }).catch(function(err) { var mm = b.querySelector('#dutyMsg'); mm.textContent = err.message || '儲存失敗'; mm.style.display = 'block'; btn.disabled = false; btn.textContent = '儲存 ' + (m + 1) + ' 月值班'; });
+    });
+  });
+}
+function calRenderDay() {
+  var iso = cal.sel || calIso(new Date()), evs = calEventsOn(iso);
+  var d = new Date(iso + 'T00:00:00');
+  var hol = HOLIDAYS[iso];
+  var dutyNow = calDutyOf(iso);
+  $('calDay').innerHTML = '<h3>' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日（' + '日一二三四五六'[d.getDay()] + '）' + (hol ? '<span class="hol-tag">' + esc(hol[0]) + '</span>' : '') + '</h3>' +
+    (dutyNow ? '<div class="duty-line">值班：' + esc(dutyNow) + '</div>' : (d.getDay() === 0 ? '<div class="duty-line" style="color:#B3261E;">公休</div>' : '')) +
+    (evs.length ? evs.map(function(e) {
+      var info = e.kind === '行程' ? [e.place ? '地點：' + e.place : '', e.target ? '對象：' + e.target : '', e.amount ? '預期效益 ' + e.amount + ' 萬' : ''].filter(Boolean).join('｜') : '';
+      return '<div class="cal-ev" data-ev="' + esc(e.id) + '"><span class="k ' + (e.kind === '公司' ? 'co' : 'me') + '">' + (e.kind === '公司' ? '公司' : esc((calIsSec() && e.owner !== auth.name ? e.owner + '・' : '') + (e.type || '行程'))) + '</span>' +
+        '<div><div class="t">' + esc((e.time ? e.time + '　' : '') + e.title) + (e.end !== e.start ? '<span style="font-weight:400;color:var(--muted);font-size:12.5px;">（' + esc(e.start.slice(5).replace('-', '/')) + '～' + esc(e.end.slice(5).replace('-', '/')) + '）</span>' : '') + '</div>' +
+        (info ? '<div class="s">' + esc(info) + '</div>' : '') + (e.body ? '<div class="s">' + esc(e.body) + '</div>' : '') + '</div></div>';
+    }).join('') : '<div class="rem-empty">這天沒有活動或行程。</div>');
+}
+function calLoad(force) {
+  if (!auth) return;
+  if (!cal.month) { var t = new Date(); cal.month = new Date(t.getFullYear(), t.getMonth(), 1); cal.sel = calIso(t); }
+  var r = calRange(), key = r.from + '|' + r.to;
+  var ck = 'ruihe_cal_' + auth.name + '_' + key;
+  if (!force) { try { var c = JSON.parse(localStorage.getItem(ck) || 'null'); if (c) { cal.data = c; calRender(); } } catch (e) {} }
+  if (!cal.data) calRender();
+  $('calNote').textContent = '讀取中…';
+  cal.range = key;
+  post(OBJ_API, 'calendarGet', [auth.name, auth.code, r.from, r.to]).then(function(res) {
+    if (cal.range !== key) return;
+    cal.data = res; $('calNote').textContent = '';
+    try { localStorage.setItem(ck, JSON.stringify(res)); } catch (e) {}
+    calRender();
+  }).catch(function(err) { $('calNote').textContent = '行事曆讀取失敗：' + (err.message || '連不上系統'); });
+}
+
+// 我的行程：大部分用點的（115/10/20）。欄位 id 跟原本一樣（cfStart、cfType…），點按鈕就把值填進去，儲存的程式不用改
+var CAL_TIMES = ['上午', '中午', '下午', '晚上', '09:00', '10:00', '11:00', '13:30', '14:00', '15:00', '16:00'];
+var CAL_AMOUNTS = ['500', '1000', '2000', '3000', '5000', '10000'];
+function calRecent(field) {
+  var seen = {}, out = [];
+  ((cal.data && cal.data.events) || []).filter(function(e) { return e.kind === '行程' && e.owner === auth.name && e[field]; })
+    .sort(function(a, b) { return String(b.start).localeCompare(String(a.start)); })
+    .forEach(function(e) { var v = String(e[field]).trim(); if (v && !seen[v] && out.length < 6) { seen[v] = 1; out.push(v); } });
+  return out;
+}
+function calChips(group, list, cur, fmt) {
+  return '<div class="cf-chips" data-group="' + group + '">' + list.map(function(v) {
+    return '<button type="button" class="cf-chip' + (String(cur) === String(v) ? ' on' : '') + '" data-v="' + esc(v) + '">' + esc(fmt ? fmt(v) : v) + '</button>';
+  }).join('') + '</div>';
+}
+function calTripFormHtml(ev, types, isNew) {
+  var t = new Date(), iso = function(n) { var d = new Date(t.getFullYear(), t.getMonth(), t.getDate() + n); return calIso(d); };
+  var days = [[iso(0), '今天'], [iso(1), '明天'], [iso(2), '後天']];
+  var places = calRecent('place'), targets = calRecent('target');
+  var money = function(v) { return Number(v) >= 10000 ? (Number(v) / 10000) + ' 億' : v + ' 萬'; };
+  return '<div class="cal-form trip-form">' +
+    (!isNew && ev.owner !== auth.name ? '<div class="note" style="margin-bottom:8px;">' + esc(ev.owner) + ' 的行程</div>' : '') +
+    '<label class="required">行程類型</label>' + calChips('type', types, ev.type) + '<input type="hidden" id="cfType" value="' + esc(ev.type || '') + '">' +
+    '<label class="required" style="margin-top:10px;">日期</label>' +
+    '<div class="cf-chips" data-group="day">' + days.map(function(d) { return '<button type="button" class="cf-chip' + (ev.start === d[0] ? ' on' : '') + '" data-v="' + d[0] + '">' + d[1] + '</button>'; }).join('') +
+    '<input type="date" id="cfStart" value="' + esc(ev.start) + '" style="width:auto;flex:0 0 auto;"></div><input type="hidden" id="cfEnd" value="' + esc(ev.end && ev.end !== ev.start ? ev.end : '') + '">' +
+    '<label style="margin-top:10px;">時間</label>' + calChips('time', CAL_TIMES, ev.time) + '<input type="hidden" id="cfTime" value="' + esc(ev.time || '') + '">' +
+    '<label style="margin-top:10px;">對象（客戶、地主或物件）</label>' + (targets.length ? calChips('target', targets, ev.target) : '') +
+    '<input type="text" id="cfTarget" maxlength="80" placeholder="點上面的，或輸入新的" value="' + esc(ev.target || '') + '">' +
+    '<label style="margin-top:10px;">地點</label>' + (places.length ? calChips('place', places, ev.place) : '') +
+    '<input type="text" id="cfPlace" maxlength="80" placeholder="點上面的，或輸入新的" value="' + esc(ev.place || '') + '">' +
+    '<label style="margin-top:10px;">預期效益開發金額</label>' + calChips('amount', CAL_AMOUNTS, ev.amount, money) +
+    '<input type="text" inputmode="decimal" id="cfAmount" placeholder="其他金額（萬）" value="' + esc(ev.amount || '') + '" style="max-width:12em;">' +
+    '<details style="margin-top:10px;"' + (ev.title || ev.body ? ' open' : '') + '><summary style="cursor:pointer;color:var(--brand);font-weight:700;">標題、補充說明（可以不填）</summary>' +
+      '<label style="margin-top:8px;">標題</label><input type="text" id="cfTitle" maxlength="80" placeholder="不填就用「行程類型｜對象」" value="' + esc(ev.title || '') + '">' +
+      '<label style="margin-top:8px;">補充說明</label><textarea id="cfBody" rows="3">' + esc(ev.body || '') + '</textarea></details>' +
+    '<div class="notice" id="cfMsg" style="display:none;margin-top:8px;"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:12px;"><button type="button" class="btn" id="cfSave" style="flex:1;">儲存</button>' +
+    (!isNew ? '<button type="button" class="btn ghost" id="cfDel" style="color:#B3261E;">刪除</button>' : '') + '</div></div>';
+}
+function calTripBind(b) {
+  var target = { type: 'cfType', day: 'cfStart', time: 'cfTime', target: 'cfTarget', place: 'cfPlace', amount: 'cfAmount' };
+  b.addEventListener('click', function(e) {
+    var c = e.target.closest('.cf-chip'); if (!c) return;
+    var g = c.parentNode.getAttribute('data-group'), inp = b.querySelector('#' + target[g]);
+    var on = !c.classList.contains('on');
+    [].forEach.call(c.parentNode.querySelectorAll('.cf-chip'), function(x) { x.classList.remove('on'); });
+    if (on || g === 'type' || g === 'day') { c.classList.add('on'); inp.value = c.getAttribute('data-v'); } else inp.value = '';
+  });
+  // 自己輸入的時候，取消上面按鈕的選取
+  ['cfTarget', 'cfPlace', 'cfAmount', 'cfStart'].forEach(function(id) {
+    var inp = b.querySelector('#' + id); if (!inp) return;
+    inp.addEventListener('input', function() {
+      var grp = inp.parentNode.querySelector('.cf-chips') || inp.previousElementSibling;
+      var box = id === 'cfStart' ? inp.parentNode : (inp.previousElementSibling && inp.previousElementSibling.classList.contains('cf-chips') ? inp.previousElementSibling : null);
+      if (box) [].forEach.call(box.querySelectorAll('.cf-chip'), function(x) { x.classList.toggle('on', x.getAttribute('data-v') === inp.value); });
+    });
+  });
+}
+function calEdit(ev, kind) {
+  var isNew = !ev, sec = calIsSec();
+  ev = ev || { kind: kind, start: cal.sel || calIso(new Date()), end: '', time: '', title: '', body: '', type: '', place: '', target: '', amount: '' };
+  var types = (cal.data && cal.data.types) || CAL_TYPES;
+  var isTrip = ev.kind === '行程';
+  var dlg = RuiheMatch.showModal(isNew ? (ev.kind === '公司' ? '新增公司活動' : '新增我的行程') : (ev.canEdit ? '修改' : (ev.kind === '公司' ? '公司活動' : '行程')),
+    ev.canEdit === false ? ('<div class="cal-ev" style="cursor:default;"><div><div class="t">' + esc((ev.time ? ev.time + '　' : '') + ev.title) + '</div><div class="s">' + esc(ev.start + (ev.end !== ev.start ? ' ～ ' + ev.end : '')) + '</div>' + (ev.kind === '行程' ? '<div class="s">' + esc([ev.type, ev.place ? '地點：' + ev.place : '', ev.target ? '對象：' + ev.target : '', ev.amount ? '預期效益 ' + ev.amount + ' 萬' : ''].filter(Boolean).join('｜')) + '</div>' : '') + (ev.body ? '<div class="s" style="margin-top:6px;color:var(--ink);">' + esc(ev.body) + '</div>' : '') + '</div></div>') :
+    isTrip ? calTripFormHtml(ev, types, isNew) : ('<div class="cal-form">' +
+      (!isNew && ev.kind === '行程' && ev.owner !== auth.name ? '<div class="note" style="margin-bottom:8px;">' + esc(ev.owner) + ' 的行程</div>' : '') +
+      '<label class="required">日期</label><input type="date" id="cfStart" value="' + esc(ev.start) + '">' +
+      '<label style="margin-top:8px;">結束日期（跨好幾天才填）</label><input type="date" id="cfEnd" value="' + esc(ev.end && ev.end !== ev.start ? ev.end : '') + '">' +
+      (isTrip ? '<label class="required" style="margin-top:8px;">行程類型</label><select id="cfType"><option value="">請選擇</option>' + types.map(function(t) { return '<option' + (t === ev.type ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') + '</select>' : '') +
+      '<label style="margin-top:8px;">時間</label><input type="text" id="cfTime" maxlength="30" placeholder="例：14:00、下午" value="' + esc(ev.time) + '">' +
+      '<label class="required" style="margin-top:8px;">標題</label><input type="text" id="cfTitle" maxlength="80" value="' + esc(ev.title) + '">' +
+      (isTrip ? '<label style="margin-top:8px;">地點</label><input type="text" id="cfPlace" maxlength="80" placeholder="例：大雅區中清路" value="' + esc(ev.place || '') + '">' +
+        '<label style="margin-top:8px;">對象（客戶、地主或物件）</label><input type="text" id="cfTarget" maxlength="80" value="' + esc(ev.target || '') + '">' +
+        '<label style="margin-top:8px;">預期效益開發金額（萬）</label><input type="text" inputmode="decimal" id="cfAmount" placeholder="例：3000" value="' + esc(ev.amount || '') + '">' : '') +
+      '<label style="margin-top:8px;">內容</label><textarea id="cfBody" rows="3">' + esc(ev.body) + '</textarea>' +
+      '<div class="notice" id="cfMsg" style="display:none;margin-top:8px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;"><button type="button" class="btn" id="cfSave" style="flex:1;">儲存</button>' +
+      (!isNew ? '<button type="button" class="btn ghost" id="cfDel" style="color:#B3261E;">刪除</button>' : '') + '</div></div>'));
+  var b = dlg.body;
+  if (ev.canEdit === false) return;
+  if (isTrip) calTripBind(b);
+  var r = calRange();
+  var done = function(res) { cal.data = res; try { localStorage.setItem('ruihe_cal_' + auth.name + '_' + r.from + '|' + r.to, JSON.stringify(res)); } catch (e) {} calRender(); dlg.close(); };
+  var fail = function(btn, txt) { return function(err) { var m = b.querySelector('#cfMsg'); m.textContent = err.message || '儲存失敗'; m.style.display = 'block'; btn.disabled = false; btn.textContent = txt; }; };
+  b.querySelector('#cfSave').addEventListener('click', function() {
+    var btn = this; btn.disabled = true; btn.textContent = '儲存中…';
+    var data = { id: ev.id || '', kind: ev.kind, start: b.querySelector('#cfStart').value, end: b.querySelector('#cfEnd').value, time: b.querySelector('#cfTime').value,
+      title: b.querySelector('#cfTitle').value, body: b.querySelector('#cfBody').value, from: r.from, to: r.to,
+      type: b.querySelector('#cfType') ? b.querySelector('#cfType').value : '', place: b.querySelector('#cfPlace') ? b.querySelector('#cfPlace').value : '',
+      target: b.querySelector('#cfTarget') ? b.querySelector('#cfTarget').value : '', amount: b.querySelector('#cfAmount') ? b.querySelector('#cfAmount').value : '' };
+    post(OBJ_API, 'calendarSave', [auth.name, auth.code, data]).then(function(res) { done(res); toast('已儲存'); }).catch(fail(btn, '儲存'));
+  });
+  var del = b.querySelector('#cfDel');
+  if (del) del.addEventListener('click', function() {
+    if (!confirm('確定刪除「' + ev.title + '」？')) return;
+    var btn = this; btn.disabled = true;
+    post(OBJ_API, 'calendarDelete', [auth.name, auth.code, ev.id, r.from, r.to]).then(function(res) { done(res); toast('已刪除'); }).catch(fail(btn, '刪除'));
+  });
+}
+$('calGrid').addEventListener('click', function(e) {
+  var c = e.target.closest('[data-day]'); if (!c) return;
+  cal.sel = c.getAttribute('data-day');
+  var d = new Date(cal.sel + 'T00:00:00');
+  if (d.getMonth() !== cal.month.getMonth()) { cal.month = new Date(d.getFullYear(), d.getMonth(), 1); cal.data = null; calLoad(); } else calRender();
+});
+$('calDay').addEventListener('click', function(e) {
+  var x = e.target.closest('[data-ev]'); if (!x) return;
+  var ev = ((cal.data && cal.data.events) || []).filter(function(v) { return v.id === x.getAttribute('data-ev'); })[0];
+  if (ev) calEdit(ev);
+});
+$('calPrev').addEventListener('click', function() { cal.month = new Date(cal.month.getFullYear(), cal.month.getMonth() - 1, 1); cal.data = null; calLoad(); });
+$('calNext').addEventListener('click', function() { cal.month = new Date(cal.month.getFullYear(), cal.month.getMonth() + 1, 1); cal.data = null; calLoad(); });
+$('calToday').addEventListener('click', function() { var t = new Date(); cal.month = new Date(t.getFullYear(), t.getMonth(), 1); cal.sel = calIso(t); cal.data = null; calLoad(); });
+$('calAddMine').addEventListener('click', function() { calEdit(null, '行程'); });
+$('calAddCo').addEventListener('click', function() { calEdit(null, '公司'); });
+
+// ===== 秘書、管理員的待辦：契變書待收件、調謄本待申請（115/10/19） =====
+function loadSecReminders() {
+  var sec = calIsSec();
+  $('remCcP').hidden = !sec; $('remRegP').hidden = !sec; $('remDelP').hidden = !sec;
+  if (!sec || !auth) return;
+  post(OBJ_API, 'adminContractChanges', [auth.name, auth.code]).then(function(res) {
+    var list = (res.records || []).filter(function(r) { return !r['秘書收件']; });
+    setBadge('cntCcP', list.length, 'warn');
+    $('bodyCcP').innerHTML = list.length ? list.slice(0, 8).map(function(r) {
+      return '<div class="rem-row"><div class="nm">' + esc(r['案名']) + '</div><div class="meta">' + esc(r['填寫人'] + '｜契變書 ' + r['契變書編號'] + '｜' + r['契變日期']) + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=cc">去收件</a></div></div>';
+    }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html?tab=cc">到後台管理看全部</a></div>' : '') : '<div class="rem-empty">沒有待收件的契變書。</div>';
+  }).catch(function(err) { setBadge('cntCcP', '!', 'hot'); $('bodyCcP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
+  post(OBJ_API, 'deleteRequestList', [auth.name, auth.code]).then(function(res) {
+    var list = (res.requests || []).filter(function(r) { return r['狀態'] === '待審核'; });
+    setBadge('cntDelP', list.length, 'warn');
+    $('bodyDelP').innerHTML = list.length ? list.slice(0, 8).map(function(r) {
+      return '<div class="rem-row"><div class="nm">' + esc(r['案名']) + '</div><div class="meta">' + esc(r['申請人'] + '｜' + r['種類'] + '｜原因：' + r['原因']) + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=del">去審核</a></div></div>';
+    }).join('') : '<div class="rem-empty">沒有待審核的刪除申請。</div>';
+  }).catch(function(err) { setBadge('cntDelP', '!', 'hot'); $('bodyDelP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
+  post(REG_API, 'regListRequests', [auth.name, auth.code]).then(function(reg) {
+    var si = reg.statusIdx, cols = reg.columns || [];
+    var ci = function(l) { var i = cols.indexOf(l); if (i !== -1) return i; for (var k = 0; k < cols.length; k++) if (String(cols[k]).indexOf(l) !== -1 && k !== reg.noteIdx && k !== si) return k; return -1; };
+    var v = function(r, l) { var i = ci(l); return i === -1 ? '' : (r.values[i] || ''); };
+    var list = (reg.rows || []).filter(function(r) { return !r.values[si] || r.values[si] === '待申請'; });
+    setBadge('cntRegP', list.length, 'warn');
+    $('bodyRegP').innerHTML = list.length ? list.slice(0, 8).map(function(r) {
+      return '<div class="rem-row"><div class="nm">' + esc(v(r, '縣市') + v(r, '鄉鎮') + v(r, '段')) + '</div><div class="meta">' + esc(v(r, '業務名稱') + '｜' + String(r.ts || '').split(' ')[0] + '｜' + v(r, '謄本')) + '</div><div class="go"><a class="link-btn" href="secretary.html">去處理</a></div></div>';
+    }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html">到後台管理看全部</a></div>' : '') : '<div class="rem-empty">沒有待申請的謄本。</div>';
+  }).catch(function(err) { setBadge('cntRegP', '!', 'hot'); $('bodyRegP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
+}
+var _loadRemindersOrig = loadReminders;
+loadReminders = function(manual) { _loadRemindersOrig(manual); calLoad(!!manual); loadSecReminders(); };
+if (auth && !$('portal').hidden) { calLoad(); loadSecReminders(); }
+</script>
+
+<script>
+// 公告：點一下展開／收起
+document.getElementById('annBox').addEventListener('click', function(e) {
+  if (e.target.closest('a')) return;
+  var a = e.target.closest('.ann'); if (!a || a.classList.contains('short')) return;
+  a.classList.toggle('open'); a.setAttribute('aria-expanded', String(a.classList.contains('open')));
+});
+document.getElementById('annBox').addEventListener('keydown', function(e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('ann')) { e.preventDefault(); e.target.click(); } });
+</script>
+
+</body>
+</html>
