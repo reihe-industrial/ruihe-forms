@@ -1,6 +1,6 @@
 // ============================================================
-// 瑞禾業務系統：DM（給客戶看）和業務銷講可以放哪些內容（115/11/09）
-// 物件內容頁（detail.html）照這份產生 DM、業務銷講；後台管理「系統設定」用這份列出勾選清單。
+// 瑞禾業務系統：DM（給客戶看）、業務銷講、物件明細頁可以放哪些內容（115/11/09）
+// 物件內容頁（detail.html）照這份產生 DM、業務銷講，也照這份決定明細頁顯示哪些項目；後台管理「系統設定」用這份列出勾選清單。
 // 管理員在後台勾的結果存在後端（outputConfigGet／adminSaveOutputConfig）；沒設定過就用這裡的預設值。
 // dm: true＝DM 預設放；dm: false＝DM 預設不放但可以勾；dmNo: true＝DM 不能放（客戶不能看的內部資料）
 // ============================================================
@@ -32,37 +32,41 @@
   // 業務銷講預設放「委託與狀態」裡的這幾個（其他委託與狀態的欄位預設不放）
   var TALK_DEAL_ON = ['契約編號', '委託種類', '使用狀態', '主要用途'];
   // 不是欄位的項目
+  // page：物件明細頁（物件內容頁）預設顯示；pageNo：物件明細頁沒有這一項；talkNo：業務銷講沒有這一項（115/11/09）
   var SPECIAL = [
-    { id: '__photos', label: '照片', dm: true, talk: true },
-    { id: '__map', label: '位置圖（地圖）', dm: true, talk: false },
-    { id: '特色說明', label: '特色說明', dm: true, talk: true },
-    { id: '__road', label: '位置（只寫到路名）', dm: true, talk: false },
-    { id: '__addrFull', label: '詳細地址', dmNo: true, talk: true },
-    { id: '__agents', label: '負責業務和電話', dmNo: true, talk: true },
-    { id: '__gmap', label: 'Google 地圖網址', dmNo: true, talk: true },
-    { id: '其他備註說明', label: '其他備註說明', dmNo: true, talk: true },
-    { id: '__checks', label: '帶看前確認清單', dmNo: true, talk: true },
-    { id: '__notes', label: '現場紀錄（空白線）', dmNo: true, talk: true }
+    { id: '__photos', label: '照片', dm: true, talk: true, page: true },
+    { id: '__map', label: '位置圖（地圖）', dm: true, talk: false, page: true },
+    { id: '特色說明', label: '特色說明', dm: true, talk: true, page: true },
+    { id: '__road', label: '位置（只寫到路名）', dm: true, talk: false, pageNo: true },
+    { id: '__addrFull', label: '詳細地址', dmNo: true, talk: true, page: true },
+    { id: '__agents', label: '負責業務和電話', dmNo: true, talk: true, page: true },
+    { id: '__owner', label: '委託人資料（只有這件的業務、秘書、管理員看得到）', dmNo: true, talkNo: true, page: true },
+    { id: '__gmap', label: 'Google 地圖網址', dmNo: true, talk: true, page: true },
+    { id: '其他備註說明', label: '其他備註說明', dmNo: true, talk: true, page: true },
+    { id: '__rest', label: '其他資料（上面沒分到組的欄位）', dmNo: true, talkNo: true, page: true },
+    { id: '__checks', label: '帶看前確認清單', dmNo: true, talk: true, pageNo: true },
+    { id: '__notes', label: '現場紀錄（空白線）', dmNo: true, talk: true, pageNo: true }
   ];
   function labelText(l) {
     return l === '__建物合計' ? '建物面積合計' : l === '__屋齡' ? '屋齡' : String(l).replace(/\((廠房|土地|房屋)\)$/, '').replace(/\(m²\)$/, '');
   }
   // 勾選清單：[{ group, items: [{ id, label, dmNo, dmDef, talkDef }] }]
   function catalog() {
-    var out = [{ group: '一般', items: SPECIAL.map(function(s) { return { id: s.id, label: s.label, dmNo: !!s.dmNo, dmDef: !!s.dm && !s.dmNo, talkDef: !!s.talk }; }) }];
+    var out = [{ group: '一般', items: SPECIAL.map(function(s) { return { id: s.id, label: s.label, dmNo: !!s.dmNo, dmDef: !!s.dm && !s.dmNo, talkNo: !!s.talkNo, talkDef: !!s.talk && !s.talkNo, pageNo: !!s.pageNo, pageDef: !!s.page && !s.pageNo }; }) }];
     SECTIONS.forEach(function(sec) {
       out.push({ group: sec.title, items: sec.labels.map(function(l) {
         var dmNo = DM_NO_SECTIONS.indexOf(sec.id) !== -1 || DM_NO_LABELS.indexOf(l) !== -1;
         var dmDef = !dmNo && sec.id !== 'deal' && sec.id !== 'presale' && DM_OFF_LABELS.indexOf(l) === -1;
         if (sec.id === 'deal' && (l === '使用狀態' || l === '主要用途')) dmDef = true;
         var talkDef = sec.id === 'deal' ? TALK_DEAL_ON.indexOf(l) !== -1 : true;
-        return { id: l, label: labelText(l), dmNo: dmNo, dmDef: dmDef, talkDef: talkDef };
+        // 物件明細頁：委託與狀態裡的合約到期、狀態類欄位照原本顯示；全部預設顯示
+        return { id: l, label: labelText(l), dmNo: dmNo, dmDef: dmDef, talkDef: talkDef, pageDef: true };
       }) });
     });
     return out;
   }
   function allItems() { var a = []; catalog().forEach(function(g) { a = a.concat(g.items); }); return a; }
-  // cfg：後端存的 { dm: [...], talk: [...] }（沒設定過是 null）；kind：'dm' 或 'talk'
+  // cfg：後端存的 { dm: [...], talk: [...], page: [...] }（沒設定過是 null）；kind：'dm'、'talk' 或 'page'
   // 回傳一個判斷函式 on(id)
   function chooser(cfg, kind) {
     var items = allItems(), map = {};
@@ -71,9 +75,11 @@
     return function(id) {
       var it = map[id];
       if (kind === 'dm' && it && it.dmNo) return false; // 客戶不能看的，設定了也不放
+      if (kind === 'talk' && it && it.talkNo) return false;
+      if (kind === 'page' && it && it.pageNo) return false;
       if (list) return list.indexOf(id) !== -1;
-      if (!it) return false;
-      return kind === 'dm' ? it.dmDef : it.talkDef;
+      if (!it) return kind === 'page'; // 物件明細頁：清單裡沒有的欄位照樣顯示
+      return kind === 'dm' ? it.dmDef : kind === 'talk' ? it.talkDef : it.pageDef;
     };
   }
   window.RuiheOutputs = { SECTIONS: SECTIONS, catalog: catalog, chooser: chooser, labelText: labelText };

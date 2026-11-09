@@ -155,7 +155,7 @@
     <div class="lb-bar"><button type="button" id="lbPrev">上一張</button><button type="button" id="lbNext">下一張</button><button type="button" id="lbClose">關閉</button></div>
   </div>
 
-<script src="lib/outputs.js?v=20261109a"></script>
+<script src="lib/outputs.js?v=20261109b"></script>
 <script src="lib/leaflet.js"></script>
 <script src="lib/match.js?v=20261021c"></script>
 <script src="lib/dm.js?v=20261109b"></script>
@@ -289,21 +289,23 @@ function unitLines() {
 
 // ---------------- 畫面 ----------------
 function render() {
+  // 物件明細頁要顯示哪些項目：管理員在後台管理「系統設定」勾選；沒設定過全部顯示（115/11/09）
+  var PG = RuiheOutputs.chooser(OUT.cfg, 'page');
   var types = [D.type].concat(F('建物類別') && F('建物類別') !== D.type ? [F('建物類別')] : []).concat(F('土地類型') ? [F('土地類型')] : []);
-  var place = [F('案件坐落'), F('詳細地址')].filter(Boolean);
+  var place = [F('案件坐落'), PG('__addrFull') ? F('詳細地址') : ''].filter(Boolean);
   if (place.length === 2 && F('詳細地址').indexOf(F('案件坐落')) === 0) place = [F('詳細地址')];
   var subLines = [];
-  subLines.push(esc(place.join('　')) + (F('地段') ? '（' + esc(F('地段')) + '）' : ''));
+  subLines.push(esc(place.join('　')) + (F('地段') && PG('地段') ? '（' + esc(F('地段')) + '）' : ''));
   var l2 = [];
-  if (F('契約編號')) l2.push('契約編號 <b>' + esc(F('契約編號')) + '</b>');
+  if (F('契約編號') && PG('契約編號')) l2.push('契約編號 <b>' + esc(F('契約編號')) + '</b>');
   if (l2.length) subLines.push(l2.join('　｜　'));
   var l3 = [];
-  if (F('關聯物件')) l3.push('關聯物件：' + esc(F('關聯物件')));
+  if (F('關聯物件') && PG('關聯物件')) l3.push('關聯物件：' + esc(F('關聯物件')));
   if (l3.length) subLines.push(l3.join('　｜　'));
 
   var tags = types.filter(Boolean).map(function(t, i) { return '<span class="' + (i === 0 ? typeClass(t) : '') + '">' + esc(t) + '</span>'; }).join('') +
     (rsText() ? '<span>' + esc(rsText()) + '</span>' : '') +
-    (F('委託案件種類') ? '<span class="' + (F('委託案件種類') === '委託' ? 'ok' : 'warn') + '">' + esc(F('委託案件種類')) + (F('委託類別') ? '・' + esc(F('委託類別')) : '') + '</span>' : '') +
+    (F('委託案件種類') && PG('委託案件種類') ? '<span class="' + (F('委託案件種類') === '委託' ? 'ok' : 'warn') + '">' + esc(F('委託案件種類')) + (F('委託類別') ? '・' + esc(F('委託類別')) : '') + '</span>' : '') +
     (D.residential ? '<span>住商</span>' : '');
   var units = unitLines();
   var h = '';
@@ -316,22 +318,28 @@ function render() {
 
 
   var secs = SECTIONS.map(function(s) {
-    var body = kvHtml(s.labels); return body ? '<div class="card"><h3>' + esc(s.title) + '</h3>' + body + '</div>' : '';
+    var body = kvHtml(s.labels.filter(PG)); return body ? '<div class="card"><h3>' + esc(s.title) + '</h3>' + body + '</div>' : '';
   }).filter(Boolean);
   // 115/11/04 緊湊：物件資訊各組卡片兩欄瀑布排（手機一欄）
   h += '<div class="secs">' + secs.join('') + '</div>';
 
   // 位置：接在物件資訊下面（115/11/04）
-  h += '<div class="card"><h3>位置</h3>' + (D.coord ? '<div id="map"></div><div class="muted" style="margin-top:6px;"><a href="map.html?k=' + encodeURIComponent(D.key) + '">在物件地圖上看附近物件</a>　｜　<a href="https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a></div>' : '<div class="muted">還沒有座標。</div>') + '</div>';
+  var showMap = PG('__map'), showG = PG('__gmap');
+  if (showMap || showG) {
+    var links = [];
+    if (D.coord && showMap) links.push('<a href="map.html?k=' + encodeURIComponent(D.key) + '">在物件地圖上看附近物件</a>');
+    if (D.coord && showG) links.push('<a href="https://www.google.com/maps?q=' + D.coord[0] + ',' + D.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a>');
+    h += '<div class="card"><h3>位置</h3>' + (D.coord ? (showMap ? '<div id="map"></div>' : '') + '<div class="muted"' + (showMap ? ' style="margin-top:6px;"' : '') + '>' + links.join('　｜　') + '</div>' : '<div class="muted">還沒有座標。</div>') + '</div>';
+  }
 
   var h0 = h; h = '';
-  if (F('其他備註說明')) h += '<div class="card"><h3>其他備註說明</h3><div class="feat">' + esc(F('其他備註說明')) + '</div></div>';
+  if (F('其他備註說明') && PG('其他備註說明')) h += '<div class="card"><h3>其他備註說明</h3><div class="feat">' + esc(F('其他備註說明')) + '</div></div>';
 
   // 負責業務
   var ratio = { };
   if (F('主要業務人員比例')) ratio.main = F('主要業務人員比例');
   if (F('次要業務人員比例')) ratio.sub = F('次要業務人員比例');
-  h += '<div class="card"><h3>負責業務</h3><div class="agents">' + (D.agents || []).map(function(a) {
+  if (PG('__agents')) h += '<div class="card"><h3>負責業務</h3><div class="agents">' + (D.agents || []).map(function(a) {
     var r = a.main ? ratio.main : ratio.sub;
     return '<div class="ag"><b>' + esc(a.name) + '</b>' + (D.residential ? '' : (a.main ? '（主要）' : '（次要）')) +
       (a.phone ? '<div><a href="tel:' + esc(a.phone.replace(/[^\d+]/g, '')) + '">' + esc(a.phone) + '</a></div>' : '') +
@@ -339,7 +347,7 @@ function render() {
   }).join('') + '</div></div>'; // 中人比例一律不顯示（115/11/04）
 
   // 委託人（只有這件的業務、秘書、管理員；其他人整段不出現）
-  if (D.canSeeOwner) {
+  if (D.canSeeOwner && PG('__owner')) {
     var ob = OWNER.map(function(o, i) { var b = kvHtml(o[1], 'one'); return b ? '<div>' + (i ? '<div class="muted" style="font-weight:700;margin-top:4px;">' + esc(o[0]) + '</div>' : '') + b + '</div>' : ''; }).filter(Boolean);
     if (ob.length) h += '<div class="card owner-box"><h3>委託人</h3>' + ob.join('') + '</div>';
   }
@@ -347,22 +355,22 @@ function render() {
   // 其他資料（上面沒列到的欄位）
   var used = usedLabels();
   var rest = (D.order || []).filter(function(l) { return used.indexOf(l) === -1 && F(l); });
-  if (rest.length) h += '<div class="card"><h3>其他資料</h3>' + kvHtml(rest) + '</div>';
+  if (rest.length && PG('__rest')) h += '<div class="card"><h3>其他資料</h3>' + kvHtml(rest) + '</div>';
 
   h = h0 + (h ? '<div class="secs">' + h + '</div>' : '');
 
   // 特色說明放在資料下面、照片上面（115/11/04）
-  if (F('特色說明')) h += '<div class="card"><h3>特色說明</h3><div class="feat">' + esc(F('特色說明')) + '</div></div>';
+  if (F('特色說明') && PG('特色說明')) h += '<div class="card"><h3>特色說明</h3><div class="feat">' + esc(F('特色說明')) + '</div></div>';
 
   // 照片放最下面（115/11/04）
-  h += '<div class="card"><h3>照片</h3><div id="photoBox"><div class="muted">照片讀取中…</div></div></div>';
+  if (PG('__photos')) h += '<div class="card"><h3>照片</h3><div id="photoBox"><div class="muted">照片讀取中…</div></div></div>';
 
   $('page').innerHTML = h;
   $('crumbTail').textContent = '　／　' + (D.type || '') + '　／　' + (F('案名') || '');
   document.title = (F('案名') || '物件內容') + '｜瑞禾業務系統';
   $('dmBtn').addEventListener('click', openDM);
   $('tourBtn').addEventListener('click', openTour);
-  if (D.coord) initMap();
+  if (D.coord && showMap) initMap();
   renderPhotos();
 }
 
@@ -417,11 +425,11 @@ document.addEventListener('keydown', function(e) {
 // ---------------- DM（給客戶看）、業務銷講：同一種表格排版（115/11/09 改版） ----------------
 // 要放哪些內容：管理員在後台管理「系統設定」勾選（outputConfigGet）；沒設定過用 lib/outputs.js 的預設值。
 var OUT = { cfg: null, requester: null, company: null, loaded: false };
-var OUT_P = null;
+var OUT_P = null, OUT_P0 = null;
 function loadOutputConfig_() {
-  if (!OUT_P) OUT_P = runServer('outputConfigGet', auth.name, auth.code).then(function(r) {
+  if (!OUT_P) OUT_P = (OUT_P0 = runServer('outputConfigGet', auth.name, auth.code).then(function(r) {
     OUT.cfg = r.cfg || null; OUT.requester = r.requester || null; OUT.company = r.company || null; OUT.loaded = true; return OUT;
-  }).catch(function() { OUT.loaded = true; return OUT; }).then(function() {
+  }).catch(function() { OUT.loaded = true; return OUT; })).then(function() {
     // 後端還沒部署新版（沒有 outputConfigGet）時，公司、經紀人資訊改從系統設定讀，DM 上才不會空白
     if (OUT.company && OUT.company.brokerName !== undefined) return OUT;
     return runServer('getPublicSettings', auth.name, auth.code).then(function(r) {
@@ -615,7 +623,9 @@ function openTour() {
   if (!KEY) { $('page').innerHTML = '<div class="err">網址少了物件編號，請從物件總表點案名進來。</div>'; return; }
   loadPhotos();
   loadOutputConfig_();
-  runServer('listingDetailGet', auth.name, auth.code, KEY).then(function(res) {
+  // 等明細和顯示設定都到了才畫（兩個同時讀）
+  Promise.all([runServer('listingDetailGet', auth.name, auth.code, KEY), OUT_P0]).then(function(rs) {
+    var res = rs[0];
     D = res; render(); if (PH.loaded) renderPhotos(PH_NOTE);
   }).catch(function(err) {
     if (err.fromServer && /通關碼|姓名|登入/.test(err.message)) { goHome_(); return; }
