@@ -237,7 +237,7 @@ function F(l) { return D && D.fields[l] != null ? String(D.fields[l]) : ''; }
 function areaText(l) {
   var v = F(l); if (!v) return '';
   if (AREA_M2.indexOf(l) === -1) return v;
-  var n = num(v); if (n === 0) return ''; return n === null ? v : r2(n) + ' m²（' + r2(n / PING) + ' 坪）';
+  var n = num(v); if (n === 0) return '-'; return n === null ? v : r2(n) + ' m²（' + r2(n / PING) + ' 坪）';
 }
 function bldTotal() {
   var s = 0, any = false;
@@ -245,7 +245,10 @@ function bldTotal() {
   if (any && s > 0) return s / PING;
   var p = num(F('主建物面積(坪)')); return p;
 }
+// 115/11/09：資料是 0（等於沒有資訊）顯示「-」，不顯示 0
+function isZeroish_(v) { return /^\s*0+(\.0+)?\s*(m²|㎡|平方公尺|坪|米|公尺|m|%|％|元|萬|萬元|個|位|層|樓|F|戶|台|部)?\s*$/i.test(String(v == null ? '' : v)); }
 function valueText(l) {
+  if (l.charAt(0) !== '_' && F(l) && isZeroish_(F(l))) return '-';
   if (l === '__建物合計') { var b = bldTotal(); return b ? r2(b) + ' 坪（主建物＋附屬＋共有）' : ''; }
   if (l === '__屋齡') {
     var d = parseDate(F('建築完成日')); if (!d) return '';
@@ -418,7 +421,16 @@ var OUT_P = null;
 function loadOutputConfig_() {
   if (!OUT_P) OUT_P = runServer('outputConfigGet', auth.name, auth.code).then(function(r) {
     OUT.cfg = r.cfg || null; OUT.requester = r.requester || null; OUT.company = r.company || null; OUT.loaded = true; return OUT;
-  }).catch(function() { OUT.loaded = true; return OUT; });
+  }).catch(function() { OUT.loaded = true; return OUT; }).then(function() {
+    // 後端還沒部署新版（沒有 outputConfigGet）時，公司、經紀人資訊改從系統設定讀，DM 上才不會空白
+    if (OUT.company && OUT.company.brokerName !== undefined) return OUT;
+    return runServer('getPublicSettings', auth.name, auth.code).then(function(r) {
+      var v = (r && r.values) || {};
+      OUT.company = { name: v.brokerageName || (OUT.company && OUT.company.name) || '瑞禾不動產經紀股份有限公司', license: v.brokerageLicense || '',
+        phone: v.companyPhone || '', addr: v.companyAddr || '', brokerName: v.brokerName || '', brokerLicense: v.brokerLicense || '' };
+      return OUT;
+    }).catch(function() { return OUT; });
+  });
   return OUT_P;
 }
 var CHECKS = {
@@ -443,7 +455,7 @@ var SHEET_CSS = 'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif
   '.kv dt{width:118px;color:#66776c;flex:0 0 auto}.kv dd{margin:0;white-space:pre-line}.kv a{color:inherit;text-decoration:none}' +
   '.txt{white-space:pre-line}.chk div{padding:3px 0}.lines div{border-bottom:1px solid #bbb;height:26px}' +
   '.map img{width:100%;border-radius:4px;display:block}' +
-  '.contact{margin-top:14px;border-top:3px solid #1e4a32;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;font-size:13px}.contact b{font-size:14px}.contact .broker{grid-column:1/-1;color:#66776c;font-size:12px}' +
+  '.contact{margin-top:14px;border-top:3px solid #1e4a32;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;font-size:13px}.contact b{font-size:13.5px}.contact .full{grid-column:1/-1}' +
   '@media print{body{padding:0;background:#fff}.bar{display:none}#sheet{max-width:none;padding:0}@page{size:A4;margin:10mm}h3{break-after:avoid}.kv>div{break-inside:avoid}.ph img{break-inside:avoid}}';
 // 規格區塊：kind＝'dm' 或 'talk'
 function specBlocks_(on, kind) {
@@ -531,10 +543,14 @@ function dmHtml(photos, mapUrl) {
     (on('特色說明') && F('特色說明') ? '<h3>物件特色</h3><div class="txt">' + esc(F('特色說明')) + '</div>' : '') +
     specBlocks_(dmOn, 'dm') +
     (on('__map') && mapUrl ? '<h3>位置圖</h3><div class="map"><img src="' + mapUrl + '"></div>' : '') +
-    '<div class="contact"><div><b>聯絡業務　' + esc(req.name || '') + '</b>' + (req.phone ? '　' + esc(req.phone) : '') + '</div>' +
-    '<div><b>' + esc(co.name || '瑞禾不動產經紀股份有限公司') + '</b></div>' +
-    '<div>' + (co.phone ? '電話 ' + esc(co.phone) : '') + '</div><div>' + esc(co.addr || '') + '</div>' +
-    '<div class="broker">' + esc(co.broker || '') + '</div></div>';
+    // 115/11/09：聯絡業務＋不動產經紀業（名稱、許可字號）＋經紀人（姓名、證書字號）＋公司電話、地址
+    '<div class="contact">' +
+      '<div><b>聯絡業務　' + esc(req.name || '') + '</b>' + (req.phone ? '　' + esc(req.phone) : '') + '</div>' +
+      '<div>' + (co.phone ? '<b>公司電話</b>　' + esc(co.phone) : '') + '</div>' +
+      '<div class="full"><b>不動產經紀業</b>　' + esc(co.name || '瑞禾不動產經紀股份有限公司') + (co.license ? '　許可字號 ' + esc(co.license) : '') + '</div>' +
+      ((co.brokerName || co.brokerLicense) ? '<div class="full"><b>經紀人</b>　' + esc(co.brokerName || '') + (co.brokerLicense ? '　證書字號 ' + esc(co.brokerLicense) : '') + '</div>' : '') +
+      (co.addr ? '<div class="full"><b>公司地址</b>　' + esc(co.addr) + '</div>' : '') +
+    '</div>';
   return sheetPage_('DM－' + F('案名'), body, 'dm');
 }
 // 挑照片（DM 用；最多 8 張，預設前 4 張）

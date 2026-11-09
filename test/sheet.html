@@ -19,7 +19,10 @@
     if (btn) btn.onclick = function() {
       if (!window.html2canvas) { st.textContent = '圖片工具沒有載入，請重新整理'; return; }
       btn.disabled = true; st.textContent = '產生圖片中…';
-      html2canvas(document.getElementById('sheet'), { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function(c) {
+      // 115/11/09：頁面往下捲過時，圖片下面會被切掉 → 先捲回最上面，並告訴 html2canvas 整張的高度
+      var el = document.getElementById('sheet'); window.scrollTo(0, 0);
+      html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, scrollX: 0, scrollY: 0,
+        windowWidth: Math.max(document.documentElement.scrollWidth, el.scrollWidth + 60), windowHeight: Math.max(document.documentElement.scrollHeight, el.scrollHeight + 200) }).then(function(c) {
         var a = document.createElement('a'); a.download = fname; a.href = c.toDataURL('image/png');
         document.body.appendChild(a); a.click(); a.remove(); st.textContent = '已下載';
       }).catch(function(e) { st.textContent = '產生圖片失敗：' + (e && e.message || e); }).then(function() { btn.disabled = false; });
