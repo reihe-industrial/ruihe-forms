@@ -177,7 +177,7 @@
 .table-wrap.compact table { table-layout: fixed; width: 100%; }
 .table-wrap.compact th, .table-wrap.compact td { min-width: 0; white-space: normal; word-break: break-all; overflow-wrap: anywhere; }
 .table-wrap.compact td.name { white-space: normal; }
-.table-wrap.compact th:last-child, .table-wrap.compact td:last-child { width: 156px; }
+.table-wrap.compact th:last-child, .table-wrap.compact td:last-child { width: 96px; } /* 115/11/09 看明細（產生 DM 在物件內容頁） */
 .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
 /* 115/11/03：物件簡表欄寬：類型、單價、坐落寬一點，租/售、契約類型窄一點，總寬不變（沒指定的欄位平分剩下的寬度） */
 .table-wrap.compact th[data-c="類型"] { width: 112px; }
@@ -185,7 +185,7 @@
 .table-wrap.compact th[data-c="租/售"] { width: 50px; }
 .table-wrap.compact th[data-c="契約類型"] { width: 70px; }
 .table-wrap.compact th[data-c="總價"] { width: 86px; }
-.table-wrap.compact th[data-c="單價"] { width: 112px; }
+.table-wrap.compact th[data-c="單價"] { width: 150px; } /* 115/11/09：土地均價、建物均價各一行 */
 .table-wrap.compact th[data-c="坐落"] { width: 118px; }
 .table-wrap.compact th[data-c="土地面積(坪)"], .table-wrap.compact th[data-c="建物面積(坪)"] { width: 82px; }
 .table-wrap.compact td[data-c="單價"], .table-wrap.compact td[data-c="坐落"] { word-break: normal; overflow-wrap: anywhere; }
@@ -202,8 +202,11 @@
     dl.kv dt { background: #E6F0E9; color: #1E4A32 !important; font-weight: 700; font-size: 12.5px !important; padding: 4px 8px; }
     dl.kv dd { padding: 6px 8px !important; font-size: 14px !important; white-space: pre-wrap; }
     dl.kv div.long { grid-column: span 2; }
-      a.name-link { color: var(--brand-dark); text-decoration: none; border-bottom: 1px solid rgba(30,74,50,.35); }
-    a.name-link:hover { color: var(--brand); border-bottom-color: var(--brand); }
+    /* 115/11/09：案名、看明細更明顯 */
+    a.name-link { color: #1F6B45; font-weight: 700; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+    a.name-link:hover { color: #fff; background: #1F6B45; text-decoration: none; border-radius: 4px; }
+    a.detail-btn { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--brand); background: var(--brand); color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; vertical-align: middle; }
+    a.detail-btn:hover { filter: brightness(1.15); }
     .grp-only { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; margin-left: 12px; cursor: pointer; }
     .grp-only[hidden] { display: none; }
   </style>
@@ -273,7 +276,7 @@
   </script>
 
     <h1>物件總表</h1>
-    <div class="subtitle">全公司銷售中的物件，點案名看物件內容</div>
+    <div class="subtitle">全公司銷售中的物件，點案名或「看明細」看物件內容</div>
 
     <!-- 登入 -->
     <div class="card narrow" id="loginView">
@@ -875,13 +878,16 @@ function tableHtml(list) {
       if (c === C.type) return '<td>' + typeTagHtml(r) + '</td>';
       if (c === C.name) return '<td class="name">' + nameLink_(it, v) + '</td>';
       if (c === C.contract) return '<td>' + contractTagHtml(v) + '</td>';
-      if (c === C.unit) { var u = unitHtml_(r, cell(r, C.land), cell(r, C.bld)); return '<td class="num">' + (/均價/.test(u) ? u.replace(/<span>/g, '<div style="white-space:normal;">').replace(/<\/span>/g, '</div>') : esc(v)) + '</td>'; }
+      if (c === C.unit) { var u = unitHtml_(r, cell(r, C.land), cell(r, C.bld)); return '<td class="num">' + (/均價/.test(u) ? u.replace(/<span>/g, '<div style="white-space:nowrap;">').replace(/<\/span>/g, '</div>') : esc(v)) + '</td>'; }
       if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(v) + '</td>';
       return '<td>' + esc(v) + '</td>';
     }).join('');
     var more = rest.filter(function(c) { return String(cell(r, c)).trim() !== ''; });
-    var row = '<tr' + (open ? ' class="opened"' : '') + '>' + tds + '<td class="acts"><button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button>' +
-      (more.length ? ' <button type="button" class="more-btn" data-more="' + it.order + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
+    // 115/11/09：「更多」改成「看明細」（打開物件內容頁，產生 DM 在那一頁）；沒有物件鍵的才留「產生 DM」「更多」
+    var dh = detailHref_(it);
+    var row = '<tr' + (open ? ' class="opened"' : '') + '>' + tds + '<td class="acts">' + (dh ? '<a class="detail-btn" href="' + dh + '">看明細</a>' :
+      '<button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button>') +
+      (!dh && more.length ? ' <button type="button" class="more-btn" data-more="' + it.order + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
     if (open && more.length) row += '<tr class="more-row"><td colspan="' + (cols.length + 1) + '"><dl class="kv">' +
       more.map(function(c) { var vv = String(cell(r, c)); return '<div' + (vv.length > 36 ? ' class="long"' : '') + '><dt>' + esc(c) + '</dt><dd>' + esc(vv) + '</dd></div>'; }).join('') + '</dl></td></tr>';
     return row;
@@ -925,7 +931,7 @@ function cardsHtml(list) {
       (area.length ? '<div class="item-meta">' + area.join('｜') + '</div>' : '') +
       (cell(r, C.agent) ? '<div class="item-meta muted">業務：' + esc(cell(r, C.agent)) + '</div>' : '') +
       '<div class="item-more-hint"><span class="open-t">看其他欄位</span><span class="close-t">收起</span></div>' +
-      '</summary><div style="padding:0 0 10px;display:flex;gap:8px;">' + (detailHref_(it) ? '<a class="btn ghost" href="' + detailHref_(it) + '">看物件內容</a>' : '') + '<button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button></div><dl class="item-more">' + (more || '<dt></dt><dd>沒有其他資料</dd>') + '</dl></details>';
+      '</summary><div style="padding:0 0 10px;display:flex;gap:8px;">' + (detailHref_(it) ? '<a class="detail-btn" href="' + detailHref_(it) + '">看明細</a>' : '<button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button>') + '</div><dl class="item-more">' + (more || '<dt></dt><dd>沒有其他資料</dd>') + '</dl></details>';
   }).join('') + '</div>';
 }
 function updateStatus() {

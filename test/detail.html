@@ -15,10 +15,6 @@
     html { -webkit-text-size-adjust: 100%; }
     body { font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: var(--paper); margin: 0; padding: 20px 16px 60px; color: var(--ink); line-height: 1.55; }
     .container { max-width: 1180px; margin: 0 auto; }
-    .site-nav { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
-    .site-nav a { flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 14px; }
-    .site-nav a:hover { border-color: var(--brand); color: var(--brand); }
-    .site-nav a.active { background: var(--brand); border-color: var(--brand); color: #fff; }
     .crumb { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
     .crumb a { color: var(--brand-dark); font-weight: 700; text-decoration: none; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; }
@@ -85,6 +81,7 @@
       .title { font-size: 21px; }
     }
   </style>
+  <link rel="stylesheet" href="lib/ui.css?v=20261021a"><!-- 115/11/09：跟其他頁一樣的選單列、顏色、字體 -->
   <link rel="stylesheet" href="lib/leaflet.css">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
   <link rel="apple-touch-icon" href="lib/img/apple-touch-icon.png">
@@ -235,14 +232,14 @@ var SECTIONS = [
   { id: 'deed', title: '謄本資料', labels: ['地段', '地段+地號', '地段+建號', '產權範圍', '持分比例', '全筆土地面積(m²)', '全筆主建物面積(m²)', '取得原因',
     '所有權人及持分', '他項權利', '屋主是否一年內取得', '取得年月', '取得成交價格', '資訊為實價登錄或屋主提供?'] },
   { id: 'presale', title: '預售屋／換約', labels: ['建築執照', '換約金額(萬)', '轉讓證明書', '原始簽約日', '原契約總價(萬)'] },
-  { id: 'deal', title: '委託與狀態', labels: ['物件編號', '契約編號', '委託種類', '委託案件種類', '委託類別', '使用狀態',
+  { id: 'deal', title: '委託與狀態', labels: ['物件編號', '契約編號', '委託種類', '委託案件種類', '委託類別', '合約到期', '使用狀態',
     '使用狀態補充說明(廠房)', '使用狀態補充說明(土地)', '使用狀態補充說明(房屋)', '主要用途', '案件狀態', '狀態日期', '狀態說明', '成交價', '關聯物件'] }
 ];
 var OWNER = [['委託人', ['委託人姓名', '身份證字號或統編', '委託人連絡電話', '委託人聯絡地址', '簽約人身分']],
   ['代理人', ['代理人姓名', '代理人身分證字號', '代理人電話', '代理人地址', '代理人與委託人關係']],
   ['代理人 2', ['代理人2姓名', '代理人2身分證字號', '代理人2電話', '代理人2地址', '代理人2與委託人關係']]];
-var HIDE_ON_PAGE = ['合約起始', '合約到期', '填寫日期']; // 物件內容頁不顯示（115/11/04）
-var HEAD_USED = ['合約起始', '合約到期', '填寫日期', '案名', '單價', '總價', '案件坐落', '詳細地址', '特色說明', '其他備註說明', '主要業務名稱', '次要業務名稱', '主要業務人員比例', '次要業務人員比例', '中人比例', '類型', '業務人員'];
+var HIDE_ON_PAGE = ['合約起始', '填寫日期']; // 物件內容頁不顯示（115/11/04）；合約到期只有這件的業務、秘書、管理員拿得到（後端控制，115/11/09）
+var HEAD_USED = ['合約起始', '填寫日期', '案名', '單價', '總價', '案件坐落', '詳細地址', '特色說明', '其他備註說明', '主要業務名稱', '次要業務名稱', '主要業務人員比例', '次要業務人員比例', '中人比例', '類型', '業務人員'];
 var LONG = /說明|嫌惡|環境|交通|他項|所有權人|取得原因/;
 
 var auth = loginGet_();

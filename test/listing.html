@@ -5066,12 +5066,13 @@ function editLoadListsCache_(name) {
 var editOpenedFromUrl_ = false;
 function editOpenFromUrl_() {
   if (editOpenedFromUrl_ || !EDIT_MODE) return;
-  var m = location.search.match(/[?&]key=([^&]+)/);
-  if (!m) { editOpenedFromUrl_ = true; return; }
-  var key = decodeURIComponent(m[1]);
-  var found = editCases_.filter(function(c) { return c.key === key; })[0];
-  if (!found) return; // 清單還沒讀到（暫存的清單裡沒有），下一次清單更新時再試
   editOpenedFromUrl_ = true;
+  var m = location.search.match(/[?&]key=([^&]+)/);
+  if (!m || editTab_ === 'needs') return;
+  // 115/11/09：從物件內容頁、資料維護按「修改」進來：不用等清單讀完，直接打開那一件（有沒有權限由後端判斷）
+  var key = decodeURIComponent(m[1]);
+  var box = document.getElementById('editCaseList');
+  if (box) box.innerHTML = '<div class="hint">正在打開這一件…</div>';
   editOpenCase_(key, null);
 }
 function editLogin_(auto) {
@@ -5087,6 +5088,7 @@ function editLogin_(auto) {
     editRenderList_();
     editShow_('list');
     if (!cached) document.getElementById('editCaseList').innerHTML = '<div class="hint">讀取中…</div>';
+    editOpenFromUrl_(); // 網址有 ?key=… 就馬上打開那一件（115/11/09）
     runServer('editListCases', name, code)
       .then(function(res) {
         if (res.role) { editRole_ = res.role; sharedLoginSet_(name, code, res.role); }
