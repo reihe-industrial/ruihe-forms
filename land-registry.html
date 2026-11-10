@@ -127,12 +127,12 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
@@ -165,7 +165,7 @@
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
