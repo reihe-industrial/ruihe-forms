@@ -408,6 +408,7 @@ function createDistrictEntry() {
     cb.type = 'checkbox';
     cb.value = t;
     cb.className = 'transcriptTypeCheckbox';
+    if (t === '其他參考資訊') cb.checked = true; // 115/11/09：土地、建物的其他參考資訊每次都要調，預設勾選
     lbl.appendChild(cb);
     lbl.appendChild(document.createTextNode(t));
     typeGroup.appendChild(lbl);

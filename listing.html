@@ -411,6 +411,10 @@
     .lf-bar .jump[hidden] { display: none; }
     .lf-bar .go { margin-left: auto; height: 46px; padding: 0 28px; border: none; border-radius: 10px; background: var(--brand); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
     .lf-bar .go:disabled { opacity: 0.6; cursor: default; }
+    .lf-bar .save { margin-left: auto; height: 46px; padding: 0 20px; border: 1px solid var(--brand); border-radius: 10px; background: #fff; color: var(--brand); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .lf-bar .save:disabled { opacity: 0.6; cursor: default; }
+    .lf-bar .save + .go { margin-left: 0; }
+    .lf-bar .cst { font-size: 12.5px; color: var(--muted); }
     body.has-lf-bar { padding-bottom: 84px; }
     body.has-lf-bar #submitBtn { display: none; }
     @media (max-width: 700px) {
@@ -419,6 +423,8 @@
       #listingForm .card.lf-collapsed > h2::after { content: "展開"; }
       #listingForm .card.lf-collapsed > :not(h2) { display: none !important; }
       .lf-bar .go { height: 44px; padding: 0 20px; }
+      .lf-bar .save { height: 44px; padding: 0 14px; }
+      .lf-bar .cst { flex-basis: 100%; order: 9; }
     }
     #editBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     #editBar .edit-bar-title { flex: 1 1 auto; }
@@ -459,20 +465,21 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script src="lib/match.js?v=20261021c"></script>
+  <script src="lib/clouddraft.js?v=20261109a"></script>
 <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -533,6 +540,7 @@
       <div class="edit-login-actions"><button type="button" class="edit-btn" id="editLoginBtn" style="flex:1;">登入</button></div>
       <div class="msg" id="editLoginMsg"></div>
     </div>
+    <div class="card" id="editOpeningView" style="display:none;padding:40px 20px;text-align:center;color:#5D6B62;">正在打開這一件…</div>
     <div class="card" id="editListView" style="display:none;">
       <div class="edit-list-head">
         <h2 id="editListTitle">我的案件</h2>
@@ -1572,9 +1580,9 @@ var FIELD_CONFIG = {
     { label: '車位管理費', type: 'text', group: 'parking', required: true },
     { label: '車位說明', type: 'text', group: 'parking', required: true },
     { label: '屋主是否一年內取得', type: 'select', options: YES_NO, required: true, group: 'acquire' },
-    { label: '資訊為實價登錄或屋主提供?', type: 'select', options: ['實價登錄','屋主提供'], required: true, group: 'acquire' },
+    { label: '資訊為實價登錄或屋主提供?', type: 'select-other', options: ['實價登錄','屋主提供'], required: true, group: 'acquire', hint: '都不是的話選「其他」，寫資料是從哪裡來的' },
     { label: '取得年月', type: 'roc-month', required: true, hint: '請選擇年月。年份可以輸入民國年（例如 113）或西元年（例如 2024）', group: 'acquire' },
-    { label: '取得成交價格', type: 'text', required: true, group: 'acquire' },
+    { label: '取得成交價格', type: 'text', required: true, group: 'acquire', hint: '屋主不清楚、實價登錄也查不到的話，請寫實際情況，例如：屋主不清楚、實價登錄查不到' },
     { label: '小學', type: 'text' },
     { label: '國中', type: 'text' },
     { label: '高中', type: 'text' },
@@ -3426,55 +3434,17 @@ function collectDraft_() {
 // 每次打開表單是新的一份草稿，不會蓋掉之前的；每一份可以單獨刪除（會先確認）；60 天沒動的草稿自動清掉，最多留 20 份。
 var DRAFTS_KEY_ = DRAFT_STORAGE_KEY + '_list';
 var DRAFT_KEEP_DAYS_ = 60;
-var draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
-function draftsAll_() { try { var a = JSON.parse(localStorage.getItem(DRAFTS_KEY_) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-function draftsSave_(a) {
-  var lim = Date.now() - DRAFT_KEEP_DAYS_ * 864e5;
-  a = a.filter(function(x) { return x && x.at >= lim && x.draft; }).sort(function(x, y) { return y.at - x.at; }).slice(0, 20);
-  try { localStorage.setItem(DRAFTS_KEY_, JSON.stringify(a)); } catch (e) {}
-}
+// 115/11/09：草稿也存到雲端（lib/clouddraft.js），換電腦、過幾天都能接著填
+var DRAFTS_ = RuiheDrafts.create({ key: DRAFTS_KEY_, kind: 'listing', apiUrl: function() { return API_URL; }, keepDays: DRAFT_KEEP_DAYS_,
+  onStatus: function(st, x) { var el = document.getElementById('cloudSaveSt'); if (el) el.textContent = RuiheDrafts.statusText(st, x); } });
+function draftsAll_() { return DRAFTS_.all(); }
+function draftsSave_(a) { DRAFTS_.save(a); }
 (function() { // 舊版只有一份草稿：搬進清單
   try { var raw = localStorage.getItem(DRAFT_STORAGE_KEY); if (raw) { var a = draftsAll_(); var od = JSON.parse(raw), of = od.fields || {}; a.push({ id: 'old' + Date.now(), at: Date.now(), title: of['案名'] || of.clientNameInput || '', sub: od.type || '', draft: od }); draftsSave_(a); localStorage.removeItem(DRAFT_STORAGE_KEY); } } catch (e) {}
 })();
-function draftsPut_(draft, title, sub) {
-  var a = draftsAll_().filter(function(x) { return x.id !== draftId_; });
-  a.unshift({ id: draftId_, at: Date.now(), title: title || '', sub: sub || '', draft: draft });
-  draftsSave_(a);
-}
-function draftsRemoveCurrent_() {
-  draftsSave_(draftsAll_().filter(function(x) { return x.id !== draftId_; }));
-  draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
-}
-function draftsBannerRender_(onPick, onNew, newLabel) {
-  var box = document.getElementById('draftBanner'), list = draftsAll_();
-  if (!list.length) { box.style.display = 'none'; return false; }
-  var two = function(n) { return (n < 10 ? '0' : '') + n; };
-  var when = function(t) { var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()); };
-  box.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">有 ' + list.length + ' 份還沒送出的草稿（存在這台電腦的瀏覽器裡，保留 ' + DRAFT_KEEP_DAYS_ + ' 天）</div>' +
-    list.slice(0, 10).map(function(x) {
-      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed #e0c341;"><div style="flex:1;min-width:0;"><b>' + esc_(x.title || '（還沒填名稱）') + '</b>' +
-        (x.sub ? '<span style="color:#7a6a20;">｜' + esc_(x.sub) + '</span>' : '') + '<div style="font-size:12.5px;color:#7a6a20;">最後儲存 ' + when(x.at) + '</div></div>' +
-        '<button type="button" data-draft="' + x.id + '" style="padding:7px 14px;background:#2f6f4e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">繼續這一份</button>' +
-        '<button type="button" data-draft-del="' + x.id + '" style="padding:7px 10px;background:#fff;color:#B3261E;border:1px solid #E8B4B0;border-radius:8px;cursor:pointer;">刪除</button></div>';
-    }).join('') +
-    '<div style="margin-top:8px;"><button type="button" id="draftNewBtn" style="width:100%;padding:9px;background:#fff;color:#2f6f4e;border:1px solid #2f6f4e;border-radius:8px;cursor:pointer;font-weight:600;">' + newLabel + '（草稿會留著）</button></div>';
-  box.style.display = 'block';
-  box.onclick = function(e) {
-    var del = e.target.closest('[data-draft-del]');
-    if (del) { // 只刪這一份（先確認，刪掉就找不回來）
-      var dx = draftsAll_().filter(function(y) { return y.id === del.getAttribute('data-draft-del'); })[0];
-      if (dx && confirm('確定要刪除「' + (dx.title || '（還沒填名稱）') + '」這份草稿嗎？刪掉就找不回來。')) {
-        draftsSave_(draftsAll_().filter(function(y) { return y.id !== dx.id; }));
-        if (!draftsBannerRender_(onPick, onNew, newLabel)) onNew();
-      }
-      return;
-    }
-    var b = e.target.closest('[data-draft]');
-    if (b) { var x = draftsAll_().filter(function(y) { return y.id === b.getAttribute('data-draft'); })[0]; if (x) { draftId_ = x.id; box.style.display = 'none'; onPick(x.draft); } return; }
-    if (e.target.id === 'draftNewBtn') { box.style.display = 'none'; onNew(); }
-  };
-  return true;
-}
+function draftsPut_(draft, title, sub) { DRAFTS_.put(draft, title, sub); }
+function draftsRemoveCurrent_() { DRAFTS_.removeCurrent(); }
+function draftsBannerRender_(onPick, onNew, newLabel) { return DRAFTS_.banner(onPick, onNew, newLabel); }
 function esc_(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
 function saveDraftToLocalStorage_() {
@@ -3483,8 +3453,9 @@ function saveDraftToLocalStorage_() {
     var d = collectDraft_(), f = d.fields || {};
     var has = String(f['案名'] || '').trim() || String(f['委託人姓名'] || '').trim() ||
       (d.lotEntries || []).some(function(e) { return String(e.value || '').trim(); }) || (d.buildingEntries || []).some(function(e) { return String(e.value || '').trim(); });
-    if (!has) return; // 還沒填重要的東西就不存（避免一堆空白草稿）
+    if (!has) return false; // 還沒填重要的東西就不存（避免一堆空白草稿）
     draftsPut_(d, f['案名'], d.type);
+    return true;
   } catch (err) {
     // localStorage 被瀏覽器擋掉或滿了，暫存失敗就算了，不影響正常填寫
   }
@@ -3717,9 +3688,20 @@ function restoreDraft_(draft) {
 }
 
 // 頁面一打開就檢查有沒有草稿，有的話先顯示提示橫幅（不自動套用，等使用者按按鈕）
-var pendingDraft_ = null;
-if (!EDIT_MODE && draftsBannerRender_(function(d) { restoreDraft_(d); }, function() { pendingDraft_ = null; askTypeIfNeeded_(); }, '開始填新的物件')) pendingDraft_ = true;
+var pendingDraft_ = null, typeChosen_ = false, formTouched_ = false;
+function draftBannerShow_() {
+  return draftsBannerRender_(function(d) { restoreDraft_(d); }, function() { pendingDraft_ = null; if (!typeChosen_) askTypeIfNeeded_(); }, '開始填新的物件');
+}
+if (!EDIT_MODE && draftBannerShow_()) pendingDraft_ = true;
 askTypeIfNeeded_();
+// 115/11/09：雲端草稿讀到之後再更新一次清單（還沒開始填、也還沒選草稿才更新）
+document.getElementById('listingForm').addEventListener('input', function() { formTouched_ = true; }, true);
+document.getElementById('typeAsk').addEventListener('click', function(e) { if (e.target.closest('button[data-t]')) typeChosen_ = true; }, true);
+if (!EDIT_MODE) DRAFTS_.loadCloud().then(function(items) {
+  if (formTouched_ || DRAFTS_.picked) return;
+  if (!items.length && document.getElementById('draftBanner').style.display === 'none') return;
+  if (draftBannerShow_()) { pendingDraft_ = true; var ta = document.getElementById('typeAsk'); if (ta && !ta.hidden) ta.hidden = true; }
+});
 
 // 自動暫存：欄位有變動時（防抖，停止輸入1秒後才存），加上每15秒定期存一次保險
 var draftSaveTimer_ = null;
@@ -5035,6 +5017,7 @@ function editShow_(view) {
   // view：'login' | 'list' | 'form'
   document.getElementById('editLoginView').style.display = view === 'login' ? '' : 'none';
   document.getElementById('editListView').style.display = view === 'list' ? '' : 'none';
+  document.getElementById('editOpeningView').style.display = view === 'opening' ? '' : 'none'; // 115/11/09 從物件內容頁、資料維護按「修改」進來
   document.getElementById('editBar').style.display = view === 'form' ? '' : 'none';
   document.getElementById('listingForm').style.display = view === 'form' ? '' : 'none';
   document.getElementById('typeNow').style.display = view === 'form' ? '' : 'none'; // 修改頁：清單、登入畫面不顯示「正在填寫」
@@ -5066,13 +5049,13 @@ function editLoadListsCache_(name) {
 var editOpenedFromUrl_ = false;
 function editOpenFromUrl_() {
   if (editOpenedFromUrl_ || !EDIT_MODE) return;
-  var m = location.search.match(/[?&]key=([^&]+)/);
-  if (!m) { editOpenedFromUrl_ = true; return; }
-  var key = decodeURIComponent(m[1]);
-  var found = editCases_.filter(function(c) { return c.key === key; })[0];
-  if (!found) return; // 清單還沒讀到（暫存的清單裡沒有），下一次清單更新時再試
   editOpenedFromUrl_ = true;
-  editOpenCase_(key, null);
+  var m = location.search.match(/[?&]key=([^&]+)/);
+  if (!m || editTab_ === 'needs') return;
+  // 115/11/09：從物件內容頁、資料維護按「修改」進來：不用等清單讀完，直接打開那一件（有沒有權限由後端判斷）
+  var key = decodeURIComponent(m[1]);
+  editShow_('opening'); // 不顯示清單，直接顯示「正在打開這一件…」，打開後就是修改畫面
+  editOpenCase_(key, null, function() { editShow_('list'); }); // 打不開（沒有權限、找不到）才回到清單
 }
 function editLogin_(auto) {
   var name = auto ? auto.name : document.getElementById('editName').value;
@@ -5087,6 +5070,7 @@ function editLogin_(auto) {
     editRenderList_();
     editShow_('list');
     if (!cached) document.getElementById('editCaseList').innerHTML = '<div class="hint">讀取中…</div>';
+    editOpenFromUrl_(); // 網址有 ?key=… 就馬上打開那一件（115/11/09）
     runServer('editListCases', name, code)
       .then(function(res) {
         if (res.role) { editRole_ = res.role; sharedLoginSet_(name, code, res.role); }
@@ -5282,7 +5266,7 @@ function editShowMatch_(kind, key) {
   var show = function(near) {
     var it = editMatchFind_(kind, key);
     if (!it) {
-      dlg.body.innerHTML = '<div style="color:#5D6B62;">' + (kind === 'case' ? '這件不在物件簡表（不是銷售中，或剛送出還在處理），不能配對。' : '客需簡表還沒有這一筆（剛新增的請稍後再看）。') + '</div>';
+      dlg.body.innerHTML = '<div style="color:#5D6B62;">' + (kind === 'case' ? '這件不在物件總表（不是銷售中，或剛送出還在處理），不能配對。' : '客需總表還沒有這一筆（剛新增的請稍後再看）。') + '</div>';
       return;
     }
     if (kind === 'need' && it.closed) { dlg.body.innerHTML = '<div style="color:#5D6B62;">這筆客需已經結案，不配對。</div>'; return; }
@@ -5437,7 +5421,7 @@ function editApplyCurrentValue_(label, value) {
   return false;
 }
 
-function editOpenCase_(key, btn) {
+function editOpenCase_(key, btn, onFail) {
   if (!editAuth_) return;
   if (btn) { btn.disabled = true; btn.textContent = '載入中…'; }
   Promise.all([runServer('editLoadCase', editAuth_.name, editAuth_.code, key), initReady_])
@@ -5517,7 +5501,7 @@ function editOpenCase_(key, btn) {
       editShow_('form');
       editDirty_ = false;
     })
-    .catch(function(err) { showToast(err.message, 'error'); })
+    .catch(function(err) { showToast(err.message, 'error'); if (onFail) onFail(err); })
     .then(function() { if (btn) { btn.disabled = false; btn.textContent = '修改'; } });
 }
 
@@ -6162,13 +6146,26 @@ function parseDeedPages_(rawPages, districtData) {
       });
       rec.floorNums.sort(function(a, b) { return a - b; });
       // 附屬建物：「用途  陽台  面積  15.21平方公尺」
+      // 115/11/09 修正：一行一行比對會漏掉（兩筆印在同一行只讀到第一筆、「用途」和「面積」被拆成兩行就讀不到、第二筆沒寫「用途」「面積」）
+      // → 從「附屬建物」那一行開始，到其他登記事項、權利範圍之前，整段接起來，每一筆「用途…面積…平方公尺」都加進去
       rec.attachedAreaM2 = 0;
-      var inAttach = false;
-      top.forEach(function(l) {
-        if (/附屬建物/.test(l)) inAttach = true;
-        var am = l.match(/用途\s*:?\s*(\S+)\s+面積\s*:?\s*\**\s*([\d,]+(?:\.\d+)?)\s*平方公尺/);
-        if (am && inAttach) rec.attachedAreaM2 += deedNum_(am[2]);
-      });
+      rec.attachedItems = [];
+      var ai = top.findIndex(function(l) { return /附屬建物/.test(l); });
+      if (ai !== -1) {
+        // 115/11/10：附屬建物可能有很多筆、跨頁；跨頁時中間的頁首（「○○段 03716-000建號」「（續次頁）」「頁次」）跳過，
+        // 遇到其他登記事項、權利範圍、共有部分、所有權部、他項權利部就停
+        var seg = [];
+        for (var ak = ai; ak < top.length; ak++) {
+          var lk = top[ak].trim();
+          if (ak > ai && /其他登記事項|權利範圍|共有部分|所有權部|他項權利部|登記次序|^建號\s*-/.test(lk)) break;
+          if (ak > ai && (/^\S*段\s*\d{4,5}-\d{3}\s*建號$/.test(lk) || /續次頁|頁\s*次|標示部/.test(lk))) continue;
+          seg.push(top[ak]);
+        }
+        var segText = seg.join(' ').replace(/【[^】]*】/g, ' ').replace(/附屬建物/g, ' ');
+        // 每一筆：〔用途：〕名稱 〔面積：〕*****數字平方公尺（第二筆以後通常只寫「雨遮  ******9.60平方公尺」）；名稱和數字中間夾到印章上的小數字（如 81）也照讀
+        var areRe = /(?:用\s*途\s*[:：]?\s*)?([^\s\d:：*【】]+)\s*(?:面\s*積\s*[:：]?)?\s*(?:\d{1,3}\s+)?\**\s*([\d,]+(?:\.\d+)?)\s*平方公尺/g, am;
+        while ((am = areRe.exec(segText))) { rec.attachedItems.push({ use: am[1], m2: deedNum_(am[2]) }); rec.attachedAreaM2 += deedNum_(am[2]); }
+      }
       rec.attachedAreaM2 = Math.round(rec.attachedAreaM2 * 100) / 100;
       // 共有部分：逐筆讀取共有建號面積及其權利範圍，計算持分面積後加總。
       // 例如：7,702.32平方公尺 × 1,233/100,000。
@@ -6864,6 +6861,11 @@ function applyDeed_() {
     blds.forEach(function(b) { total += b.totalAreaM2 || 0; attached += b.attachedAreaM2 || 0; if (b.sharedAreaM2 !== null && b.sharedAreaM2 !== undefined) { shared += b.sharedAreaM2; hasShared = true; } });
     deedSetAuto_('主建物面積(m²)', String(Math.round(total * 100) / 100), res);
     deedSetAuto_('附屬建物面積(m²)', String(Math.round(attached * 100) / 100), res);
+    // 115/11/10：附屬建物一筆一筆列出來，方便跟謄本核對
+    var attList = blds.filter(function(b) { return b.attachedItems && b.attachedItems.length; }).map(function(b) {
+      return '建號 ' + b.number + '：' + b.attachedItems.map(function(x) { return x.use + ' ' + x.m2; }).join('、');
+    });
+    if (attList.length) res.infos.push('附屬建物（m²）：' + attList.join('；') + '，合計 ' + (Math.round(attached * 100) / 100) + '，請跟謄本核對筆數。');
     if (hasShared) deedSetAuto_('共同使用面積(m²)', String(Math.round(shared * 100) / 100), res);
     else if (deedField_('共同使用面積(m²)')) res.notes.push('這份謄本沒有列出共有部分的面積，「共同使用面積」請從權狀填寫');
 
@@ -7218,8 +7220,16 @@ document.getElementById('deedInput').addEventListener('change', function() {
   form.parentNode.insertBefore(layout, form);
   layout.appendChild(toc); layout.appendChild(form);
   var bar = document.createElement('div'); bar.className = 'lf-bar'; bar.hidden = true;
-  bar.innerHTML = '<div class="lf-bar-in"><span class="st" id="lfStatus"></span><button type="button" class="jump" id="lfJump">跳到第一項</button><button type="button" class="go" id="lfGo">送出</button></div>';
+  bar.innerHTML = '<div class="lf-bar-in"><span class="st" id="lfStatus"></span><button type="button" class="jump" id="lfJump">跳到第一項</button>' +
+    (EDIT_MODE ? '' : '<span class="cst" id="cloudSaveSt"></span><button type="button" class="save" id="lfSave">暫存</button>') + '<button type="button" class="go" id="lfGo">送出</button></div>';
   document.body.appendChild(bar);
+  // 115/11/09：暫存＝馬上存到雲端，之後在任何電腦打開「新增物件」都能接著填
+  if (!EDIT_MODE) document.getElementById('lfSave').addEventListener('click', function() {
+    var btn = this;
+    if (!saveDraftToLocalStorage_()) { document.getElementById('cloudSaveSt').textContent = RuiheDrafts.statusText('empty'); return; }
+    btn.disabled = true;
+    DRAFTS_.flush().then(function() { btn.disabled = false; });
+  });
   var submitBtn = document.getElementById('submitBtn');
   document.getElementById('lfGo').addEventListener('click', function() { if (submitBtn && !submitBtn.disabled) submitBtn.click(); });
   var firstMissing = null;

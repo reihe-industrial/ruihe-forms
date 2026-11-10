@@ -187,6 +187,11 @@
     }
     button.submit:hover:not(:disabled) { background: var(--brand-dark); }
     button.submit:disabled { background: #b9c3ba; cursor: not-allowed; }
+    .cloud-draft-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
+    .cloud-draft-bar button { height: 42px; padding: 0 20px; border: 1px solid var(--brand); border-radius: 10px; background: #fff; color: var(--brand); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .cloud-draft-bar button:disabled { opacity: 0.6; cursor: default; }
+    .cloud-draft-bar span { font-size: 13px; color: var(--muted); }
+    .cloud-draft-bar[hidden] { display: none; }
 
     .msg {
       margin-top: 12px; padding: 13px 14px; border-radius: 8px;
@@ -267,21 +272,22 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script src="lib/formui.js?v=20261016a"></script>
 <script src="lib/match.js?v=20261021c"></script>
+<script src="lib/clouddraft.js?v=20261109a"></script>
 <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -645,6 +651,7 @@
     </div>
   </div>
 
+  <div class="cloud-draft-bar" id="cloudDraftBar"><button type="button" id="cloudSaveBtn">暫存</button><span id="cloudSaveSt"></span></div>
   <button type="button" class="submit" id="submitBtn">送出</button>
   </div>
 </div>
@@ -1369,55 +1376,17 @@ function draftIsEmpty_(draft) {
 // 每次打開表單是新的一份草稿，不會蓋掉之前的；每一份可以單獨刪除（會先確認）；60 天沒動的草稿自動清掉，最多留 20 份。
 var DRAFTS_KEY_ = DRAFT_STORAGE_KEY + '_list';
 var DRAFT_KEEP_DAYS_ = 60;
-var draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
-function draftsAll_() { try { var a = JSON.parse(localStorage.getItem(DRAFTS_KEY_) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-function draftsSave_(a) {
-  var lim = Date.now() - DRAFT_KEEP_DAYS_ * 864e5;
-  a = a.filter(function(x) { return x && x.at >= lim && x.draft; }).sort(function(x, y) { return y.at - x.at; }).slice(0, 20);
-  try { localStorage.setItem(DRAFTS_KEY_, JSON.stringify(a)); } catch (e) {}
-}
+// 115/11/09：草稿也存到雲端（lib/clouddraft.js），換電腦、過幾天都能接著填
+var DRAFTS_ = RuiheDrafts.create({ key: DRAFTS_KEY_, kind: 'client', apiUrl: function() { return LISTING_API_URL; }, keepDays: DRAFT_KEEP_DAYS_,
+  onStatus: function(st, x) { var el = document.getElementById('cloudSaveSt'); if (el) el.textContent = RuiheDrafts.statusText(st, x); } });
+function draftsAll_() { return DRAFTS_.all(); }
+function draftsSave_(a) { DRAFTS_.save(a); }
 (function() { // 舊版只有一份草稿：搬進清單
   try { var raw = localStorage.getItem(DRAFT_STORAGE_KEY); if (raw) { var a = draftsAll_(); var od = JSON.parse(raw), of = od.fields || {}; a.push({ id: 'old' + Date.now(), at: Date.now(), title: of['案名'] || of.clientNameInput || '', sub: od.type || '', draft: od }); draftsSave_(a); localStorage.removeItem(DRAFT_STORAGE_KEY); } } catch (e) {}
 })();
-function draftsPut_(draft, title, sub) {
-  var a = draftsAll_().filter(function(x) { return x.id !== draftId_; });
-  a.unshift({ id: draftId_, at: Date.now(), title: title || '', sub: sub || '', draft: draft });
-  draftsSave_(a);
-}
-function draftsRemoveCurrent_() {
-  draftsSave_(draftsAll_().filter(function(x) { return x.id !== draftId_; }));
-  draftId_ = 'd' + Date.now() + Math.random().toString(36).slice(2, 6);
-}
-function draftsBannerRender_(onPick, onNew, newLabel) {
-  var box = document.getElementById('draftBanner'), list = draftsAll_();
-  if (!list.length) { box.style.display = 'none'; return false; }
-  var two = function(n) { return (n < 10 ? '0' : '') + n; };
-  var when = function(t) { var d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()); };
-  box.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">有 ' + list.length + ' 份還沒送出的草稿（存在這台電腦的瀏覽器裡，保留 ' + DRAFT_KEEP_DAYS_ + ' 天）</div>' +
-    list.slice(0, 10).map(function(x) {
-      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px dashed #e0c341;"><div style="flex:1;min-width:0;"><b>' + esc_(x.title || '（還沒填名稱）') + '</b>' +
-        (x.sub ? '<span style="color:#7a6a20;">｜' + esc_(x.sub) + '</span>' : '') + '<div style="font-size:12.5px;color:#7a6a20;">最後儲存 ' + when(x.at) + '</div></div>' +
-        '<button type="button" data-draft="' + x.id + '" style="padding:7px 14px;background:#2f6f4e;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">繼續這一份</button>' +
-        '<button type="button" data-draft-del="' + x.id + '" style="padding:7px 10px;background:#fff;color:#B3261E;border:1px solid #E8B4B0;border-radius:8px;cursor:pointer;">刪除</button></div>';
-    }).join('') +
-    '<div style="margin-top:8px;"><button type="button" id="draftNewBtn" style="width:100%;padding:9px;background:#fff;color:#2f6f4e;border:1px solid #2f6f4e;border-radius:8px;cursor:pointer;font-weight:600;">' + newLabel + '（草稿會留著）</button></div>';
-  box.style.display = 'block';
-  box.onclick = function(e) {
-    var del = e.target.closest('[data-draft-del]');
-    if (del) { // 只刪這一份（先確認，刪掉就找不回來）
-      var dx = draftsAll_().filter(function(y) { return y.id === del.getAttribute('data-draft-del'); })[0];
-      if (dx && confirm('確定要刪除「' + (dx.title || '（還沒填名稱）') + '」這份草稿嗎？刪掉就找不回來。')) {
-        draftsSave_(draftsAll_().filter(function(y) { return y.id !== dx.id; }));
-        if (!draftsBannerRender_(onPick, onNew, newLabel)) onNew();
-      }
-      return;
-    }
-    var b = e.target.closest('[data-draft]');
-    if (b) { var x = draftsAll_().filter(function(y) { return y.id === b.getAttribute('data-draft'); })[0]; if (x) { draftId_ = x.id; box.style.display = 'none'; onPick(x.draft); } return; }
-    if (e.target.id === 'draftNewBtn') { box.style.display = 'none'; onNew(); }
-  };
-  return true;
-}
+function draftsPut_(draft, title, sub) { DRAFTS_.put(draft, title, sub); }
+function draftsRemoveCurrent_() { DRAFTS_.removeCurrent(); }
+function draftsBannerRender_(onPick, onNew, newLabel) { return DRAFTS_.banner(onPick, onNew, newLabel); }
 function esc_(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
 function saveDraftToLocalStorage_() {
@@ -1426,9 +1395,10 @@ function saveDraftToLocalStorage_() {
     var draft = collectDraft_();
     // 只勾了自己（預設勾的負責業務）不算有填
     var real = { fields: draft.fields, regions: draft.regions, checked: draft.checked.filter(function(c) { return !/businessCheckbox/.test(c.cls); }) };
-    if (draftIsEmpty_(real)) return;
+    if (draftIsEmpty_(real)) return false;
     var types = draft.checked.filter(function(c) { return /propertyType|typeCheckbox/.test(c.cls); }).map(function(c) { return c.value; }).join('、');
     draftsPut_(draft, draft.fields.clientNameInput || draft.fields.contactPersonInput || '', types);
+    return true;
   } catch (err) {
     // localStorage 被瀏覽器擋掉或滿了，暫存失敗就算了，不影響正常填寫
   }
@@ -1477,11 +1447,29 @@ function restoreDraft_(draft) {
   });
 }
 
+// 115/11/09：暫存＝馬上存到雲端，之後在任何電腦打開「新增客需」都能接著填
+document.getElementById('cloudSaveBtn').addEventListener('click', function() {
+  var btn = this;
+  if (!saveDraftToLocalStorage_()) { document.getElementById('cloudSaveSt').textContent = RuiheDrafts.statusText('empty'); return; }
+  btn.disabled = true;
+  DRAFTS_.flush().then(function() { btn.disabled = false; });
+});
+if (/[?&]mode=edit(&|$)/.test(location.search)) document.getElementById('cloudDraftBar').hidden = true; // 修改客需不用暫存
+
 // 載入完成後檢查有沒有草稿，有的話顯示提示橫幅（不自動套用，等使用者按按鈕）
 var pendingDraft_ = null;
+var formTouched_ = false;
 function initDraftBanner_() {
   if (EDIT_MODE) return;
-  draftsBannerRender_(function(d) { restoreDraft_(d); }, function() {}, '開始填新的客需');
+  var show = function() { return draftsBannerRender_(function(d) { restoreDraft_(d); }, function() {}, '開始填新的客需'); };
+  show();
+  // 115/11/09：雲端草稿讀到之後再更新一次清單（還沒開始填、也還沒選草稿才更新）
+  document.querySelector('.container').addEventListener('input', function() { formTouched_ = true; }, true);
+  DRAFTS_.loadCloud().then(function(items) {
+    if (formTouched_ || DRAFTS_.picked) return;
+    if (!items.length && document.getElementById('draftBanner').style.display === 'none') return;
+    show();
+  });
 }
 
 // 自動暫存：欄位有變動時（停止輸入 1 秒後才存），加上每 15 秒定期存一次保險。
@@ -1968,7 +1956,7 @@ function loadMatches_(key) {
   box.innerHTML = '<div style="color:#5D6B62;">讀取中…</div>';
   Promise.all([RuiheMatch.loadClients(editAuth_), RuiheMatch.loadListings(editAuth_)]).then(function(all) {
     var c = all[0].filter(function(x) { return x.key === key; })[0];
-    if (!c) { box.innerHTML = '<div style="color:#5D6B62;">客需簡表還沒有這一筆（剛新增的請稍後再看）。</div>'; return; }
+    if (!c) { box.innerHTML = '<div style="color:#5D6B62;">客需總表還沒有這一筆（剛新增的請稍後再看）。</div>'; return; }
     if (c.closed) { box.innerHTML = '<div style="color:#5D6B62;">這筆客需已經結案，不配對。</div>'; return; }
     var near = document.getElementById('matchNear').checked;
     var list = RuiheMatch.matchesForClient(c, all[1], near);

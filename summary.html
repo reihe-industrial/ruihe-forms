@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>物件簡表｜瑞禾業務系統</title>
+  <title>物件總表｜瑞禾業務系統</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -177,7 +177,7 @@
 .table-wrap.compact table { table-layout: fixed; width: 100%; }
 .table-wrap.compact th, .table-wrap.compact td { min-width: 0; white-space: normal; word-break: break-all; overflow-wrap: anywhere; }
 .table-wrap.compact td.name { white-space: normal; }
-.table-wrap.compact th:last-child, .table-wrap.compact td:last-child { width: 156px; }
+.table-wrap.compact th:last-child, .table-wrap.compact td:last-child { width: 96px; } /* 115/11/09 看明細（產生 DM 在物件內容頁） */
 .table-wrap.compact td.acts { white-space: nowrap; text-align: right; }
 /* 115/11/03：物件簡表欄寬：類型、單價、坐落寬一點，租/售、契約類型窄一點，總寬不變（沒指定的欄位平分剩下的寬度） */
 .table-wrap.compact th[data-c="類型"] { width: 112px; }
@@ -185,7 +185,7 @@
 .table-wrap.compact th[data-c="租/售"] { width: 50px; }
 .table-wrap.compact th[data-c="契約類型"] { width: 70px; }
 .table-wrap.compact th[data-c="總價"] { width: 86px; }
-.table-wrap.compact th[data-c="單價"] { width: 112px; }
+.table-wrap.compact th[data-c="單價"] { width: 150px; } /* 115/11/09：土地均價、建物均價各一行 */
 .table-wrap.compact th[data-c="坐落"] { width: 118px; }
 .table-wrap.compact th[data-c="土地面積(坪)"], .table-wrap.compact th[data-c="建物面積(坪)"] { width: 82px; }
 .table-wrap.compact td[data-c="單價"], .table-wrap.compact td[data-c="坐落"] { word-break: normal; overflow-wrap: anywhere; }
@@ -202,6 +202,13 @@
     dl.kv dt { background: #E6F0E9; color: #1E4A32 !important; font-weight: 700; font-size: 12.5px !important; padding: 4px 8px; }
     dl.kv dd { padding: 6px 8px !important; font-size: 14px !important; white-space: pre-wrap; }
     dl.kv div.long { grid-column: span 2; }
+    /* 115/11/09：案名、看明細更明顯 */
+    a.name-link { color: #1F6B45; font-weight: 700; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+    a.name-link:hover { color: #fff; background: #1F6B45; text-decoration: none; border-radius: 4px; }
+    a.detail-btn { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--brand); background: var(--brand); color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; vertical-align: middle; }
+    a.detail-btn:hover { filter: brightness(1.15); }
+    .grp-only { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; margin-left: 12px; cursor: pointer; }
+    .grp-only[hidden] { display: none; }
   </style>
   <link rel="stylesheet" href="lib/ui.css?v=20261021a">
   <link rel="icon" type="image/png" href="lib/img/favicon.png">
@@ -217,19 +224,19 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -268,8 +275,8 @@
   })();
   </script>
 
-    <h1>物件簡表</h1>
-    <div class="subtitle">全公司銷售中的物件</div>
+    <h1>物件總表</h1>
+    <div class="subtitle">全公司銷售中的物件，點案名或「看明細」看物件內容</div>
 
     <!-- 登入 -->
     <div class="card narrow" id="loginView">
@@ -363,6 +370,7 @@
 
       <div class="resultbar">
         <div class="count" id="countText" aria-live="polite"></div>
+        <label class="grp-only" id="grpOnlyWrap" hidden><input type="checkbox" id="grpOnly"> 只看同組</label>
         <select class="sort-mobile" id="sortMobile" aria-label="排序">
           <option value="">最新在前</option>
           <option value="總價|1">總價 低→高</option>
@@ -381,7 +389,7 @@
   </div>
 
 <script src="lib/match.js?v=20261021c"></script>
-<script src="lib/dm.js?v=20261103c"></script>
+<script src="lib/dm.js?v=20261109b"></script>
 <script>
 var API_URL = 'https://script.google.com/macros/s/AKfycbx8cp8ArkFb4RXXom9UCR2cAqc8MdU6AZlBznwkSx34tQoYR2xEH0I1oJzouip-fyJJQw/exec';
 
@@ -538,6 +546,7 @@ var filters = emptyFilters();
 var pollTimer = null;
 var busy = false;
 var lastCheckFailed = false;
+var groupOnly_ = false, groupNames_ = null; // 主管：只看同組（115/11/09）
 
 function $(id) { return document.getElementById(id); }
 function esc(v) {
@@ -770,6 +779,7 @@ function filtered() {
     if (filters.type && it.main !== filters.type) return false;
     if (filters.sub && it.subs.indexOf(filters.sub) === -1) return false;
     if (filters.agent && it.agents.indexOf(filters.agent) === -1) return false;
+    if (groupOnly_ && groupNames_ && !it.agents.some(function(a) { return groupNames_.indexOf(a) !== -1; })) return false;
     if (filters.contract && it.contract !== filters.contract) return false;
     if (filters.rs && it.rs !== filters.rs) return false;
     if (filters.county && it.county !== filters.county) return false;
@@ -842,6 +852,11 @@ function tagSummaryCols_(box) {
     });
   });
 }
+// 115/11/09 物件總表：案名點開物件內容頁
+function detailHref_(it) { var k = (data.keys || [])[it.order]; return k ? 'detail.html?key=' + encodeURIComponent(k) : ''; }
+function nameLink_(it, v) { var h = detailHref_(it); return h ? '<a class="name-link" href="' + h + '">' + esc(v) + '</a>' : esc(v); }
+// 115/11/09：資料是 0（等於沒有資訊）顯示「-」
+function dash_(v) { return /^\s*0+(\.0+)?\s*(坪|米|%|元|萬)?\s*$/.test(String(v == null ? '' : v)) ? '-' : v; }
 function typeTagHtml(row) {
   return splitTypes(cell(row, C.type)).map(function(t) {
     return '<span class="tag ' + typeClass(t) + '">' + esc(t) + '</span>';
@@ -863,15 +878,18 @@ function tableHtml(list) {
     var tds = cols.map(function(c) {
       var v = cell(r, c);
       if (c === C.type) return '<td>' + typeTagHtml(r) + '</td>';
-      if (c === C.name) return '<td class="name">' + esc(v) + '</td>';
+      if (c === C.name) return '<td class="name">' + nameLink_(it, v) + '</td>';
       if (c === C.contract) return '<td>' + contractTagHtml(v) + '</td>';
-      if (c === C.unit) { var u = unitHtml_(r, cell(r, C.land), cell(r, C.bld)); return '<td class="num">' + (/均價/.test(u) ? u.replace(/<span>/g, '<div style="white-space:normal;">').replace(/<\/span>/g, '</div>') : esc(v)) + '</td>'; }
-      if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(v) + '</td>';
-      return '<td>' + esc(v) + '</td>';
+      if (c === C.unit) { var u = unitHtml_(r, cell(r, C.land), cell(r, C.bld)); return '<td class="num">' + (/均價/.test(u) ? u.replace(/<span>/g, '<div style="white-space:nowrap;">').replace(/<\/span>/g, '</div>') : esc(v)) + '</td>'; }
+      if (NUMERIC_LABELS.indexOf(c) !== -1) return '<td class="num">' + esc(dash_(v)) + '</td>';
+      return '<td>' + esc(dash_(v)) + '</td>';
     }).join('');
     var more = rest.filter(function(c) { return String(cell(r, c)).trim() !== ''; });
-    var row = '<tr' + (open ? ' class="opened"' : '') + '>' + tds + '<td class="acts"><button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button>' +
-      (more.length ? ' <button type="button" class="more-btn" data-more="' + it.order + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
+    // 115/11/09：「更多」改成「看明細」（打開物件內容頁，產生 DM 在那一頁）；沒有物件鍵的才留「產生 DM」「更多」
+    var dh = detailHref_(it);
+    var row = '<tr' + (open ? ' class="opened"' : '') + '>' + tds + '<td class="acts">' + (dh ? '<a class="detail-btn" href="' + dh + '">看明細</a>' :
+      '<button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button>') +
+      (!dh && more.length ? ' <button type="button" class="more-btn" data-more="' + it.order + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
     if (open && more.length) row += '<tr class="more-row"><td colspan="' + (cols.length + 1) + '"><dl class="kv">' +
       more.map(function(c) { var vv = String(cell(r, c)); return '<div' + (vv.length > 36 ? ' class="long"' : '') + '><dt>' + esc(c) + '</dt><dd>' + esc(vv) + '</dd></div>'; }).join('') + '</dl></td></tr>';
     return row;
@@ -900,14 +918,14 @@ function cardsHtml(list) {
     var r = it.row;
     var land = cell(r, C.land), bld = cell(r, C.bld);
     var area = [];
-    if (land !== '') area.push('土地 ' + esc(land) + ' 坪');
-    if (bld !== '') area.push('建物 ' + esc(bld) + ' 坪');
+    if (land !== '' && dash_(land) !== '-') area.push('土地 ' + esc(land) + ' 坪');
+    if (bld !== '' && dash_(bld) !== '-') area.push('建物 ' + esc(bld) + ' 坪');
     var more = others.filter(function(c) { return String(cell(r, c)).trim() !== ''; }).map(function(c) {
       return '<dt>' + esc(c) + '</dt><dd>' + esc(cell(r, c)) + '</dd>';
     }).join('');
     var rs = String(cell(r, C.rs)).trim();
     return '<details class="item"><summary>' +
-      '<div class="item-top"><span class="item-name">' + esc(cell(r, C.name) || '（未填案名）') + '</span>' +
+      '<div class="item-top"><span class="item-name">' + nameLink_(it, cell(r, C.name) || '（未填案名）') + '</span>' +
         typeTagHtml(r) + (rs ? '<span class="tag rs">' + esc(rs) + '</span>' : '') + contractTagHtml(cell(r, C.contract)) + '</div>' +
       '<div class="item-price"><b>' + esc(cell(r, C.total) || '總價未填') + '</b>' +
         unitHtml_(r, land, bld) + '</div>' +
@@ -915,7 +933,7 @@ function cardsHtml(list) {
       (area.length ? '<div class="item-meta">' + area.join('｜') + '</div>' : '') +
       (cell(r, C.agent) ? '<div class="item-meta muted">業務：' + esc(cell(r, C.agent)) + '</div>' : '') +
       '<div class="item-more-hint"><span class="open-t">看其他欄位</span><span class="close-t">收起</span></div>' +
-      '</summary><div style="padding:0 0 10px;display:flex;gap:8px;"><button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button></div><dl class="item-more">' + (more || '<dt></dt><dd>沒有其他資料</dd>') + '</dl></details>';
+      '</summary><div style="padding:0 0 10px;display:flex;gap:8px;">' + (detailHref_(it) ? '<a class="detail-btn" href="' + detailHref_(it) + '">看明細</a>' : '<button type="button" class="match-btn" data-dm="' + it.order + '">產生 DM</button>') + '</div><dl class="item-more">' + (more || '<dt></dt><dd>沒有其他資料</dd>') + '</dl></details>';
   }).join('') + '</div>';
 }
 function updateStatus() {
@@ -1046,6 +1064,7 @@ function login(auto) {
     updateStatus();
     checkForUpdates(false);
     startPolling();
+    loadGroupNames_();
   }).catch(function(err) {
     if (isAuthError(err)) { sharedLoginClear_(); ruiheGoHome_(err.message); return; }
     if (/只有.{0,6}可以/.test(err.message || '')) { ruiheGoHome_(err.message); return; }
@@ -1080,6 +1099,16 @@ document.addEventListener('click', function(e) {
   }
   // 配對改到「修改物件／客需」清單（115/10/16）
 });
+
+// 主管：「只看同組」（看自己組員負責的物件）
+function loadGroupNames_() {
+  if (sharedRole_() !== '主管') return;
+  runServer('myVisibleNames', auth.name, auth.code).then(function(res) {
+    if (!res || res.role !== '主管' || !res.names) return;
+    groupNames_ = res.names; $('grpOnlyWrap').hidden = false;
+  }).catch(function() {});
+}
+$('grpOnly').addEventListener('change', function() { groupOnly_ = this.checked; applyAndRender(); });
 
 // ---------------- 事件 ----------------
 $('loginBtn').addEventListener('click', function() { login(); });

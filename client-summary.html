@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>客需簡表｜瑞禾業務系統</title>
+  <title>客需總表｜瑞禾業務系統</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -128,6 +128,9 @@
     .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 22px; font-size: 13.5px; }
     .detail-grid div { display: grid; grid-template-columns: 9.5em 1fr; gap: 8px; }
     .detail-grid span:first-child { color: var(--muted); }
+    .contact-box { background: #fbf7ea; border-left: 4px solid #c9a227; border-radius: 6px; padding: 8px 12px; margin: 0 0 10px; }
+    .contact-box a { color: var(--brand-dark); }
+    .client-name { display: block; font-size: 12.5px; color: var(--muted); font-weight: 500; }
     .mine { display: inline-block; font-size: 11.5px; font-weight: 700; color: var(--brand); border: 1px solid var(--brand); border-radius: 5px; padding: 0 5px; margin-left: 4px; }
     .edit-link { color: var(--brand); font-weight: 600; font-size: 13.5px; text-decoration: none; }
     .demand-lines { font-size: 13.5px; }
@@ -193,19 +196,19 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -244,7 +247,7 @@
   })();
   </script>
 
-    <h1>客需簡表</h1>
+    <h1>客需總表</h1>
     <div class="subtitle">全公司的客戶需求</div>
 
     <div class="card narrow" id="loginView">
@@ -482,6 +485,7 @@ var SHOWN = ['負責業務', '填表日期', '物件類型', '需求類型', '�
 
 var auth = null, data = null, items = [], colIndex = {};
 var serverRole_ = ''; // 後端回報的身分（業務／主管／秘書）
+var contacts_ = {}; // 115/11/09 客需總表：客戶聯絡資料（只有自己負責的、秘書和管理員才有；只放記憶體，不存在這台電腦）
 var sortState = { key: '', dir: 1 };
 var filters = emptyFilters();
 var pollTimer = null, busy = false, lastCheckFailed = false;
@@ -723,7 +727,8 @@ function filtered() {
     if (filters.county && !it.regions.some(function(r) {
       return r.county === filters.county && (!filters.town || !r.town || r.town === filters.town);
     })) return false;
-    for (var i = 0; i < words.length; i++) if (it.search.indexOf(words[i]) === -1) return false;
+    var cs = contacts_[it.key] ? Object.keys(contacts_[it.key]).map(function(k) { return contacts_[it.key][k]; }).join(' ').toLowerCase() : '';
+    for (var i = 0; i < words.length; i++) if (it.search.indexOf(words[i]) === -1 && cs.indexOf(words[i]) === -1) return false;
     if (area !== null && !matchNeed(it, 'area', area)) return false;
     if (price !== null && !matchNeed(it, 'price', price)) return false;
     if (rent !== null && !matchNeed(it, 'rent', rent)) return false;
@@ -824,7 +829,20 @@ function loadTracks(key) {
     .then(function() { if (data) applyAndRender(); });
 }
 function agentHtml(it) {
-  return esc(cell(it.row, '負責業務')) + (isMine(it) ? '<span class="mine">我的</span>' : '');
+  var c = contacts_[it.key];
+  return esc(cell(it.row, '負責業務')) + (isMine(it) ? '<span class="mine">我的</span>' : '') +
+    (c && c['公司／客戶名稱'] ? '<span class="client-name">' + esc(c['公司／客戶名稱']) + '</span>' : '');
+}
+// 客戶聯絡資料（只有負責業務、秘書、管理員拿得到；其他人這一段不會出現）
+function contactHtml(it) {
+  var c = contacts_[it.key];
+  if (!c) return '';
+  return '<div class="contact-box"><div class="flabel">客戶聯絡資料</div><div class="detail-grid">' + Object.keys(c).map(function(l) {
+    var v = c[l];
+    var html = l === '聯絡電話' ? String(v).split(/[、,，;；\s]+/).filter(Boolean).map(function(x) { return '<a href="tel:' + esc(x.replace(/[^\d+]/g, '')) + '">' + esc(x) + '</a>'; }).join('、')
+      : l === 'Email' ? '<a href="mailto:' + esc(v) + '">' + esc(v) + '</a>' : esc(v);
+    return '<div><span>' + esc(l) + '</span><span style="white-space:pre-wrap;">' + html + '</span></div>';
+  }).join('') + '</div></div>';
 }
 function editLinkHtml(it) {
   return isMine(it) || isSecretary() ? '<a class="edit-link" href="client-needs.html?mode=edit&key=' + encodeURIComponent(it.key) + '">修改／追蹤</a>' : '';
@@ -834,7 +852,7 @@ function detailHtml(it) {
   var body = !rest.length ? '<div class="hint">沒有其他資料</div>' : '<div class="detail-grid">' + rest.map(function(c) {
     return '<div><span>' + esc(c) + '</span><span>' + esc(cell(it.row, c)) + '</span></div>';
   }).join('') + '</div>';
-  return body + tracksHtml(it);
+  return contactHtml(it) + body + tracksHtml(it);
 }
 var TABLE_COLS = [
   ['agent', '負責業務'], ['fillDate', '填表日期'], ['types', '物件類型'], ['demand', '需求類型'], [null, '坪數／預算'],
@@ -897,6 +915,8 @@ function checkForUpdates(manual, isLogin) {
   return post(API_URL, 'clientSummaryGet', [auth.name, auth.code, cached ? cached.version : ''])
     .then(function(res) {
       lastCheckFailed = false;
+      var contactsChanged = JSON.stringify(res.contacts || {}) !== JSON.stringify(contacts_);
+      contacts_ = res.contacts || {};
       if (res.role) {
         var changed = serverRole_ && serverRole_ !== res.role;
         serverRole_ = res.role;
@@ -906,7 +926,7 @@ function checkForUpdates(manual, isLogin) {
       if (res.unchanged && cached) {
         var first = !data;
         data = cached; data.checkedAt = Date.now(); saveCache();
-        if (first) { buildItems(); applyAndRender(); }
+        if (first) { buildItems(); applyAndRender(); } else if (contactsChanged) applyAndRender();
         if (manual) toast('已經是最新資料');
       } else {
         var had = !!data;
@@ -975,7 +995,7 @@ function login(auto) {
 function logout(reason) { logoutLocal_(reason); ruiheGoHome_(reason); }
 function logoutLocal_(reason) {
   sharedLoginClear_();
-  serverRole_ = ''; trackCache_ = {};
+  serverRole_ = ''; trackCache_ = {}; contacts_ = {};
   auth = null; data = null; items = []; openKeys = {};
   stopPolling(); clearCache();
   $('mainView').hidden = true; $('loginView').hidden = false;

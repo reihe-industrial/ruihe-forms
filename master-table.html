@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>物件／客需總表｜瑞禾業務系統</title>
+  <title>資料維護｜瑞禾業務系統</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -185,6 +185,8 @@
     .item.dup.sim { border-color: #F5C9A4; background: #FFF8F2; }
       [hidden] { display: none !important; }
     .resultbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    a.edit-row-link { display: inline-block; margin-right: 6px; padding: 3px 10px; border: 1px solid var(--brand); border-radius: 7px; color: var(--brand); font-weight: 700; font-size: 13px; text-decoration: none; white-space: nowrap; }
+    a.edit-row-link:hover { background: var(--brand-soft); }
     td.editable { cursor: text; }
     td.editable:hover { outline: 2px solid #A9CDB6; outline-offset: -2px; }
     td.edited { background: #FFF2CC !important; font-weight: 700; }
@@ -245,19 +247,19 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -296,8 +298,8 @@
   })();
   </script>
 
-    <h1>物件總表</h1>
-    <div class="subtitle">全公司的物件</div>
+    <h1>資料維護</h1>
+    <div class="subtitle">物件</div>
 
     <div class="card narrow" id="loginView">
       <h2>登入</h2>
@@ -327,8 +329,8 @@
       <div class="role-note" id="roleNote"></div>
 
       <div class="chips view-switch" id="viewSwitch" role="group" aria-label="總表">
-        <button type="button" data-v="obj" aria-pressed="true">物件總表</button>
-        <button type="button" data-v="client" aria-pressed="false">客需總表</button>
+        <button type="button" data-v="obj" aria-pressed="true">物件</button>
+        <button type="button" data-v="client" aria-pressed="false">客需</button>
       </div>
 
       <!-- 客需總表（115/10/27）：秘書、管理員看全部欄位；主管只看同組，看不到客戶名稱和聯絡資料 -->
@@ -541,8 +543,8 @@ function setView(v) {
   cView = v;
   Array.prototype.forEach.call(document.querySelectorAll('#viewSwitch button'), function(b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === v)); });
   $('clientView').hidden = v !== 'client'; $('objView').hidden = v === 'client';
-  document.querySelector('h1').textContent = v === 'client' ? '客需總表' : '物件總表';
-  var sub = document.querySelector('.subtitle'); if (sub) sub.textContent = v === 'client' ? '全公司的客需' : '全公司的物件';
+  document.querySelector('h1').textContent = '資料維護';
+  var sub = document.querySelector('.subtitle'); if (sub) sub.textContent = v === 'client' ? '客需' : '物件';
   $('roleNote').hidden = v === 'client';
   try { var u = new URL(location.href); if (v === 'client') u.searchParams.set('view', 'client'); else u.searchParams.delete('view'); history.replaceState(null, '', u); } catch (e) {}
   if (v === 'client' && auth && !cData) cLoad();
@@ -590,7 +592,7 @@ function cRender() {
     var open = !!cOpen[x.k];
     var rest = cols.map(function(c, i) { return i; }).filter(function(i) { return used.indexOf(i) === -1 && String(x.r[i] || '').trim(); });
     var row = '<tr>' + keyIdx.map(function(i) { return '<td' + (cols[i] === '公司／客戶名稱' ? ' class="name"' : cls(i)) + '>' + esc(x.r[i]) + '</td>'; }).join('') +
-      '<td class="need">' + esc(need) + '</td><td class="acts">' + (rest.length ? '<button type="button" class="more-btn" data-copen="' + esc(x.k) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
+      '<td class="need">' + esc(need) + '</td><td class="acts">' + (cData.keys && cData.keys.length ? '<a class="edit-row-link" href="client-needs.html?mode=edit&key=' + encodeURIComponent(x.k) + '">修改</a>' : '') + (rest.length ? '<button type="button" class="more-btn" data-copen="' + esc(x.k) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + '</button>' : '') + '</td></tr>';
     if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 2) + '"><div class="kv">' + rest.map(function(i) { return '<div class="kv-item"><span class="k">' + esc(cols[i]) + '</span><span class="v">' + esc(x.r[i]) + '</span></div>'; }).join('') + '</div></td></tr>';
     return row;
   }).join('');
@@ -735,6 +737,8 @@ function noteHtml_(v) {
 }
 var MASTER_KEY_COLS = ['案名', '案件狀態', '委託種類', '總價', '單價', '案件坐落', '詳細地址', '土地面積(坪)', '主建物面積(坪)', '主要業務名稱', '次要業務名稱', '契約編號', '委託類別', '合約到期'];
 var masterOpen = {};
+// 115/11/09：每一列的「修改」→ 跟業務一樣的修改物件畫面（面積、使用分區、特色說明等在這裡改）
+function editLink_(t, i) { var k = (t.keys || [])[i]; return k ? '<a class="edit-row-link" href="listing.html?mode=edit&key=' + encodeURIComponent(k) + '">修改</a>' : ''; }
 function canEditTable() { return (role === '秘書' || role === '管理員') && DESKTOP_QUERY.matches && data && current() && (current().keys || []).length > 0; }
 function editKey(t, i, label) { return t.type + '|' + t.keys[i] + '|' + label; }
 function editCount() { return Object.keys(edits).length; }
@@ -744,7 +748,7 @@ function updateEditBar() {
   if (!can) return;
   var n = editCount();
   $('editToggle').textContent = editMode ? '結束修改' : '修改資料';
-  $('editHint').textContent = editMode ? '點格子修改；灰色的欄位不能在這裡改' : '';
+  $('editHint').textContent = editMode ? '點格子修改；灰色的欄位請按那一列的「修改」' : '';
   $('editSave').hidden = !editMode && !n; $('editCancel').hidden = !n;
   $('editSave').disabled = !n;
   $('editSave').textContent = n ? '儲存變更（' + n + '）' : '儲存變更';
@@ -800,7 +804,7 @@ function render() {
       if (!wide) {
         var restIdx = t.columns.map(function(c, i) { return i; }).filter(function(i) { return keyIdx.indexOf(i) === -1; });
         var nEdited = restIdx.filter(function(i) { return cellAttrs(x, i).edited; }).length;
-        row += '<td class="acts"><button type="button" class="more-btn" data-mopen="' + esc(rk) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + (nEdited ? '（改了 ' + nEdited + ' 格）' : '') + '</button></td>';
+        row += '<td class="acts">' + editLink_(t, x.i) + '<button type="button" class="more-btn" data-mopen="' + esc(rk) + '" aria-expanded="' + open + '">' + (open ? '收起' : '更多') + (nEdited ? '（改了 ' + nEdited + ' 格）' : '') + '</button></td>';
         row += '</tr>';
         if (open) row += '<tr class="more-row"><td colspan="' + (keyIdx.length + 1) + '">' + dupLinkHtml_(t, x.i) + '<div class="kv">' + restIdx.map(function(i) {
           var a = cellAttrs(x, i);
@@ -826,7 +830,7 @@ function render() {
         '<div class="item-top"><span class="item-name">' + (d ? dupTag(d) : '') + esc(val(t, x.r, '案名') || '（沒有案名）') + '</span><span class="tag ' + (st === '銷售中' ? 'rs' : '') + '">' + esc(st) + '</span></div>' +
         (d ? '<div class="item-meta" style="color:#8C1D18;font-weight:700;">' + esc(dupCat(d) + '：' + dupText(d)) + '</div>' : '') +
         lines + '<div class="item-more-hint"><span class="open-t">看全部欄位</span><span class="close-t">收起</span></div>' +
-        '</summary><div class="item-more" style="display:block;">' + dupLinkHtml_(t, x.i) + detailHtml(t, x.r) + '</div></details>';
+        '</summary><div class="item-more" style="display:block;">' + (editLink_(t, x.i) ? '<div style="margin-bottom:8px;">' + editLink_(t, x.i) + '</div>' : '') + dupLinkHtml_(t, x.i) + detailHtml(t, x.r) + '</div></details>';
     }).join('') + '</div>' + moreHtml(full.length);
   }
 }
@@ -945,7 +949,7 @@ document.addEventListener('click', function(e) {
   var w = t && t.dupWith && t.dupWith[+p[1]], o = w && w.others[+p[2]], me = w && w.self;
   if (!o || !me) return;
   if (!me.contract || !o.contract) { alert('兩件都要有契約編號才能設成關聯物件（口約、訪談紀錄沒有編號）。請先補契約編號。'); return; }
-  if (!confirm('「' + (o.name || '') + '」和這一件，是同一筆土地建物的不同委託（例如整筆和部分），不是重複登錄嗎？\n設定後物件總表就不會再標成重複。')) return;
+  if (!confirm('「' + (o.name || '') + '」和這一件，是同一筆土地建物的不同委託（例如整筆和部分），不是重複登錄嗎？\n設定後資料維護就不會再標成重複。')) return;
   var add = function(cur, c) { var a = String(cur || '').split(/[、,，\s]+/).filter(Boolean); if (a.indexOf(c) === -1) a.push(c); return a.join('、'); };
   var changes = [
     { type: me.type, key: me.key, label: '關聯物件', old: me.linked || '', value: add(me.linked, o.contract) },

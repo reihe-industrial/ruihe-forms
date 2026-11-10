@@ -447,6 +447,17 @@ var CHECKS = {
   '土地': ['界址、地界樁（實際範圍跟地籍圖一不一樣）', '地上物、有沒有被占用', '臨路情形、出入口位置', '地勢高低、排水', '水電可不可以接', '周邊嫌惡設施', '使用分區的限制（能蓋什麼）'],
   '房屋': ['漏水、壁癌、牆面裂縫', '採光、通風、噪音', '水電管線、熱水器、冷氣', '車位能不能實際停（尺寸、坡道）', '管委會規定、管理費', '鄰居、社區環境', '鑰匙在哪裡、現場要先聯絡誰']
 };
+// 帶看前確認清單用哪一種（廠房／土地／房屋）；住商物件後端沒給類型時，看欄位判斷（115/11/09）
+function checkType_() {
+  if (CHECKS[D.type]) return D.type;
+  var t = String(D.type || '') + ' ' + F('建物類別');
+  if (/土地|地$/.test(String(D.type || ''))) return '土地';
+  if (/廠|倉/.test(t)) return '廠房';
+  if (F('簷高(滴水高度)') || F('可供用電量') || F('是否有廠登') || F('物件格局(廠房)')) return '廠房';
+  var hasBld = F('建物類別') || F('主建物面積(m²)') || F('主建物面積(坪)') || F('建築完成日') || F('所在樓別');
+  if (!hasBld && (F('土地面積(m²)') || F('土地類型'))) return '土地';
+  return '房屋';
+}
 var SHEET_CSS = 'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:#1c2b22;margin:0;padding:24px;font-size:13.5px;line-height:1.5;background:#f4f3ee}' +
   '.bar{display:flex;gap:8px;margin:0 auto 14px;max-width:794px;flex-wrap:wrap;align-items:center}.bar button{height:36px;padding:0 16px;border-radius:8px;border:1px solid #1e4a32;background:#1e4a32;color:#fff;font-weight:700;cursor:pointer;font-family:inherit}' +
   '.bar button.g{background:#fff;color:#1e4a32}.bar span{color:#66776c;font-size:13px}' +
@@ -463,7 +474,7 @@ var SHEET_CSS = 'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif
   '.kv dt{width:118px;color:#66776c;flex:0 0 auto}.kv dd{margin:0;white-space:pre-line}.kv a{color:inherit;text-decoration:none}' +
   '.txt{white-space:pre-line}.chk div{padding:3px 0}.lines div{border-bottom:1px solid #bbb;height:26px}' +
   '.map img{width:100%;border-radius:4px;display:block}' +
-  '.contact{margin-top:14px;border-top:3px solid #1e4a32;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;font-size:13px}.contact b{font-size:13.5px}.contact .full{grid-column:1/-1}' +
+  '.contact{margin-top:14px;border-top:3px solid #1e4a32;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;font-size:13px}.contact b{font-size:13.5px}.contact .col>div{padding:2px 0}' +
   '@media print{body{padding:0;background:#fff}.bar{display:none}#sheet{max-width:none;padding:0}@page{size:A4;margin:10mm}h3{break-after:avoid}.kv>div{break-inside:avoid}.ph img{break-inside:avoid}}';
 // 規格區塊：kind＝'dm' 或 'talk'
 function specBlocks_(on, kind) {
@@ -504,7 +515,7 @@ function mapP_(on) { return on('__map') && D.coord && window.RuiheDM && RuiheDM.
 function talkHtml(photos, mapUrl) {
   var on = RuiheOutputs.chooser(OUT.cfg, 'talk');
   var units = unitLines();
-  var checks = CHECKS[D.type] || CHECKS['房屋'];
+  var checks = CHECKS[checkType_()];
   var top = [
     ['類型', [D.type, F('建物類別')].filter(Boolean).filter(function(x, i, a) { return a.indexOf(x) === i; }).join('・') + (rsText() ? '・' + rsText() : '')],
     ['開價', (F('總價') || '') + (units.length ? '（' + units.join('；') + '）' : '')],
@@ -525,7 +536,7 @@ function talkHtml(photos, mapUrl) {
     (dealExtra.length && kvHtml(dealExtra) ? '<h3>委託與狀態</h3>' + kvHtml(dealExtra) : '') +
     (on('__map') && mapUrl ? '<h3>位置圖</h3><div class="map"><img src="' + mapUrl + '"></div>' : '') +
     (on('其他備註說明') && F('其他備註說明') ? '<h3>其他備註說明</h3><div class="txt">' + esc(F('其他備註說明')) + '</div>' : '') +
-    (on('__checks') ? '<h3>帶看前確認</h3><div class="chk">' + checks.map(function(c) { return '<div>☐ ' + esc(c) + '</div>'; }).join('') + '</div>' : '') +
+    (on('__checks') ? '<h3>帶看前確認（' + checkType_() + '）</h3><div class="chk">' + checks.map(function(c) { return '<div>☐ ' + esc(c) + '</div>'; }).join('') + '</div>' : '') +
     (on('__notes') ? '<h3>現場紀錄（客戶反應、要回覆的問題）</h3><div class="lines">' + new Array(7).join('<div></div>') + '</div>' : '');
   return sheetPage_('業務銷講－' + F('案名'), body, 'talk');
 }
@@ -552,13 +563,17 @@ function dmHtml(photos, mapUrl) {
     specBlocks_(dmOn, 'dm') +
     (on('__map') && mapUrl ? '<h3>位置圖</h3><div class="map"><img src="' + mapUrl + '"></div>' : '') +
     // 115/11/09：聯絡業務＋不動產經紀業（名稱、許可字號）＋經紀人（姓名、證書字號）＋公司電話、地址
-    '<div class="contact">' +
-      '<div><b>聯絡業務　' + esc(req.name || '') + '</b>' + (req.phone ? '　' + esc(req.phone) : '') + '</div>' +
-      '<div>' + (co.phone ? '<b>公司電話</b>　' + esc(co.phone) : '') + '</div>' +
-      '<div class="full"><b>不動產經紀業</b>　' + esc(co.name || '瑞禾不動產經紀股份有限公司') + (co.license ? '　許可字號 ' + esc(co.license) : '') + '</div>' +
-      ((co.brokerName || co.brokerLicense) ? '<div class="full"><b>經紀人</b>　' + esc(co.brokerName || '') + (co.brokerLicense ? '　證書字號 ' + esc(co.brokerLicense) : '') + '</div>' : '') +
-      (co.addr ? '<div class="full"><b>公司地址</b>　' + esc(co.addr) + '</div>' : '') +
-    '</div>';
+    // 115/11/09 17:30：分左右兩欄、兩邊行數差不多（左：業務、公司電話、地址；右：經紀業、經紀人）
+    '<div class="contact"><div class="col">' +
+      '<div><b>聯絡業務</b>　<b>' + esc(req.name || '') + '</b>' + (req.phone ? '　' + esc(req.phone) : '') + '</div>' +
+      (co.phone ? '<div><b>公司電話</b>　' + esc(co.phone) + '</div>' : '') +
+      (co.addr ? '<div><b>公司地址</b>　' + esc(co.addr) + '</div>' : '') +
+    '</div><div class="col">' +
+      '<div><b>不動產經紀業</b>　' + esc(co.name || '瑞禾不動產經紀股份有限公司') + '</div>' +
+      (co.license ? '<div><b>許可字號</b>　' + esc(co.license) + '</div>' : '') +
+      (co.brokerName ? '<div><b>經紀人</b>　' + esc(co.brokerName) + '</div>' : '') +
+      (co.brokerLicense ? '<div><b>證書字號</b>　' + esc(co.brokerLicense) + '</div>' : '') +
+    '</div></div>';
   return sheetPage_('DM－' + F('案名'), body, 'dm');
 }
 // 挑照片（DM 用；最多 8 張，預設前 4 張）
