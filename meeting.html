@@ -175,7 +175,7 @@ function mapLinks(it) {
   if (!it.key) { var pl = it.extra && it.extra.place; return pl ? ['<a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(pl) + '" target="_blank" rel="noopener">Google 地圖</a>'] : []; }
   var l = L(it), out = [];
   if (l && l.coord) out.push('<a href="https://www.google.com/maps?q=' + l.coord[0] + ',' + l.coord[1] + '" target="_blank" rel="noopener">Google 地圖</a>');
-  out.push('<a href="map.html?k=' + encodeURIComponent(it.key) + '" target="_blank" rel="noopener">物件地圖（國土測繪）</a>');
+  out.push('<a href="map.html?k=' + encodeURIComponent(it.key) + '" target="_blank" rel="noopener">公司全部物件地圖</a>');
   return out;
 }
 function render() {
