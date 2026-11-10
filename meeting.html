@@ -256,7 +256,7 @@ function itemForm(title, it, onSave, custom) {
     '<div><label class="f-label">建物坪數</label><input type="text" inputmode="decimal" id="cBld" class="full" style="height:38px;" value="' + esc(ex.bld || '') + '"></div></div>') : '';
   var dlg = RuiheMatch.showModal(title, cf +
     '<label class="f-label">' + (agenda ? '內容' : '補充說明') + '</label><textarea class="full" id="fNote" rows="' + (agenda ? 6 : 3) + '" placeholder="' + (agenda ? '' : '例：屋主急售、可議價') + '">' + esc((it && it.note) || '') + '</textarea>' +
-    '<label class="f-label">上傳檔案（PDF、PPT、Word、圖片；圖片會自動壓縮，其他檔案一個最大 10MB）</label>' +
+    '<label class="f-label">上傳檔案（PDF、PPT、Word、圖片；圖片會自動壓縮，單檔最大 30MB）</label>' +
     '<label class="btn ghost" style="display:inline-flex;align-items:center;height:38px;cursor:pointer;">選擇檔案<input type="file" id="fFiles" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*" style="display:none;"></label>' +
     '<div id="fUpMsg" style="font-size:13px;color:var(--muted);margin-top:4px;"></div>' +
     '<label class="f-label">網址（雲端硬碟、網站…）</label><datalist id="lTypes">' + TYPE_LINKS.map(function(t) { return '<option value="' + t + '">'; }).join('') + '</datalist>' +
@@ -273,7 +273,7 @@ function itemForm(title, it, onSave, custom) {
       var f = files[i];
       msg.textContent = '處理中（' + (i + 1) + '/' + files.length + '）：' + f.name + '…';
       shrinkImage(f).then(function(up) {
-        if (up.size > 10 * 1024 * 1024) { alert('「' + f.name + '」超過 10MB，請放在自己的雲端硬碟再貼網址。'); next(i + 1); return; }
+        if (up.size > 30 * 1024 * 1024) { alert('「' + f.name + '」超過 30MB，請放在自己的雲端硬碟再貼網址。'); next(i + 1); return; }
         msg.textContent = '上傳中（' + (i + 1) + '/' + files.length + '）：' + f.name + '…';
         post('meetingUpload', [auth.name, auth.code, M.date, up.name, up.type, up.b64]).then(function(link) {
           var box = b.querySelector('#fLinks'), first = box.querySelector('.lrow');
