@@ -465,12 +465,12 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script src="lib/match.js?v=20261021c"></script>
@@ -479,7 +479,7 @@
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -540,6 +540,7 @@
       <div class="edit-login-actions"><button type="button" class="edit-btn" id="editLoginBtn" style="flex:1;">登入</button></div>
       <div class="msg" id="editLoginMsg"></div>
     </div>
+    <div class="card" id="editOpeningView" style="display:none;padding:40px 20px;text-align:center;color:#5D6B62;">正在打開這一件…</div>
     <div class="card" id="editListView" style="display:none;">
       <div class="edit-list-head">
         <h2 id="editListTitle">我的案件</h2>
@@ -5016,6 +5017,7 @@ function editShow_(view) {
   // view：'login' | 'list' | 'form'
   document.getElementById('editLoginView').style.display = view === 'login' ? '' : 'none';
   document.getElementById('editListView').style.display = view === 'list' ? '' : 'none';
+  document.getElementById('editOpeningView').style.display = view === 'opening' ? '' : 'none'; // 115/11/09 從物件內容頁、資料維護按「修改」進來
   document.getElementById('editBar').style.display = view === 'form' ? '' : 'none';
   document.getElementById('listingForm').style.display = view === 'form' ? '' : 'none';
   document.getElementById('typeNow').style.display = view === 'form' ? '' : 'none'; // 修改頁：清單、登入畫面不顯示「正在填寫」
@@ -5047,13 +5049,13 @@ function editLoadListsCache_(name) {
 var editOpenedFromUrl_ = false;
 function editOpenFromUrl_() {
   if (editOpenedFromUrl_ || !EDIT_MODE) return;
-  var m = location.search.match(/[?&]key=([^&]+)/);
-  if (!m) { editOpenedFromUrl_ = true; return; }
-  var key = decodeURIComponent(m[1]);
-  var found = editCases_.filter(function(c) { return c.key === key; })[0];
-  if (!found) return; // 清單還沒讀到（暫存的清單裡沒有），下一次清單更新時再試
   editOpenedFromUrl_ = true;
-  editOpenCase_(key, null);
+  var m = location.search.match(/[?&]key=([^&]+)/);
+  if (!m || editTab_ === 'needs') return;
+  // 115/11/09：從物件內容頁、資料維護按「修改」進來：不用等清單讀完，直接打開那一件（有沒有權限由後端判斷）
+  var key = decodeURIComponent(m[1]);
+  editShow_('opening'); // 不顯示清單，直接顯示「正在打開這一件…」，打開後就是修改畫面
+  editOpenCase_(key, null, function() { editShow_('list'); }); // 打不開（沒有權限、找不到）才回到清單
 }
 function editLogin_(auto) {
   var name = auto ? auto.name : document.getElementById('editName').value;
@@ -5068,6 +5070,7 @@ function editLogin_(auto) {
     editRenderList_();
     editShow_('list');
     if (!cached) document.getElementById('editCaseList').innerHTML = '<div class="hint">讀取中…</div>';
+    editOpenFromUrl_(); // 網址有 ?key=… 就馬上打開那一件（115/11/09）
     runServer('editListCases', name, code)
       .then(function(res) {
         if (res.role) { editRole_ = res.role; sharedLoginSet_(name, code, res.role); }
@@ -5263,7 +5266,7 @@ function editShowMatch_(kind, key) {
   var show = function(near) {
     var it = editMatchFind_(kind, key);
     if (!it) {
-      dlg.body.innerHTML = '<div style="color:#5D6B62;">' + (kind === 'case' ? '這件不在物件簡表（不是銷售中，或剛送出還在處理），不能配對。' : '客需簡表還沒有這一筆（剛新增的請稍後再看）。') + '</div>';
+      dlg.body.innerHTML = '<div style="color:#5D6B62;">' + (kind === 'case' ? '這件不在物件總表（不是銷售中，或剛送出還在處理），不能配對。' : '客需總表還沒有這一筆（剛新增的請稍後再看）。') + '</div>';
       return;
     }
     if (kind === 'need' && it.closed) { dlg.body.innerHTML = '<div style="color:#5D6B62;">這筆客需已經結案，不配對。</div>'; return; }
@@ -5418,7 +5421,7 @@ function editApplyCurrentValue_(label, value) {
   return false;
 }
 
-function editOpenCase_(key, btn) {
+function editOpenCase_(key, btn, onFail) {
   if (!editAuth_) return;
   if (btn) { btn.disabled = true; btn.textContent = '載入中…'; }
   Promise.all([runServer('editLoadCase', editAuth_.name, editAuth_.code, key), initReady_])
@@ -5498,7 +5501,7 @@ function editOpenCase_(key, btn) {
       editShow_('form');
       editDirty_ = false;
     })
-    .catch(function(err) { showToast(err.message, 'error'); })
+    .catch(function(err) { showToast(err.message, 'error'); if (onFail) onFail(err); })
     .then(function() { if (btn) { btn.disabled = false; btn.textContent = '修改'; } });
 }
 

@@ -51,19 +51,19 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop();
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'help.html' ? 'help' : page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'help.html' ? 'help' : page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -104,12 +104,12 @@
     <h1>使用說明</h1>
     <div class="subtitle">瑞禾業務系統的操作方式。標籤寫「所有人」的大家都會用到，其他的是主管、秘書、管理員才有的功能。</div>
     <div class="help-layout">
-      <nav class="help-toc" aria-label="說明目錄"><a href="#login">登入</a><a href="#home">首頁</a><a href="#listing">新增物件</a><a href="#edit">修改物件／客需／物件配對</a><a href="#needs">新增客需、客需追蹤</a><a href="#summary">物件簡表、產生 DM</a><a href="#csummary">客需簡表</a><a href="#map">物件地圖</a><a href="#meeting">週會</a><a href="#registry">調謄本</a><a href="#manager">主管</a><a href="#secretary">秘書專區</a><a href="#admin">管理員</a><a href="#faq">常見問題</a></nav>
+      <nav class="help-toc" aria-label="說明目錄"><a href="#login">登入</a><a href="#home">首頁</a><a href="#listing">新增物件</a><a href="#edit">修改物件／客需／物件配對</a><a href="#needs">新增客需、客需追蹤</a><a href="#summary">物件總表、物件內容、產生 DM</a><a href="#csummary">客需總表</a><a href="#map">物件地圖</a><a href="#meeting">週會</a><a href="#registry">調謄本</a><a href="#manager">主管</a><a href="#maintain">資料維護</a><a href="#secretary">後台管理</a><a href="#admin">管理員</a><a href="#faq">常見問題</a></nav>
       <div><section id="login" class="hs"><h2>登入<span class="who">所有人</span></h2>
 <p>從「首頁」登入，有兩種方式：</p>
 <ul>
 <li><b>使用 Google 帳戶登入</b>：管理員在「人員管理」幫你設定好 Gmail 後就能用，按一下就登入。</li>
-<li><b>使用通關碼登入</b>：選自己的名字，輸入通關碼。忘記通關碼請找管理員。</li>
+<li><b>通關碼登入</b>：用管理員給的通關碼登入網址打開，輸入自己的姓名和通關碼。忘記通關碼請找管理員。</li>
 </ul>
 <p>所有功能（包括新增物件、新增客需、調謄本）都要先登入；沒登入時打開會先帶到首頁，登入後回到原本那一頁。同一個瀏覽器分頁登入一次，其他功能頁都不用再登入。<b>30 分鐘沒有動作會自動登出</b>。</p>
 <div class="tip">在共用電腦上用完，一定要按右上角的「登出」。</div>
@@ -189,19 +189,25 @@
 <p>需求土地分區可以複選（都市計畫、非都市的工業相關分區），清單裡沒有的勾「其他」自己填。面積和預算可以寫一個數字或範圍（例如 200～300）。<b>坪數、預算有填，配對才會準</b>。</p>
 <h4>追蹤紀錄</h4>
 <p>到「修改物件／客需／物件配對」→「客需」→「修改／追蹤」，在上方新增追蹤紀錄，填下次聯絡日期，首頁就會提醒你。成交或不需要了，記得把客需結案。</p>
-</section><section id="summary" class="hs"><h2>物件簡表、產生 DM<span class="who">所有人</span></h2>
-<p>全公司銷售中的物件（含住商物件），可以用類型、租售、區域、坪數、總價、業務篩選。每一列按「更多」，下面會一格一格列出其他欄位。</p>
+</section><section id="summary" class="hs"><h2>物件總表、物件內容、產生 DM<span class="who">所有人</span></h2>
+<p>全公司銷售中的物件（含住商物件），可以用類型、租售、區域、坪數、總價、業務篩選。每一列按「<b>看明細</b>」或點案名，打開物件內容。主管勾「只看同組」，只列組員負責的物件。</p>
+<h4>物件內容</h4>
+<p>點<b>案名</b>打開物件內容：土地、建物、設備、周邊環境、謄本資料、位置、特色說明、照片（點照片放大）。委託人資料只有負責這件的業務和秘書、管理員看得到。</p>
+<ul>
+<li>「<b>給客戶看（DM）</b>」：產生 DM，做法見下面。</li>
+<li>「<b>業務銷講</b>」：另開一頁，可以「下載圖片」或「列印／存成 PDF」。有規格、謄本重點、帶看前確認清單和現場紀錄空白線，不要交給客戶。</li>
+<li>「<b>修改</b>」：自己負責的物件（秘書、管理員是全部）才有，打開修改物件畫面。</li>
+</ul>
 <h4>產生 DM</h4>
 <ol>
-<li>按那一件的「<b>產生 DM</b>」。</li>
-<li>「下載圖片」：直式圖片，適合傳 LINE。</li>
-<li>「A4 版面（存成 PDF）」：跳出列印視窗，目的地選「另存為 PDF」。</li>
-<li>「Word 檔（可編輯）」：下載表格式的物件說明（.docx）。左邊是建物資料、右邊是土地資料，下面是其他說明、優勢特色、服務人員、聯絡電話、仲介服務費；有座標的話表格下方放位置圖；有照片的話第 2 頁放照片。整份都可以在 Word 裡改，字型是標楷體和 Times New Roman。</li>
+<li>打開那一件的物件內容（點案名或「看明細」），按「<b>給客戶看（DM）</b>」。</li>
+<li>勾選要放的照片（最多 8 張），◀ ▶ 調順序，按「產生 DM」。</li>
+<li>另開的一頁：「<b>下載圖片</b>」適合傳 LINE；「<b>列印／存成 PDF</b>」目的地選「另存為 PDF」。</li>
 </ol>
-<p>DM 的價格旁邊會標「單價」；<b>廠房出售</b>改成顯示<b>土地均價</b>（總價 ÷ 土地坪數）和<b>建物均價</b>（總價 ÷ 主建物坪數），物件簡表和物件地圖也一樣。</p>
-<p>DM 上的聯絡業務是<b>產生 DM 的人</b>，電話來自人員管理的設定；公司資訊和經紀人資訊會自動帶入。地址只會寫到路名，委託人、地號建號這類資料不會出現在 DM 和 Word 檔。有座標的物件會放位置圖：DM 圖片是 1 張照片＋右邊的位置圖；A4 版是 2×2 四格（最多 3 張照片＋位置圖）；Word 檔是在表格下方放位置圖，第 2 頁放最多 8 張照片。</p>
-</section><section id="csummary" class="hs"><h2>客需簡表<span class="who">所有人</span></h2>
-<p>全公司的客戶需求，可以篩選類型、區域、業務。有符合的客戶，請找負責業務。</p>
+<p>DM 跟業務銷講是同一種表格排版。價格旁邊會標「單價」；<b>廠房出售</b>改成顯示<b>土地均價</b>（總價 ÷ 土地坪數）和<b>建物均價</b>（總價 ÷ 主建物坪數），物件總表和物件地圖也一樣。</p>
+<p>DM 上的聯絡業務是<b>產生 DM 的人</b>，電話來自人員管理的設定；不動產經紀業（名稱、許可字號）、經紀人（姓名、證書字號）、公司電話和地址一定會放，在後台管理「系統設定 → 公司與經紀業資訊」改。地址只寫到路名，委託人、契約、謄本這類資料不會出現在 DM。DM 和業務銷講要放哪些欄位，由管理員在「後台管理 → 系統設定」勾選。</p>
+</section><section id="csummary" class="hs"><h2>客需總表<span class="who">所有人</span></h2>
+<p>全公司的客戶需求，可以篩選類型、區域、業務。按一列展開看全部需求。自己負責的客需（秘書、管理員是全部）展開後會多一格「客戶聯絡資料」；別人的客需，有符合的物件請找負責業務。</p>
 </section><section id="map" class="hs"><h2>物件地圖<span class="who">所有人</span></h2>
 <p>銷售中的物件放在地圖上，點標記看簡介。可以篩選類型、租售、業務、建物坪數、總價、土地坪數。</p>
 </section><section id="meeting" class="hs"><h2>週會<span class="who">所有人</span></h2>
@@ -229,14 +235,20 @@
 <li>按「送出申請」。90 天內申請過同一筆會提醒你。</li>
 </ol>
 </section><section id="manager" class="hs"><h2>主管<span class="who">主管</span></h2>
-<p>選單的<b>物件／客需總表</b>，上方可以切換「物件總表／客需總表」。客需總表：秘書、管理員看全部客需和全部欄位；主管只看同組業務的客需，看不到客戶名稱、聯絡人、電話、Line ID、Email，只看得到客戶身份。客需總表跟物件總表一樣不用左右捲，按「更多」看其他欄位。</p>
-<p>（秘書、管理員）物件總表標成「相同／需要確認／相似」的物件，按「更多」會列出跟哪一件重複；如果其實是同一筆土地建物的不同委託（例如可以整筆買、也可以只買一部分），按「<b>同一物件的不同委託（拆售等），不是重複</b>」，兩件就會互相記在「關聯物件」欄，之後不再標成重複。</p>
 <ul>
+<li>物件總表勾「<b>只看同組</b>」，看組員負責的物件。</li>
 <li>首頁可以切換「全組」，看組員的待辦。</li>
-<li>「物件總表」只能看，不能改。</li>
 <li>只能修改自己負責的物件和客需。</li>
 </ul>
-</section><section id="secretary" class="hs"><h2>秘書專區<span class="who">秘書、管理員</span></h2>
+</section><section id="maintain" class="hs"><h2>資料維護<span class="who">秘書、管理員</span></h2>
+<p>上方切換「物件／客需」。表格不用左右捲，按「更多」看其他欄位。</p>
+<ul>
+<li><b>直接在表格改</b>：「修改資料」→ 點格子改 → 「儲存變更」。可以改的是案件狀態、狀態日期、成交價、狀態說明、主要／次要業務和比例、中人比例、契約編號、委託種類、委託類別、合約起始、合約到期、座標。</li>
+<li><b>其他欄位</b>（面積、使用分區、特色說明…）：按那一列的「<b>修改</b>」，到修改畫面改。</li>
+<li>主要業務、次要業務會直接寫出比例（例如「曾甄茹 35%、羅長庚 35%」）。</li>
+<li>標成「相同／需要確認／相似」的物件，按「更多」會列出跟哪一件重複；如果其實是同一筆土地建物的不同委託（例如可以整筆買、也可以只買一部分），按「<b>同一物件的不同委託（拆售等），不是重複</b>」，兩件就會互相記在「關聯物件」欄，之後不再標成重複。</li>
+</ul>
+</section><section id="secretary" class="hs"><h2>後台管理<span class="who">秘書、管理員</span></h2>
 <ul>
 <li><b>申調謄本</b>：改狀態、內部備註、費用，按「儲存變更」。可以勾好幾筆一起改狀態。</li>
 <li><b>人員管理</b>：在職、身分、組別、電話（DM 會用到）、通關碼、Gmail。秘書改身分或組別要送申請，由管理員同意。</li>
@@ -246,12 +258,10 @@
 <li><b>公告</b>：首頁的公告，可以設重要（紅色置頂）和顯示期間。</li>
 <li><b>異動紀錄</b>：誰在什麼時候改了哪一筆。</li>
 <li>首頁的行事曆可以新增<b>公司活動</b>，也看得到所有業務的行程。</li>
-<li>物件總表的主要業務、次要業務會直接寫出比例（例如「曾甄茹 35%、羅長庚 35%」）。</li>
-<li>物件總表可以直接改格子：「修改資料」→ 點格子改（其他欄位按「更多」展開後也能改）→ 「儲存變更」。</li>
 </ul>
 </section><section id="admin" class="hs"><h2>管理員<span class="who">管理員</span></h2>
 <ul>
-<li><b>系統設定</b>：分成提醒與配對、公司資訊、行程、文件與備份四組，不用改程式：提醒天數、自動登出時間、配對的坪數和預算差距、鄰近區域公里數；公司電話、地址、經紀人姓名和證照字號（DM、Word 檔會用）；行程類型（一行一個）；Word 檔照片張數、備份保留份數。最下面有「讀取速度測試」。</li>
+<li><b>系統設定</b>：上面一排選分類，一次看一類。<b>提醒與配對</b>（提醒天數、自動登出、配對的坪數和預算差距等）、<b>公司與經紀業資訊</b>（不動產經紀業名稱和許可字號、經紀人姓名和證書字號、公司電話和地址，DM 最下面會用）、<b>契約編號字首</b>、<b>行程類型</b>、<b>文件與備份</b>、<b>DM、銷講、明細頁的內容</b>（一項一項勾 DM、業務銷講、物件明細頁要放什麼；「—」是那一邊沒有這一項，DM 的「—」是客戶不能看的資料。物件明細頁沒勾的項目大家都看不到，委託人資料就算勾了也只有這件的業務、秘書、管理員看得到；「回到預設」恢復原本的設定）、<b>讀取速度測試</b>。改完按那一類的「儲存設定」或「儲存」。</li>
 <li><b>系統狀態</b>：排程最後一次有沒有成功、背景處理有沒有卡住、座標待確認幾筆。</li>
 <li><b>備份</b>（在系統狀態下面）：每週一凌晨自動備份重要的試算表到管理員的雲端硬碟「瑞禾系統備份」，保留份數在系統設定改（預設 4 份）；也可以按「立即備份」。客需、調謄本的試算表要在這裡貼上網址。</li>
 <li>刪掉的物件、客需會先備份在試算表的隱藏分頁「已刪除」「已刪除客需」，刪錯可以從那裡找回內容。</li>
@@ -261,7 +271,7 @@
 </section><section id="faq" class="hs"><h2>常見問題<span class="who">所有人</span></h2>
 <dl>
 <dt>畫面跟同事說的不一樣、按鈕不見了</dt><dd>按 <b>Ctrl＋F5</b>（手機把瀏覽器關掉重開），讀最新版的網頁。</dd>
-<dt>資料不是最新的</dt><dd>按頁面上的「重新整理」。剛送出的物件要等一下下才會出現在簡表。</dd>
+<dt>資料不是最新的</dt><dd>按頁面上的「重新整理」。剛送出的物件要等一下下才會出現在物件總表。</dd>
 <dt>忘記通關碼、Google 登入說還沒設定</dt><dd>找管理員。</dd>
 <dt>看到「連線比較慢」</dt><dd>系統會自動再試一次，稍等一下；一直不行就重新整理。</dd>
 <dt>填錯送出了</dt><dd>到「修改物件／客需／物件配對」改；改不了的欄位（例如業務比例）請找管理員。</dd>

@@ -350,19 +350,19 @@
     <a href="land-registry.html" data-key="registry" data-auth="1" style="display:none;">調謄本</a>
     <span data-auth="1" aria-hidden="true" style="display:none;flex:0 0 1px;background:#dfe2d7;margin:4px 4px;"></span>
     <a href="listing.html?mode=edit" data-key="edit" data-auth="1" style="display:none;">修改物件／客需／物件配對</a>
-    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件簡表</a>
-    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需簡表</a>
+    <a href="summary.html" data-key="summary" data-auth="1" style="display:none;">物件總表</a>
+    <a href="client-summary.html" data-key="csummary" data-auth="1" style="display:none;">客需總表</a>
     <a href="map.html" data-key="map" data-auth="1" style="display:none;">物件地圖</a>
     <a href="meeting.html" data-key="meeting" data-auth="1" style="display:none;">週會</a>
-    <a href="master-table.html" data-key="master" data-auth="1" data-roles="主管,秘書,管理員" style="display:none;">物件／客需總表</a>
-    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">秘書專區</a>
+    <a href="master-table.html" data-key="master" data-auth="1" data-roles="秘書,管理員" style="display:none;">資料維護</a>
+    <a href="secretary.html" data-key="secretary" data-auth="1" data-roles="秘書,管理員" style="display:none;">後台管理</a>
     <a href="help.html" data-key="help" data-auth="1" style="display:none;">使用說明</a>
   </nav>
   <script>
   (function() {
     var page = location.pathname.split('/').pop() || 'index.html';
     var edit = /[?&]mode=edit(&|$)/.test(location.search);
-    var key = page === 'index.html' ? 'home' : page === 'land-registry.html' ? 'registry' : page === 'summary.html' ? 'summary'
+    var key = page === 'index.html' ? 'home' : page === 'land-registry.html' ? 'registry' : page === 'summary.html' || page === 'detail.html' ? 'summary'
       : page === 'master-table.html' ? 'master' : page === 'secretary.html' ? 'secretary'
       : page === 'client-summary.html' ? 'csummary' : page === 'map.html' ? 'map' : page === 'matching.html' ? 'matching'
       : page === 'client-needs.html' ? (edit ? 'edit' : 'needs')
@@ -408,14 +408,12 @@
       <h2>登入</h2>
       <div id="chooseBox">
         <div class="g-box"><div id="googleBtn"></div><div class="g-note" id="googleNote"></div></div>
-        <div class="or-line">或</div>
-        <button type="button" class="btn" id="showCodeBtn" style="width:100%;">使用通關碼登入</button>
       </div>
       <div id="codeBox" hidden>
         <button type="button" class="back-link" id="backBtn">← 其他登入方式</button>
         <div class="field">
           <label class="required" for="loginName">姓名</label>
-          <select id="loginName"><option value="">載入中…</option></select>
+          <input type="text" id="loginName" autocomplete="off" spellcheck="false" maxlength="20">
         </div>
         <div class="field">
           <label class="required" for="loginCode">通關碼</label>
@@ -656,14 +654,14 @@ function loadLoginNames_(sel, fetchNames, onError) {
 }
 
 var HOME_CACHE_KEY = 'ruihe_home_cache_v1';
-var ALLOWED_NEXT = ['listing.html', 'client-needs.html', 'land-registry.html', 'summary.html', 'client-summary.html', 'map.html', 'master-table.html', 'secretary.html', 'help.html', 'meeting.html'];
+var ALLOWED_NEXT = ['listing.html', 'client-needs.html', 'land-registry.html', 'summary.html', 'detail.html', 'client-summary.html', 'map.html', 'master-table.html', 'secretary.html', 'help.html', 'meeting.html'];
 var ENTRIES = [
   { href: 'listing.html?mode=edit', title: '修改物件／客需／物件配對', desc: '修改自己負責的物件和客需，記錄客需追蹤、配對', secDesc: '修改全部人的物件和客需，記錄客需追蹤' },
-  { href: 'summary.html', title: '物件簡表', desc: '全公司銷售中的物件，可以篩選、排序' },
-  { href: 'client-summary.html', title: '客需簡表', desc: '全公司的客戶需求' },
+  { href: 'summary.html', title: '物件總表', desc: '全公司銷售中的物件，點案名看物件內容' },
+  { href: 'client-summary.html', title: '客需總表', desc: '全公司的客戶需求' },
   { href: 'map.html', title: '物件地圖', desc: '銷售中的物件放在地圖上，點標記看簡介' },
-  { href: 'master-table.html', title: '物件總表', desc: '總彙整表的所有欄位', roles: ['主管', '秘書', '管理員'] },
-  { href: 'secretary.html', title: '秘書專區', desc: '申調謄本清單、人員管理', roles: ['秘書', '管理員'] }
+  { href: 'master-table.html', title: '資料維護', desc: '總彙整表的所有欄位，改狀態、業務、契約', roles: ['秘書', '管理員'] },
+  { href: 'secretary.html', title: '後台管理', desc: '申調謄本清單、人員管理', roles: ['秘書', '管理員'] }
 ];
 var auth = null, role = '', scope = 'mine';
 var state = { client: null, contract: null, clientErr: '', contractErr: '' };
@@ -861,7 +859,8 @@ function logoutToLogin(msg) {
 }
 function login(auto) {
   var name = auto ? auto.name : $('loginName').value, code = auto ? auto.code : $('loginCode').value.replace(/\s+/g, '');
-  if (!name || !code) { showLoginMsg('請選擇姓名並輸入通關碼。', true); return; }
+  name = String(name || '').trim();
+  if (!name || !code) { showLoginMsg('請輸入姓名和通關碼。', true); return; }
   var btn = $('loginBtn'); btn.disabled = true; btn.textContent = '登入中…'; showLoginMsg('');
   post(OBJ_API, 'summaryVerifyLogin', auto ? [name, code] : [name, code, clientInfo()]).then(function(res) {
     afterLogin(res, res.token || code);   // 用通關碼登入會拿到登入憑證，之後網頁只暫存憑證；用憑證驗證（換頁）沿用原本的
@@ -945,8 +944,8 @@ function renderDupReminder() {
   if (!items.length) { $('bodyDup').innerHTML = '<div class="rem-empty">目前沒有相同、需要確認或相似的物件。</div>'; return; }
   $('bodyDup').innerHTML = items.slice(0, 8).map(function(it) {
     return '<div class="rem-row dup"><div class="nm">' + esc(it.name || '（未填案名）') + '</div><div class="meta">' + esc(it.type) + '</div>' +
-      '<div class="when"><b>' + esc(it.why.split('｜')[0]) + '</b>　' + esc(it.why.split('｜').slice(1).join('｜')) + '</div><div class="go"><a class="link-btn" href="master-table.html?dup=1">看物件總表</a></div></div>';
-  }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 件，請到物件總表勾「只看相同、需要確認或相似的」。</div>' : '');
+      '<div class="when"><b>' + esc(it.why.split('｜')[0]) + '</b>　' + esc(it.why.split('｜').slice(1).join('｜')) + '</div><div class="go"><a class="link-btn" href="master-table.html?dup=1">到資料維護看</a></div></div>';
+  }).join('') + (items.length > 8 ? '<div class="rem-empty">還有 ' + (items.length - 8) + ' 件，請到資料維護勾「只看相同、需要確認或相似的」。</div>' : '');
 }
 
 // ---------------- 預先載入各功能頁的資料 ----------------
@@ -977,8 +976,8 @@ function prefetchPages() {
     if (res.unchanged || !auth) return;
     try { localStorage.setItem('ruihe_client_summary_cache_v1', JSON.stringify({ version: res.version, columns: res.columns || [], rows: res.rows || [], checkedAt: Date.now() })); } catch (e) {}
   }).then(function() { renderMatchReminder(); }, function() {});
-  // 物件總表（只存在這個分頁）
-  if (r === '主管' || r === '秘書' || r === '管理員') {
+  // 資料維護（物件）（只存在這個分頁；115/11/09 只有秘書、管理員）
+  if (r === '秘書' || r === '管理員') {
     var tc = readJson(sessionStorage, 'ruihe_master_cache_v1');
     post(OBJ_API, 'masterTableGet', [who, code, tc && tc.name === who ? tc.version : '']).then(function(res) {
       if (res.unchanged || !auth) return;
@@ -1031,12 +1030,12 @@ function whenGoogle() {
 function inAppBrowser() { return /Line\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent || ''); }
 function renderGoogleLogin() {
   var note = $('googleNote');
-  if (inAppBrowser()) { note.className = 'g-note warn'; note.textContent = '在 LINE 等 App 裡打開時，Google 登入可能沒辦法用，請改用 Chrome 或 Safari 開啟，或用下面的通關碼登入。'; }
+  if (inAppBrowser()) { note.className = 'g-note warn'; note.textContent = '在 LINE 等 App 裡打開時，Google 登入可能沒辦法用，請改用 Chrome 或 Safari 開啟。'; }
   whenGoogle().then(function(gid) {
     gid.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleLogin, auto_select: false, cancel_on_tap_outside: true });
     $('googleBtn').innerHTML = '';
     gid.renderButton($('googleBtn'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', width: 280, locale: 'zh_TW' });
-  }).catch(function() { if (!inAppBrowser()) { note.className = 'g-note'; note.textContent = 'Google 登入暫時無法使用，請用通關碼登入。'; } });
+  }).catch(function() { if (!inAppBrowser()) { note.className = 'g-note'; note.textContent = 'Google 登入暫時無法使用，請稍後再試或找管理員。'; } });
 }
 function onGoogleLogin(resp) {
   if (!resp || !resp.credential) return;
@@ -1075,12 +1074,14 @@ $('gUnbindBtn').addEventListener('click', function() {
     .catch(function(err) { toast(err.message || '解除失敗', true); });
 });
 
-function showLoginChoice(code) {
+// 115/11/09：通關碼登入不放在畫面上（不讓外部的人看到、試）；只有用管理員給的網址（index.html?code=1）打開才出現
+var CODE_LOGIN_ = /[?&]code(=|&|$)/.test(location.search);
+function showLoginChoice(code, force) {
+  if (!force) code = code || CODE_LOGIN_;
   $('chooseBox').hidden = !!code; $('codeBox').hidden = !code;
   if (code) setTimeout(function() { try { $('loginName').focus(); } catch (e) {} }, 0);
 }
-$('showCodeBtn').addEventListener('click', function() { showLoginChoice(true); });
-$('backBtn').addEventListener('click', function() { showLoginChoice(false); });
+$('backBtn').addEventListener('click', function() { showLoginChoice(false, true); });
 
 // ---------------- 事件 ----------------
 $('loginBtn').addEventListener('click', function() { login(); });
@@ -1100,9 +1101,9 @@ $('scopeSeg').addEventListener('click', function(e) {
 // 起始：被功能頁帶回來時顯示原因（例如 30 分鐘沒動作自動登出）
 (function init() {
   var msg = ''; try { msg = sessionStorage.getItem('ruihe_login_msg') || ''; } catch (e) {}
-  loadLoginNames_($('loginName'), function() {
-    return post(OBJ_API, 'getEditLoginOptions', []).then(function(res) { return res.personList || []; });
-  }, function(err) { $('loginName').innerHTML = '<option value="">載入失敗，請重新整理頁面</option>'; showLoginMsg(err.message || '連不上系統', true); });
+  // 115/11/09：不再載入同仁名單（姓名自己輸入），外部的人看不到名單
+  try { $('loginName').value = localStorage.getItem('ruihe_summary_last_name') || ''; } catch (e) {}
+  showLoginChoice(false);
   idleWatch_(function() { return !!auth; }, function(m) { logoutToLogin(m); });
   var saved = sharedLoginGet_();
   if (!saved) renderGoogleLogin();
@@ -1405,7 +1406,7 @@ function loadSecReminders() {
     setBadge('cntCcP', list.length, 'warn');
     $('bodyCcP').innerHTML = list.length ? list.slice(0, 8).map(function(r) {
       return '<div class="rem-row"><div class="nm">' + esc(r['案名']) + '</div><div class="meta">' + esc(r['填寫人'] + '｜契變書 ' + r['契變書編號'] + '｜' + r['契變日期']) + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=cc">去收件</a></div></div>';
-    }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html?tab=cc">到秘書專區看全部</a></div>' : '') : '<div class="rem-empty">沒有待收件的契變書。</div>';
+    }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html?tab=cc">到後台管理看全部</a></div>' : '') : '<div class="rem-empty">沒有待收件的契變書。</div>';
   }).catch(function(err) { setBadge('cntCcP', '!', 'hot'); $('bodyCcP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
   post(OBJ_API, 'deleteRequestList', [auth.name, auth.code]).then(function(res) {
     var list = (res.requests || []).filter(function(r) { return r['狀態'] === '待審核'; });
@@ -1422,7 +1423,7 @@ function loadSecReminders() {
     setBadge('cntRegP', list.length, 'warn');
     $('bodyRegP').innerHTML = list.length ? list.slice(0, 8).map(function(r) {
       return '<div class="rem-row"><div class="nm">' + esc(v(r, '縣市') + v(r, '鄉鎮') + v(r, '段')) + '</div><div class="meta">' + esc(v(r, '業務名稱') + '｜' + String(r.ts || '').split(' ')[0] + '｜' + v(r, '謄本')) + '</div><div class="go"><a class="link-btn" href="secretary.html">去處理</a></div></div>';
-    }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html">到秘書專區看全部</a></div>' : '') : '<div class="rem-empty">沒有待申請的謄本。</div>';
+    }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html">到後台管理看全部</a></div>' : '') : '<div class="rem-empty">沒有待申請的謄本。</div>';
   }).catch(function(err) { setBadge('cntRegP', '!', 'hot'); $('bodyRegP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
 }
 var _loadRemindersOrig = loadReminders;
