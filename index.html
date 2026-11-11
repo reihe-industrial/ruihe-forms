@@ -912,7 +912,7 @@ function renderMatchReminder() {
 }
 function renderReqReminder() {
   var box = $('remReq');
-  var c = auth ? readJson(sessionStorage, 'ruihe_secretary_cache_v1') : null;
+  var c = auth ? readJson(localStorage, 'ruihe_secretary_cache_v1') : null;
   var reqs = (role === '管理員' && c && c.name === auth.name && c.people && c.people.requests) ? c.people.requests.filter(function(r) { return r.status === '待審核'; }) : [];
   box.hidden = !reqs.length;
   if (!reqs.length) return;
@@ -931,7 +931,8 @@ function renderDupReminder() {
   var can = role === '秘書' || role === '管理員';
   box.hidden = !can;
   if (!can || !auth) return;
-  var c = readJson(sessionStorage, 'ruihe_master_cache_v1');
+  var c = readJson(localStorage, 'ruihe_master_cache_v1') || window.__masterMem || null; // 存不進 localStorage（太大）時用記憶體裡的
+  if (window.__masterFail && (!c || c.name !== auth.name || !c.tabs)) { $('bodyDup').innerHTML = '<div class="rem-empty">讀取失敗，請按右上角「重新整理」。</div>'; $('cntDup').textContent = '!'; return; }
   if (!c || c.name !== auth.name || !c.tabs) { $('bodyDup').innerHTML = '<div class="rem-empty loading">讀取中…</div>'; $('cntDup').textContent = '…'; $('cntDup').className = 'badge'; return; }
   var items = [];
   c.tabs.forEach(function(t) {
@@ -978,12 +979,13 @@ function prefetchPages() {
   }).then(function() { renderMatchReminder(); }, function() {});
   // 資料維護（物件）（只存在這個分頁；115/11/09 只有秘書、管理員）
   if (r === '秘書' || r === '管理員') {
-    var tc = readJson(sessionStorage, 'ruihe_master_cache_v1');
+    var tc = readJson(localStorage, 'ruihe_master_cache_v1');
     post(OBJ_API, 'masterTableGet', [who, code, tc && tc.name === who ? tc.version : '']).then(function(res) {
       if (res.unchanged || !auth) return;
-      try { localStorage.setItem('ruihe_master_cache_v1', JSON.stringify({ name: who, role: res.role || r, version: res.version, tabs: res.tabs || [] })); } catch (e) {}
+      window.__masterMem = { name: who, role: res.role || r, version: res.version, tabs: res.tabs || [] };
+      try { localStorage.setItem('ruihe_master_cache_v1', JSON.stringify(window.__masterMem)); } catch (e) {}
       renderDupReminder();
-    }).then(function() { renderDupReminder(); }, function() {});
+    }).then(function() { renderDupReminder(); }, function() { window.__masterFail = true; renderDupReminder(); });
   }
   // 秘書專區（只存在這個分頁）
   if (r === '秘書' || r === '管理員') {
