@@ -250,6 +250,23 @@
     <h1>客需總表</h1>
     <div class="subtitle">全公司的客戶需求</div>
 
+    <div id="autoLoad" class="card narrow" style="display:none;text-align:center;color:#6b6b60;padding:40px 0;">讀取中…</div>
+    <script>
+    // 已經登入的人換頁：不要先閃一下登入畫面，直接顯示「讀取中」（115/11/11）
+    (function() {
+      try {
+        var o = JSON.parse(localStorage.getItem('ruihe_login_v1') || 'null');
+        if (!(o && o.name && o.code)) return;
+        var st = document.createElement('style'); st.id = 'autoLoadStyle'; st.textContent = '#loginView{display:none}'; document.head.appendChild(st);
+        document.getElementById('autoLoad').style.display = 'block';
+        var n = 0, t = setInterval(function() {
+          n++; var mv = document.getElementById('mainView'), lm = document.getElementById('loginMsg');
+          var ok = mv && !mv.hidden, bad = lm && /error/.test(lm.className || '') || n > 160;
+          if (ok || bad) { clearInterval(t); document.getElementById('autoLoad').style.display = 'none'; if (bad && !ok) st.remove(); }
+        }, 250);
+      } catch (e) {}
+    })();
+    </script>
     <div class="card narrow" id="loginView">
       <h2>登入</h2>
       <div class="field">

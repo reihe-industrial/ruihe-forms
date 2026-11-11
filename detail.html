@@ -60,6 +60,10 @@
     .ag b { font-size: 15px; } .ag div { color: var(--muted); font-size: 14px; margin-top: 2px; }
     .ag a, .kv a { color: var(--brand-dark); }
     .owner-box { border-left: 4px solid #c9a227; }
+    .agline { margin-top:8px; font-size:14px; display:flex; flex-wrap:wrap; gap:4px 18px; align-items:baseline; }
+    .agline .agl { color:var(--muted); }
+    .agline .ag { border:none; padding:0; flex:none; }
+    .agline .ag a { color:var(--brand-dark); }
     .loading { padding: 50px 0; text-align: center; color: var(--muted); }
     .err { padding: 30px; text-align: center; color: var(--danger); }
     #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; align-items: center; justify-content: center; z-index: 9000; flex-direction: column; gap: 10px; }
@@ -308,13 +312,26 @@ function render() {
     (F('委託案件種類') && PG('委託案件種類') ? '<span class="' + (F('委託案件種類') === '委託' ? 'ok' : 'warn') + '">' + esc(F('委託案件種類')) + (F('委託類別') ? '・' + esc(F('委託類別')) : '') + '</span>' : '') +
     (D.residential ? '<span>住商</span>' : '');
   var units = unitLines();
+  // 負責業務：直接寫在案件資訊裡（115/11/11）
+  var ratio = { };
+  var agentsHtml = '';
+  if (PG('__agents') && (D.agents || []).length) agentsHtml = '<div class="agline"><span class="agl">負責業務</span>' + D.agents.map(function(a) {
+    return '<span class="ag"><b>' + esc(a.name) + '</b>' + (D.residential ? '' : (a.main ? '（主要）' : '（次要）')) +
+      (a.phone ? '　<a href="tel:' + esc(a.phone.replace(/[^\d+]/g, '')) + '">' + esc(a.phone) + '</a>' : '') + '</span>';
+  }).join('') + '</div>';
+  // 委託人（只有這件的業務、秘書、管理員；其他人整段不出現）：獨立一整行，不跟其他卡片排兩欄（115/11/11）
+  var ownerCard = '';
+  if (D.canSeeOwner && PG('__owner')) {
+    var ob = OWNER.map(function(o, i) { var b = kvHtml(o[1], 'one'); return b ? '<div>' + (i ? '<div class="muted" style="font-weight:700;margin-top:4px;">' + esc(o[0]) + '</div>' : '') + b + '</div>' : ''; }).filter(Boolean);
+    if (ob.length) ownerCard = '<div class="card owner-box"><h3>委託人</h3>' + ob.join('') + '</div>';
+  }
   var h = '';
   h += '<div class="card"><div class="head"><div class="head-main"><div class="title">' + esc(F('案名') || '（未填案名）') + '</div><div class="tags">' + tags + '</div>' +
-    '<div class="sub">' + subLines.join('<br>') + '</div></div>' +
+    '<div class="sub">' + subLines.join('<br>') + '</div>' + agentsHtml + '</div>' +
     '<div class="price"><div class="big">' + esc(F('總價') || '總價未填') + '</div>' + (units.length ? '<div class="u">' + units.map(esc).join('<br>') + '</div>' : '') +
     '<div class="btns"><button type="button" class="btn" id="dmBtn">給客戶看（DM）</button><button type="button" class="btn blue" id="tourBtn">業務銷講</button></div>' +
     (D.canEdit ? '<div class="btns" style="margin-top:8px;"><a class="btn ghost" href="listing.html?mode=edit&key=' + encodeURIComponent(D.key) + '">修改</a></div>' : '') +
-    '</div></div></div>';
+    '</div></div></div>' + ownerCard;
 
 
   var secs = SECTIONS.map(function(s) {
@@ -334,23 +351,6 @@ function render() {
 
   var h0 = h; h = '';
   if (F('其他備註說明') && PG('其他備註說明')) h += '<div class="card"><h3>其他備註說明</h3><div class="feat">' + esc(F('其他備註說明')) + '</div></div>';
-
-  // 負責業務
-  var ratio = { };
-  if (F('主要業務人員比例')) ratio.main = F('主要業務人員比例');
-  if (F('次要業務人員比例')) ratio.sub = F('次要業務人員比例');
-  if (PG('__agents')) h += '<div class="card"><h3>負責業務</h3><div class="agents">' + (D.agents || []).map(function(a) {
-    var r = a.main ? ratio.main : ratio.sub;
-    return '<div class="ag"><b>' + esc(a.name) + '</b>' + (D.residential ? '' : (a.main ? '（主要）' : '（次要）')) +
-      (a.phone ? '<div><a href="tel:' + esc(a.phone.replace(/[^\d+]/g, '')) + '">' + esc(a.phone) + '</a></div>' : '') +
-      '</div>'; // 業務比例一律不顯示（115/11/04）
-  }).join('') + '</div></div>'; // 中人比例一律不顯示（115/11/04）
-
-  // 委託人（只有這件的業務、秘書、管理員；其他人整段不出現）
-  if (D.canSeeOwner && PG('__owner')) {
-    var ob = OWNER.map(function(o, i) { var b = kvHtml(o[1], 'one'); return b ? '<div>' + (i ? '<div class="muted" style="font-weight:700;margin-top:4px;">' + esc(o[0]) + '</div>' : '') + b + '</div>' : ''; }).filter(Boolean);
-    if (ob.length) h += '<div class="card owner-box"><h3>委託人</h3>' + ob.join('') + '</div>';
-  }
 
   // 其他資料（上面沒列到的欄位）
   var used = usedLabels();
@@ -473,13 +473,15 @@ var SHEET_CSS = 'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif
   '.kv{display:grid;grid-template-columns:1fr 1fr;column-gap:18px;margin:0}.kv>div{display:flex;gap:8px;border-bottom:1px solid #e6e6df;padding:3px 0}.kv>div.long{grid-column:1/-1}' +
   '.kv dt{width:118px;color:#66776c;flex:0 0 auto}.kv dd{margin:0;white-space:pre-line}.kv a{color:inherit;text-decoration:none}' +
   '.txt{white-space:pre-line}.chk div{padding:3px 0}.lines div{border-bottom:1px solid #bbb;height:26px}' +
-  '.map img{width:100%;border-radius:4px;display:block}' +
+  '.map img{width:100%;aspect-ratio:2/1;object-fit:cover;border-radius:4px;display:block}' +
   // 115/11/10：DM 簡短版（照片一樣大排成格子；位置圖放在物件資訊右邊）
   '.dms .sub{color:#66776c;margin:-4px 0 4px}.dms .pg{display:grid;gap:6px;margin:8px 0 6px}.dms .pg img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px;display:block}' +
   '.dms .pg.c1 img{aspect-ratio:16/9}.dms .pg.c2{grid-template-columns:1fr 1fr}.dms .pg.c2 img{aspect-ratio:3/2}.dms .pg.c3{grid-template-columns:repeat(3,1fr)}.dms .pg.c4{grid-template-columns:repeat(4,1fr)}' +
   '.dms .info{display:grid;grid-template-columns:1fr 250px;gap:18px;align-items:start}.dms .info .m img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:4px;display:block}' +
   '.dms .info.nomap{grid-template-columns:1fr}.dms .info.nomap .kv{grid-template-columns:1fr 1fr}.dms .kv{grid-template-columns:1fr}.dms .kv dt{width:80px}.dms .kv dd{font-weight:700}' +
   '@media print{.dms .pg img{aspect-ratio:16/10!important}.dms .pg.c1 img{aspect-ratio:2/1!important}}' +
+  '.txt.cols2{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;align-items:start}.txt.cols2>div{white-space:pre-line}' +
+  '.fm2{overflow:hidden;margin-top:4px}.fm2 .m{float:right;width:46%;margin:0 0 6px 20px}.fm2 .m img{width:100%;aspect-ratio:2/1;object-fit:cover;border-radius:4px;display:block}.fm2 .m h3{margin-top:12px}' +
   '.fm{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch;margin-top:4px}.fm>div{display:flex;flex-direction:column}.fm .txt{flex:1;background:#f6f7f2;border-radius:6px;padding:10px 12px}.fm .m img{width:100%;aspect-ratio:2/1;object-fit:cover;border-radius:4px;display:block}' +
   '.contact{margin-top:14px;border-top:3px solid #1e4a32;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;font-size:13px}.contact b{font-size:13.5px}.contact .col>div{padding:2px 0}' +
   '@media print{body{padding:0;background:#fff}.bar{display:none}#sheet{max-width:none;padding:0}@page{size:A4;margin:10mm}h3{break-after:avoid}.kv>div{break-inside:avoid}.ph img{break-inside:avoid}}';
@@ -562,23 +564,52 @@ function dmHtml(photos, mapUrl) {
   var req = OUT.requester || { name: auth.name, phone: '' }, co = OUT.company || {};
   var logo = new URL('lib/img/logo-full.png', location.href).href;
   var ph = on('__photos') ? photos : [];
+  var fm = dmFeatMap_(on('特色說明') && F('特色說明') ? F('特色說明') : '', on('__map') ? mapUrl : null);
   var body = '<div class="brand"><img src="' + logo + '" alt=""><span>物件介紹</span></div>' +
     '<div class="inner"><b>' + esc(F('案名')) + '</b><div class="price"><b>' + esc(F('總價') || '') + '</b>' + (units.length ? '<div>' + units.map(esc).join('<br>') + '</div>' : '') + '</div></div>' +
     '<div class="top">' + top + '</div>' +
     (ph.length ? '<div class="ph' + (ph.length <= 2 ? ' big' : '') + '">' + ph.map(function(s) { return '<img src="' + s + '">'; }).join('') + '</div>' : '') +
     // 115/11/10：物件特色和位置圖並排（左特色、右位置圖），右邊不再空一大塊；只有其中一個就整排
-    dmFeatMap_(on('特色說明') && F('特色說明') ? F('特色說明') : '', on('__map') ? mapUrl : null) +
+    fm.top +
     specBlocks_(dmOn, 'dm') +
+    fm.bottom +
     // 115/11/09：聯絡業務＋不動產經紀業（名稱、許可字號）＋經紀人（姓名、證書字號）＋公司電話、地址
     // 115/11/09 17:30：分左右兩欄、兩邊行數差不多（左：業務、公司電話、地址；右：經紀業、經紀人）
     dmContactHtml_(req, co);
   return sheetPage_('DM－' + F('案名'), body, 'dm');
 }
+ // 115/11/11：物件特色比較長時排成左右兩欄（用空白行分段，同一段不拆到兩欄），右邊不會空一大塊
+function dmFeatText_(text, cols) {
+  text = String(text || '').replace(/\r/g, '').trim();
+  var all = text.split('\n'), n = all.filter(function(l) { return l.trim(); }).length;
+  if (!cols || (n < 7 && text.length < 160)) return '<div class="txt">' + esc(text) + '</div>';
+  // 分成左右兩欄、兩邊差不多高：盡量切在空白行（段落之間），不要切在標題（■、【】、冒號結尾）後面
+  var head = function(l) { return /^\s*(■|□|●|◆|★|【|#)/.test(l) || /[：:]\s*$/.test(l); };
+  var w = function(l) { return Math.max(1, Math.ceil(String(l).length / 26)); }; // 一行大約 26 字，長的算兩行
+  var tot = all.reduce(function(a, l) { return a + (l.trim() ? w(l) : 0.5); }, 0), acc = 0, best = -1, bestScore = 1e9;
+  for (var k = 1; k < all.length; k++) {
+    acc += all[k - 1].trim() ? w(all[k - 1]) : 0.5;
+    var sc = Math.abs(acc - tot / 2) - (!all[k - 1].trim() || !all[k].trim() ? 0.75 : 0) + (head(all[k - 1]) ? 6 : 0);
+    // 左欄最後一段只剩標題＋1 行、右欄開頭只剩 1 行就接空白行：都不好看，盡量避開
+    var a0 = k - 1; while (a0 >= 0 && all[a0].trim()) a0--;
+    if (all[k - 1].trim() && head(all[a0 + 1] || '') && k - 1 - a0 < 3) sc += 4;
+    var b0 = k; while (b0 < all.length && all[b0].trim()) b0++;
+    if (all[k].trim() && all[k - 1].trim() && b0 - k < 2) sc += 4;
+    if (sc < bestScore) { bestScore = sc; best = k; }
+  }
+  var trimBlank = function(a) { while (a.length && !a[0].trim()) a.shift(); while (a.length && !a[a.length - 1].trim()) a.pop(); return a; };
+  var L = trimBlank(all.slice(0, best)), R = trimBlank(all.slice(best));
+  return '<div class="txt cols2"><div>' + esc(L.join('\n')) + '</div><div>' + esc(R.join('\n')) + '</div></div>';
+}
+// 詳細版：物件特色＋位置圖
+//  ・特色短（不到 7 行）：特色在左、位置圖在右，並排
+//  ・特色長：特色用整個寬度排成左右兩欄；位置圖放到規格下面（回傳 { top, bottom }）
+function dmFeatLong_(feat) { var t = String(feat || '').replace(/\r/g, '').trim(); return t.split('\n').filter(function(l) { return l.trim(); }).length >= 7 || t.length >= 160; }
 function dmFeatMap_(feat, mapUrl) {
-  var f = feat ? '<div><h3>物件特色</h3><div class="txt">' + esc(feat) + '</div></div>' : '';
-  var m = mapUrl ? '<div class="m"><h3>位置圖</h3><img src="' + mapUrl + '"></div>' : '';
-  if (f && m) return '<div class="fm">' + f + m + '</div>';
-  return f + (m ? '<div class="map">' + m.replace('<div class="m">', '').replace(/<\/div>$/, '') + '</div>' : '');
+  var mapBlock = mapUrl ? '<h3>位置圖</h3><div class="map"><img src="' + mapUrl + '"></div>' : '';
+  if (!feat) return { top: '', bottom: mapBlock };
+  if (dmFeatLong_(feat) || !mapUrl) return { top: '<h3>物件特色</h3>' + dmFeatText_(feat, true), bottom: mapBlock };
+  return { top: '<div class="fm2"><div class="m"><h3>位置圖</h3><img src="' + mapUrl + '"></div><h3>物件特色</h3><div class="txt">' + esc(String(feat).replace(/\r/g, '').trim()) + '</div></div>', bottom: '' };
 }
 function dmContactHtml_(req, co) {
   return (
@@ -633,7 +664,7 @@ function dmShortHtml(photos, mapUrl) {
     dmPhotoGrid_(ph) +
     '<div class="info' + (on('__map') && mapUrl ? '' : ' nomap') + '"><div>' + (keys.length ? '<h3>物件資訊</h3>' + dmShortKv_(keys) : '') + '</div>' +
     (on('__map') && mapUrl ? '<div class="m"><h3>位置圖</h3><img src="' + mapUrl + '"></div>' : '') + '</div>' +
-    (on('特色說明') && F('特色說明') ? '<h3>物件特色</h3><div class="txt">' + esc(F('特色說明')) + '</div>' : '') +
+    (on('特色說明') && F('特色說明') ? '<h3>物件特色</h3>' + dmFeatText_(F('特色說明'), true) : '') +
     dmContactHtml_(req, co) + '</div>';
   return sheetPage_('DM（簡短）－' + F('案名'), body, 'dms');
 }
@@ -703,17 +734,39 @@ function openTour() {
 }
 
 // ---------------- 開始 ----------------
+// 換頁加快（115/11/11）：看過的物件把資料存在這個分頁（sessionStorage，關掉分頁就清掉），
+// 再開同一件先用上次的畫面，同時去讀最新的，有變才換。
+var CK_ = 'ruihe_detail_cache_v1';
+function cacheGet_() { try { var o = JSON.parse(sessionStorage.getItem(CK_) || '{}'); var e = o[auth.name + '|' + KEY]; return e && e.res ? e : null; } catch (e) { return null; } }
+function cachePut_(res) {
+  try {
+    var o = JSON.parse(sessionStorage.getItem(CK_) || '{}'); o[auth.name + '|' + KEY] = { at: Date.now(), res: res, out: { cfg: OUT.cfg, requester: OUT.requester, company: OUT.company } };
+    var ks = Object.keys(o).sort(function(x, y) { return o[y].at - o[x].at; }); ks.slice(12).forEach(function(k) { delete o[k]; });
+    sessionStorage.setItem(CK_, JSON.stringify(o));
+  } catch (e) {}
+}
 (function start() {
   if (!auth) { goHome_(); return; }
   if (!KEY) { $('page').innerHTML = '<div class="err">網址少了物件編號，請從物件總表點案名進來。</div>'; return; }
   loadPhotos();
   loadOutputConfig_();
+  var cached = cacheGet_(), shown = false, shownJson = '';
+  if (cached) { // 先用上次的資料畫出來
+    try {
+      if (cached.out && cached.out.cfg !== undefined && !OUT.loaded) { OUT.cfg = cached.out.cfg; OUT.requester = cached.out.requester; OUT.company = cached.out.company; }
+      D = cached.res; render(); shown = true; shownJson = JSON.stringify(cached.res) + JSON.stringify(OUT.cfg); if (PH.loaded) renderPhotos(PH_NOTE);
+    } catch (e) { shown = false; D = null; }
+  }
   // 等明細和顯示設定都到了才畫（兩個同時讀）
   Promise.all([runServer('listingDetailGet', auth.name, auth.code, KEY), OUT_P0]).then(function(rs) {
     var res = rs[0];
+    cachePut_(res);
+    var js = JSON.stringify(res) + JSON.stringify(OUT.cfg);
+    if (shown && js === shownJson) return; // 沒變，不用重畫
     D = res; render(); if (PH.loaded) renderPhotos(PH_NOTE);
   }).catch(function(err) {
     if (err.fromServer && /通關碼|姓名|登入/.test(err.message)) { goHome_(); return; }
+    if (shown) { toast('連不上系統，目前顯示的是上次看到的資料', true); return; }
     $('page').innerHTML = '<div class="err">' + esc(err.message || '讀取失敗') + '<br><a href="summary.html">回物件總表</a></div>';
   });
 })();
