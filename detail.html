@@ -47,6 +47,9 @@
     .kv dd { margin: 0; font-weight: 500; min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
     .kv.one { grid-template-columns: 1fr; }
     .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+    .bld { line-height: 1.9; font-size: 14.5px; padding-left: 4px; }
+    .bld .nb { white-space: nowrap; }
+    .bld .nbsep { color: var(--line); margin: 0 4px; }
     .feat { white-space: pre-line; line-height: 1.7; font-size: 14.5px; }
     .secs { column-count: 2; column-gap: 10px; }
     .secs > .card { break-inside: avoid; display: inline-block; width: 100%; vertical-align: top; }
@@ -265,6 +268,15 @@ function valueText(l) {
   return areaText(l);
 }
 function labelText(l) { return l === '__建物合計' ? '建物面積合計' : l === '__屋齡' ? '屋齡' : l.replace(/\((廠房|土地|房屋)\)$/, '').replace(/\(m²\)$/, ''); }
+// 其他備註說明：「・」開頭的行（分棟資訊）一棟一行，名稱粗體、欄位用「｜」分開且每欄不斷行；其他行照原樣
+function noteHtml_(t) {
+  return String(t).split('\n').map(function(line) {
+    var m = /^[・•]\s*([^：:]+)[：:]\s*(.*)$/.exec(line);
+    if (!m) return '<div class="feat">' + (esc(line) || '&nbsp;') + '</div>';
+    var parts = m[2].split(/\s*｜\s*/).filter(Boolean).map(function(p) { return '<span class="nb">' + esc(p) + '</span>'; }).join('<span class="nbsep">｜</span>');
+    return '<div class="bld"><b>' + esc(m[1]) + '</b>　' + parts + '</div>';
+  }).join('');
+}
 function kvHtml(labels, cls) {
   var rows = labels.map(function(l) {
     var v = valueText(l); if (!v) return '';
@@ -350,14 +362,20 @@ function render() {
   }
 
   var h0 = h; h = '';
-  if (F('其他備註說明') && PG('其他備註說明')) h += '<div class="card"><h3>其他備註說明</h3><div class="feat">' + esc(F('其他備註說明')) + '</div></div>';
+  // 115/11/11：備註有「分棟資訊」或很長時，獨立一整行（不跟其他卡片排兩欄）；分棟每一棟一行，欄位用「｜」分開、不在欄位中間斷行
+  var noteFull = '';
+  if (F('其他備註說明') && PG('其他備註說明')) {
+    var nt = F('其他備註說明');
+    if (/分棟資訊/.test(nt) || nt.length > 160 || nt.split('\n').length > 6) noteFull = '<div class="card"><h3>其他備註說明</h3>' + noteHtml_(nt) + '</div>';
+    else h += '<div class="card"><h3>其他備註說明</h3><div class="feat">' + esc(nt) + '</div></div>';
+  }
 
   // 其他資料（上面沒列到的欄位）
   var used = usedLabels();
   var rest = (D.order || []).filter(function(l) { return used.indexOf(l) === -1 && F(l); });
   if (rest.length && PG('__rest')) h += '<div class="card"><h3>其他資料</h3>' + kvHtml(rest) + '</div>';
 
-  h = h0 + (h ? '<div class="secs">' + h + '</div>' : '');
+  h = h0 + noteFull + (h ? '<div class="secs">' + h + '</div>' : '');
 
   // 特色說明放在資料下面、照片上面（115/11/04）
   if (F('特色說明') && PG('特色說明')) h += '<div class="card"><h3>特色說明</h3><div class="feat">' + esc(F('特色說明')) + '</div></div>';
