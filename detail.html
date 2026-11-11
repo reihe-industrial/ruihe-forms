@@ -207,7 +207,7 @@ function toWan(text) {
 }
 // 民國或西元日期 → Date
 function parseDate(v) {
-  var s = String(v || '').trim(), m;
+  var s = String(v || '').trim().replace(/^民國\s*/, ''), m;
   if ((m = s.match(/^(\d{2,3})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})/))) return new Date(+m[1] + 1911, +m[2] - 1, +m[3]);
   if ((m = s.match(/^(\d{2,3})[\/.\-](\d{1,2})[\/.\-](\d{1,2})$/))) return new Date(+m[1] + 1911, +m[2] - 1, +m[3]);
   if ((m = s.match(/^(\d{4})[\/.\-年](\d{1,2})[\/.\-月](\d{1,2})/))) return new Date(+m[1], +m[2] - 1, +m[3]);
@@ -474,6 +474,13 @@ var SHEET_CSS = 'body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif
   '.kv dt{width:118px;color:#66776c;flex:0 0 auto}.kv dd{margin:0;white-space:pre-line}.kv a{color:inherit;text-decoration:none}' +
   '.txt{white-space:pre-line}.chk div{padding:3px 0}.lines div{border-bottom:1px solid #bbb;height:26px}' +
   '.map img{width:100%;border-radius:4px;display:block}' +
+  // 115/11/10：DM 簡短版（照片一樣大排成格子；位置圖放在物件資訊右邊）
+  '.dms .sub{color:#66776c;margin:-4px 0 4px}.dms .pg{display:grid;gap:6px;margin:8px 0 6px}.dms .pg img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px;display:block}' +
+  '.dms .pg.c1 img{aspect-ratio:16/9}.dms .pg.c2{grid-template-columns:1fr 1fr}.dms .pg.c2 img{aspect-ratio:3/2}.dms .pg.c3{grid-template-columns:repeat(3,1fr)}.dms .pg.c4{grid-template-columns:repeat(4,1fr)}' +
+  '.dms .info{display:grid;grid-template-columns:1fr 250px;gap:18px;align-items:start}.dms .info .m img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:4px;display:block}' +
+  '.dms .info.nomap{grid-template-columns:1fr}.dms .info.nomap .kv{grid-template-columns:1fr 1fr}.dms .kv{grid-template-columns:1fr}.dms .kv dt{width:80px}.dms .kv dd{font-weight:700}' +
+  '@media print{.dms .pg img{aspect-ratio:16/10!important}.dms .pg.c1 img{aspect-ratio:2/1!important}}' +
+  '.fm{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:stretch;margin-top:4px}.fm>div{display:flex;flex-direction:column}.fm .txt{flex:1;background:#f6f7f2;border-radius:6px;padding:10px 12px}.fm .m img{width:100%;aspect-ratio:2/1;object-fit:cover;border-radius:4px;display:block}' +
   '.contact{margin-top:14px;border-top:3px solid #1e4a32;padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;font-size:13px}.contact b{font-size:13.5px}.contact .col>div{padding:2px 0}' +
   '@media print{body{padding:0;background:#fff}.bar{display:none}#sheet{max-width:none;padding:0}@page{size:A4;margin:10mm}h3{break-after:avoid}.kv>div{break-inside:avoid}.ph img{break-inside:avoid}}';
 // 規格區塊：kind＝'dm' 或 'talk'
@@ -489,7 +496,7 @@ function specBlocks_(on, kind) {
   }).join('');
 }
 function sheetPage_(title, body, kind) {
-  var fname = (kind === 'dm' ? 'DM_' : '業務銷講_') + String(F('案名') || '物件').replace(/[\\/:*?"<>|]/g, '') + '.png';
+  var fname = (kind === 'dm' ? 'DM_' : kind === 'dms' ? 'DM簡短_' : '業務銷講_') + String(F('案名') || '物件').replace(/[\\/:*?"<>|]/g, '') + '.png';
   return { title: title, css: SHEET_CSS, fname: fname,
     body: '<div class="bar"><button id="imgBtn">下載圖片</button><button class="g" id="prBtn">列印／存成 PDF</button><button class="g" id="clBtn">關閉</button><span id="st"></span></div>' +
       '<div id="sheet">' + body + '</div>' };
@@ -559,11 +566,22 @@ function dmHtml(photos, mapUrl) {
     '<div class="inner"><b>' + esc(F('案名')) + '</b><div class="price"><b>' + esc(F('總價') || '') + '</b>' + (units.length ? '<div>' + units.map(esc).join('<br>') + '</div>' : '') + '</div></div>' +
     '<div class="top">' + top + '</div>' +
     (ph.length ? '<div class="ph' + (ph.length <= 2 ? ' big' : '') + '">' + ph.map(function(s) { return '<img src="' + s + '">'; }).join('') + '</div>' : '') +
-    (on('特色說明') && F('特色說明') ? '<h3>物件特色</h3><div class="txt">' + esc(F('特色說明')) + '</div>' : '') +
+    // 115/11/10：物件特色和位置圖並排（左特色、右位置圖），右邊不再空一大塊；只有其中一個就整排
+    dmFeatMap_(on('特色說明') && F('特色說明') ? F('特色說明') : '', on('__map') ? mapUrl : null) +
     specBlocks_(dmOn, 'dm') +
-    (on('__map') && mapUrl ? '<h3>位置圖</h3><div class="map"><img src="' + mapUrl + '"></div>' : '') +
     // 115/11/09：聯絡業務＋不動產經紀業（名稱、許可字號）＋經紀人（姓名、證書字號）＋公司電話、地址
     // 115/11/09 17:30：分左右兩欄、兩邊行數差不多（左：業務、公司電話、地址；右：經紀業、經紀人）
+    dmContactHtml_(req, co);
+  return sheetPage_('DM－' + F('案名'), body, 'dm');
+}
+function dmFeatMap_(feat, mapUrl) {
+  var f = feat ? '<div><h3>物件特色</h3><div class="txt">' + esc(feat) + '</div></div>' : '';
+  var m = mapUrl ? '<div class="m"><h3>位置圖</h3><img src="' + mapUrl + '"></div>' : '';
+  if (f && m) return '<div class="fm">' + f + m + '</div>';
+  return f + (m ? '<div class="map">' + m.replace('<div class="m">', '').replace(/<\/div>$/, '') + '</div>' : '');
+}
+function dmContactHtml_(req, co) {
+  return (
     '<div class="contact"><div class="col">' +
       '<div><b>聯絡業務</b>　<b>' + esc(req.name || '') + '</b>' + (req.phone ? '　' + esc(req.phone) : '') + '</div>' +
       (co.phone ? '<div><b>公司電話</b>　' + esc(co.phone) + '</div>' : '') +
@@ -573,23 +591,70 @@ function dmHtml(photos, mapUrl) {
       (co.license ? '<div><b>許可字號</b>　' + esc(co.license) + '</div>' : '') +
       (co.brokerName ? '<div><b>經紀人</b>　' + esc(co.brokerName) + '</div>' : '') +
       (co.brokerLicense ? '<div><b>證書字號</b>　' + esc(co.brokerLicense) + '</div>' : '') +
-    '</div></div>';
-  return sheetPage_('DM－' + F('案名'), body, 'dm');
+    '</div></div>'
+  );
+}
+// ---------------- DM 簡短版（115/11/10）----------------
+// 重點規格 8～10 項（依類型）；DM 不能放的（後台「DM」沒勾的）一樣不放
+var DM_SHORT_KEYS = {
+  '廠房': ['土地面積(m²)', '__建物合計', '使用分區', '面臨路寬', '簷高(滴水高度)', '地上樓層', '可供用電量', '樓地板載重或機具/電梯載重', '是否有廠登', '產業園區名稱'],
+  '土地': ['土地面積(m²)', '使用分區', '土地類型', '面臨路寬', '基地面寬', '基地深度', '土地朝向(土地)', '產業園區名稱(土地)'],
+  '房屋': ['__建物合計', '物件格局', '所在樓別', '地上樓層', '__屋齡', '建物朝向', '有無車位', '管理費用']
+};
+var DM_SHORT_LABEL = { '__建物合計': '建物面積', '簷高(滴水高度)': '簷高', '樓地板載重或機具/電梯載重': '樓板載重', '是否有廠登': '工廠登記', '產業園區名稱': '產業園區', '產業園區名稱(土地)': '產業園區',
+  '地上樓層': '樓層', '可供用電量': '用電', '土地朝向(土地)': '朝向', '建物朝向': '朝向', '物件格局': '格局', '有無車位': '車位', '管理費用': '管理費' };
+function dmShortKv_(keys) {
+  return '<dl class="kv">' + keys.map(function(l) {
+    var v = valueText(l);
+    if (l === '__建物合計') v = v.replace(/（.*$/, '');
+    if (l === '__屋齡') v = v.replace(/（.*$/, '');
+    if (l === '地上樓層' && /^[0-9]+$/.test(v)) v = '地上 ' + v + ' 層' + (F('地下樓層') && !isZeroish_(F('地下樓層')) ? '、地下 ' + F('地下樓層') + ' 層' : '');
+    if (l === '是否有廠登') v = v === '是' ? '有' : v === '否' ? '無' : v;
+    return '<div><dt>' + esc(DM_SHORT_LABEL[l] || labelText(l)) + '</dt><dd>' + (/電話/.test(l) ? v : esc(v)) + '</dd></div>';
+  }).join('') + '</dl>';
+}
+// 照片一樣大：1 張一張大圖、2 張一排、3 張一排、4 張 2×2、5～6 張每排 3 張、7～8 張每排 4 張
+function dmPhotoGrid_(photos) {
+  var n = photos.length; if (!n) return '';
+  var cols = n === 1 ? 1 : n === 2 ? 2 : n === 3 ? 3 : n === 4 ? 2 : n <= 6 ? 3 : 4;
+  return '<div class="pg c' + cols + '">' + photos.map(function(s) { return '<img src="' + s + '">'; }).join('') + '</div>';
+}
+function dmShortHtml(photos, mapUrl) {
+  var on = RuiheOutputs.chooser(OUT.cfg, 'dm');
+  var units = unitLines();
+  var keys = (DM_SHORT_KEYS[D.type] || DM_SHORT_KEYS['房屋']).filter(function(l) { return on(l) && valueText(l); });
+  var req = OUT.requester || { name: auth.name, phone: '' }, co = OUT.company || {};
+  var logo = new URL('lib/img/logo-full.png', location.href).href;
+  var tags = [D.type, F('建物類別')].filter(Boolean).filter(function(x, i, a) { return a.indexOf(x) === i; }).join('・') + (rsText() ? '・' + rsText() : '');
+  var ph = on('__photos') ? photos : [];
+  var body = '<div class="dms"><div class="brand"><img src="' + logo + '" alt=""><span>物件介紹</span></div>' +
+    '<div class="inner"><b>' + esc(F('案名')) + '</b><div class="price"><b>' + esc(F('總價') || '') + '</b>' + (units.length ? '<div>' + units.map(esc).join('<br>') + '</div>' : '') + '</div></div>' +
+    '<div class="sub">' + esc(tags) + (on('__road') && roadPlace_() ? '　｜　' + esc(roadPlace_()) : '') + '</div>' +
+    dmPhotoGrid_(ph) +
+    '<div class="info' + (on('__map') && mapUrl ? '' : ' nomap') + '"><div>' + (keys.length ? '<h3>物件資訊</h3>' + dmShortKv_(keys) : '') + '</div>' +
+    (on('__map') && mapUrl ? '<div class="m"><h3>位置圖</h3><img src="' + mapUrl + '"></div>' : '') + '</div>' +
+    (on('特色說明') && F('特色說明') ? '<h3>物件特色</h3><div class="txt">' + esc(F('特色說明')) + '</div>' : '') +
+    dmContactHtml_(req, co) + '</div>';
+  return sheetPage_('DM（簡短）－' + F('案名'), body, 'dms');
 }
 // 挑照片（DM 用；最多 8 張，預設前 4 張）
-function pickPhotos_(done) {
-  if (PH.thumbs.length <= 1) { done(PH.ids.slice(0, 1), PH.thumbs.slice(0, 1)); return; }
+// 115/11/10：先選 DM 簡短版／詳細版，再挑照片（同一個視窗）；withPhotos＝false 時只選版本
+var DM_KIND_ = 'short';
+function pickPhotos_(done, withPhotos) {
   var LIMIT = 8;
-  var items = PH.thumbs.map(function(src, i) { return { src: src, id: PH.ids[i] || '', on: i < 4 }; });
+  var items = (withPhotos ? PH.thumbs : []).map(function(src, i) { return { src: src, id: PH.ids[i] || '', on: i < 4 }; });
   var box = document.createElement('div');
   box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;';
   document.body.appendChild(box);
   var paint = function() {
     var nOn = items.filter(function(x) { return x.on; }).length;
     box.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:16px 18px;">' +
-      '<div style="font-weight:700;font-size:16px;margin-bottom:6px;">DM 要放哪些照片</div>' +
-      '<div class="muted" style="margin-bottom:10px;">勾選照片（最多 ' + LIMIT + ' 張，已選 ' + nOn + ' 張），◀ ▶ 調順序</div>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + items.map(function(it, k) {
+      '<div style="font-weight:700;font-size:16px;margin-bottom:8px;">產生 DM</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' + [['short', '簡短版', '照片＋重點資訊，一頁'], ['full', '詳細版', '全部規格']].map(function(k) {
+        return '<label style="flex:1;min-width:180px;border:2px solid ' + (DM_KIND_ === k[0] ? '#1e4a32' : '#ddd') + ';border-radius:10px;padding:8px 12px;cursor:pointer;"><input type="radio" name="dmKind" value="' + k[0] + '"' + (DM_KIND_ === k[0] ? ' checked' : '') + '> <b>' + k[1] + '</b><div class="muted" style="font-size:12.5px;">' + k[2] + '</div></label>';
+      }).join('') + '</div>' +
+      (items.length > 1 ? '<div style="font-weight:700;margin-bottom:4px;">要放哪些照片</div><div class="muted" style="margin-bottom:10px;">勾選照片（最多 ' + LIMIT + ' 張，已選 ' + nOn + ' 張），◀ ▶ 調順序</div>' : '') +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + (items.length > 1 ? items : []).map(function(it, k) {
         return '<div style="width:112px;border:1px solid #ddd;border-radius:8px;padding:5px;opacity:' + (it.on ? 1 : .45) + '"><img src="' + it.src + '" style="width:100%;height:76px;object-fit:cover;border-radius:5px;display:block;">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:12.5px;"><label><input type="checkbox" data-on="' + k + '"' + (it.on ? ' checked' : '') + '> 用</label>' +
           '<span><button type="button" data-up="' + k + '">◀</button><button type="button" data-dn="' + k + '">▶</button></span></div></div>';
@@ -600,8 +665,9 @@ function pickPhotos_(done) {
       items[+cb.getAttribute('data-on')].on = cb.checked; paint(); }; });
     box.querySelectorAll('[data-up]').forEach(function(b) { b.onclick = function() { var k = +b.getAttribute('data-up'); if (k > 0) { var t = items[k]; items[k] = items[k - 1]; items[k - 1] = t; paint(); } }; });
     box.querySelectorAll('[data-dn]').forEach(function(b) { b.onclick = function() { var k = +b.getAttribute('data-dn'); if (k < items.length - 1) { var t = items[k]; items[k] = items[k + 1]; items[k + 1] = t; paint(); } }; });
+    box.querySelectorAll('input[name="dmKind"]').forEach(function(r) { r.onchange = function() { DM_KIND_ = r.value; paint(); }; });
     $('pkCancel').onclick = function() { box.remove(); };
-    $('pkGo').onclick = function() { var sel = items.filter(function(x) { return x.on; }); box.remove(); done(sel.map(function(x) { return x.id; }), sel.map(function(x) { return x.src; })); };
+    $('pkGo').onclick = function() { var sel = items.filter(function(x) { return x.on; }); box.remove(); done(sel.map(function(x) { return x.id; }), sel.map(function(x) { return x.src; }), DM_KIND_); };
   };
   paint();
 }
@@ -615,14 +681,18 @@ function bigPhotos_(ids, thumbs) {
 function openDM() {
   if (!D) return;
   if (!PH.loaded) { toast('照片還在讀取，請稍等一下再按。', true); return; }
-  var go = function(ids, thumbs) {
+  var go = function(ids, thumbs, kind) {
     openSheet_(loadOutputConfig_().then(function() {
-      return Promise.all([bigPhotos_(ids, thumbs), mapP_(RuiheOutputs.chooser(OUT.cfg, 'dm'))]);
-    }).then(function(all) { return dmHtml(all[0], all[1]); }));
+      var on = RuiheOutputs.chooser(OUT.cfg, 'dm');
+      // 簡短版的位置圖是正方形，放在物件資訊右邊
+      // 簡短版的位置圖是正方形（放在物件資訊右邊）；詳細版跟物件特色並排（7:5）
+      var mw = kind === 'short' ? 500 : 640, mh = kind === 'short' ? 500 : 320;
+      var mp = on('__map') && D.coord && window.RuiheDM && RuiheDM.mapImage ? RuiheDM.mapImage(D.coord, mw, mh, 16).catch(function() { return null; }) : Promise.resolve(null);
+      return Promise.all([bigPhotos_(ids, thumbs), mp]);
+    }).then(function(all) { return kind === 'short' ? dmShortHtml(all[0], all[1]) : dmHtml(all[0], all[1]); }));
   };
   var on = RuiheOutputs.chooser(OUT.cfg, 'dm');
-  if (OUT.loaded && !on('__photos')) { go([], []); return; }
-  pickPhotos_(go);
+  pickPhotos_(go, !(OUT.loaded && !on('__photos')));
 }
 function openTour() {
   if (!D) return;

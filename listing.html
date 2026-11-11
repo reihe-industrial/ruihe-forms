@@ -5831,7 +5831,8 @@ function submitEditCase_(fieldValues, photoUrls) {
   runServer('editSubmitCase', editAuth_.name, editAuth_.code, editCase_.key, currentType, fieldValues,
     collectDraft_(), photoUrls, editCase_.version, editCase_.legacy ? editCase_.baseline : null)
     .then(function(result) {
-      showToast(result.message || '已儲存修改', 'success');
+      // 115/11/10：資料當場存好；物件總表、業務個人表、照片整理在背景做，約 1 分鐘內更新
+      showToast((result.message || '已儲存修改') + (result.background ? '物件總表、照片約 1 分鐘內更新。' : ''), 'success');
       editDirty_ = false;
       editCase_ = null;
       editResetForm_();

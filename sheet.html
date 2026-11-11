@@ -27,9 +27,24 @@
         document.body.appendChild(a); a.click(); a.remove(); st.textContent = '已下載';
       }).catch(function(e) { st.textContent = '產生圖片失敗：' + (e && e.message || e); }).then(function() { btn.disabled = false; });
     };
-    var pr = document.getElementById('prBtn'); if (pr) pr.onclick = function() { window.print(); };
+    var pr = document.getElementById('prBtn'); if (pr) pr.onclick = function() { fitPrint(); window.print(); };
     var cl = document.getElementById('clBtn'); if (cl) cl.onclick = function() { window.close(); };
   }
+  // 115/11/10：DM 簡短版列印／存 PDF 時縮成一頁 A4（量列印寬度下的高度，太高就整張縮小）
+  function fitPrint() {
+    var el = document.getElementById('sheet'); if (!el || !el.querySelector('.dms')) return;
+    var st = document.getElementById('fitStyle'); if (!st) { st = document.createElement('style'); st.id = 'fitStyle'; document.head.appendChild(st); }
+    st.textContent = '';
+    var keep = [el.style.width, el.style.maxWidth, el.style.padding];
+    el.style.maxWidth = 'none'; el.style.width = '718px'; el.style.padding = '0';
+    var h = el.scrollHeight;
+    el.style.width = keep[0]; el.style.maxWidth = keep[1]; el.style.padding = keep[2];
+    var z = Math.min(1, 1020 / h);
+    // 寬度固定在列印寬度再縮小（不固定的話，縮小後版面變寬、照片跟著變大，還是超過一頁）
+    if (z < 1) st.textContent = '@media print{#sheet{zoom:' + z.toFixed(3) + ';width:718px!important;max-width:718px!important;margin:0 auto!important}}';
+  }
+  window.addEventListener('beforeprint', fitPrint);
+  window.__fitPrint = fitPrint;
   function show(d) {
     if (shown) return; shown = true;
     document.title = d.title || '瑞禾業務系統';
