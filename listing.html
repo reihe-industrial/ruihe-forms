@@ -1455,7 +1455,7 @@ var FIELD_CONFIG = {
     { label: '主要建材', type: 'checkbox-other', required: true, options: ['RC 鋼筋混凝土','SC 鋼骨','SRC 鋼骨鋼筋混凝土','磚造','加強磚造','木造'] },
     { label: '外壁材質', type: 'checkbox-other', options: ['洗石子','馬賽克','方塊磚','二丁掛','玻璃帷幕','花崗石','原木'] },
     { label: '建物朝向', type: 'select', options: DIRECTIONS.concat(['待查']), required: true }, // 115/11/03：當下不知道可以先選「待查」
-    { label: '土地朝向(廠房)', type: 'select', options: DIRECTIONS, required: true },
+    { label: '土地朝向(廠房)', type: 'select', options: DIRECTIONS.concat(['待查']), required: true }, // 115/11/16：沒有臨路的土地很難判斷朝向，可以先選「待查」
     { label: '簷高(滴水高度)', type: 'per-floor-height', hint: '選填。按「＋新增一棟」，輸入棟別名稱和地上／地下幾層，下面會出現每一層的簷高欄位，分別填寫；基地上不只一棟就一棟一棟新增。(滴水高度：雨水離開廠房屋頂，開始下墜時離地面的高度)' },
     { label: '樓地板載重或機具/電梯載重', type: 'multi-text', hint: '有資訊者填寫。指樓地板(公斤/平方公尺)、貨梯(公斤或公噸)...、天車(公斤或公噸)...等載重，可能不只一種，點「新增一筆」逐項填寫。' },
     { label: '可供用水量', type: 'text', hint: '數值+單位。範例：80立方米/日' },
@@ -1513,7 +1513,7 @@ var FIELD_CONFIG = {
     { label: '基地深度', type: 'text', required: true, hint: '無需填單位。範例：150' },
     { label: '基地面寬', type: 'text', required: true, hint: '無需填單位。範例：60' },
     { label: '面臨路寬', type: 'text', required: true, hint: '無需填單位。範例：8' },
-    { label: '土地朝向(土地)', type: 'select', options: DIRECTIONS, required: true },
+    { label: '土地朝向(土地)', type: 'select', options: DIRECTIONS.concat(['待查']), required: true }, // 115/11/16：沒有臨路的土地很難判斷朝向，可以先選「待查」
     { label: '半徑300公尺是否有嫌惡設施', type: 'checkbox-other', required: true, noneExclusive: '無', options: ['無','殯儀館','火化場','公墓','靈骨塔','葬儀社','私人墳墓','寺廟','神壇','垃圾場','垃圾掩埋場','焚化爐','資源回收場','汙水處理廠','畜牧業','高壓電塔','變電所','基地台','加油站','瓦斯行','瓦斯槽','飛機場','高架道路','夜市','KTV','遊樂場','特種行業','醫院','警察局','消防隊','監獄','看守所','中途之家','儲能廠'],
       hint: '沒有請勾「無」；查詢：https://www.map.com.tw/' },
     { label: '特色說明', type: 'textarea', required: true,
@@ -4937,6 +4937,15 @@ function idleWatch_(isLoggedIn, onTimeout) {
 }
 // 115/10/29：送出、上傳、刪照片、查送出狀態都要帶登入的姓名和通關碼（後端會檢查）
 function lg_() { var l = sharedLoginGet_() || {}; return [l.name || '', l.code || '']; }
+// 115/11/16：填表單時只在這個分頁打字、不會呼叫後端，後端的登入憑證（40 分鐘沒呼叫就失效）會在填表中途先過期，
+// 這時選照片上傳就被擋。所以只要這一頁還有人在操作，每 10 分鐘向後端報到一次，讓後端憑證保持有效。
+setInterval(function() {
+  try {
+    if (document.hidden) return;
+    var l = sharedLoginGet_(); if (!l) return;
+    runServer('myVisibleNames', l.name, l.code).catch(function() {});
+  } catch (e) {}
+}, 10 * 60 * 1000);
 function sharedLoginGet_() {
   if (idleExpired_()) { sharedLoginClear_(); return null; }
   try { var o = JSON.parse(localStorage.getItem(SHARED_LOGIN_KEY) || 'null'); return o && o.name && o.code ? o : null; }
