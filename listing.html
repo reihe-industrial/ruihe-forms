@@ -6263,7 +6263,7 @@ function parseDeedPages_(rawPages, districtData) {
             return;
           }
           // 所有權人姓名、統一編號（電傳在同一行，電子謄本分兩行）；住址一律不讀
-          var ow = t.match(/^所有權人\s*:?\s*(\S+)/);
+          var ow = t.match(/^所有權人(?:姓名)?\s*:?\s*(\S+)/); // 115/11/16：有些謄本的標籤是「所有權人姓名」，原本會把「姓名」當成人名
           if (ow && !entry.owner.name) {
             entry.owner.name = ow[1];
             var oid = t.match(/統一編號\s*:?\s*([A-Za-z0-9*]{8,10})/);
