@@ -1341,15 +1341,27 @@ function contractPrefixMap_() {
 }
 var entrustKindByUser_ = false;
 document.addEventListener('change', function(e) { if (e.target && e.target.name === 'entrustKind' && e.isTrusted) entrustKindByUser_ = true; });
+// 契約編號位數檢查（115/11/23）：A、Z 開頭 7 位數字，B、P、R、T、W、X 開頭 6 位數字；其他字首不檢查。
+// 編號後面接「-租」之類的文字照放行，只看英文字母後面連續的數字。少填或多填就提醒，送出前也擋下來。
+var CONTRACT_NO_DIGITS_ = { A: 7, Z: 7, B: 6, P: 6, R: 6, T: 6, W: 6, X: 6 };
+function contractNoLenProblem_(v) {
+  v = String(v || '').trim();
+  var m = v.match(/^([A-Za-z])(\d*)/);
+  if (!m) return '';
+  var need = CONTRACT_NO_DIGITS_[m[1].toUpperCase()];
+  if (!need || m[2].length === need) return '';
+  return m[1].toUpperCase() + ' 開頭的契約編號應該是 ' + need + ' 位數字，目前是 ' + m[2].length + ' 位，請確認有沒有少填或多填';
+}
 function contractNoCheck_() {
   var inp = document.querySelector('[data-label="契約編號"]'), note = document.getElementById('contractNoNote');
   if (!inp || !note) return;
   var v = inp.value.trim(), m = v ? contractPrefixMap_()[v.charAt(0).toUpperCase()] : null;
-  if (!m) { note.style.display = 'none'; note.textContent = ''; note.classList.remove('warn-hint'); return; }
+  var lenMsg_ = (selectedContractType_() === '委託') ? contractNoLenProblem_(v) : '';
+  if (!m) { if (lenMsg_) { note.style.display = ''; note.classList.add('warn-hint'); note.textContent = '❗ ' + lenMsg_; } else { note.style.display = 'none'; note.textContent = ''; note.classList.remove('warn-hint'); } return; }
   var isEntrust = selectedContractType_() === '委託';
   note.style.display = '';
-  note.classList.toggle('warn-hint', isEntrust && !m.kind);
-  note.textContent = v.charAt(0).toUpperCase() + '：' + m.name + (isEntrust && !m.kind ? '　❗ 這不是委託契約的編號，請確認' : '');
+  note.classList.toggle('warn-hint', (isEntrust && !m.kind) || !!lenMsg_);
+  note.textContent = v.charAt(0).toUpperCase() + '：' + m.name + (isEntrust && !m.kind ? '　❗ 這不是委託契約的編號，請確認' : '') + (lenMsg_ ? '　❗ ' + lenMsg_ : '');
   if (isEntrust && m.kind && !entrustKindByUser_ && !EDIT_MODE) {
     var h = document.getElementById('entrustKindValue');
     if (h && h.value !== m.kind) { h.value = m.kind; syncEntrustKindRadios_(); h.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -4269,6 +4281,7 @@ function listingCheck_() {
   var contractTypeNow_ = selectedContractType_();
   if (!contractTypeNow_) missingLabels.push('契約類型');
   else if (CONTRACT_TYPES[contractTypeNow_].numberRequired && !String(fieldValues['契約編號'] || '').trim()) missingLabels.push('契約編號');
+  else if (!EDIT_MODE && contractTypeNow_ === '委託' && contractNoLenProblem_(fieldValues['契約編號'])) missingLabels.push('契約編號（' + contractNoLenProblem_(fieldValues['契約編號']) + '）');
   if (contractTypeNow_ === '委託' && !String(fieldValues['委託類別'] || '').trim()) missingLabels.push('委託類別');
   STATIC_REQUIRED_LABELS.forEach(function(label) {
     if (clientInfoOptional_() && CLIENT_LABELS_OPTIONAL_IF_ORAL.indexOf(label) !== -1) return;
