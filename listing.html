@@ -1418,6 +1418,7 @@ var FIELD_CONFIG = {
     { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
     { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
     { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
+    { label: '底價(萬)', type: 'number', hint: '填數字，單位是萬；沒有底價就空白' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
     { label: '使用狀態補充說明(廠房)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
@@ -1490,6 +1491,7 @@ var FIELD_CONFIG = {
     { label: '土地類型', type: 'select-other', required: true, options: ['工業地', '農地', '建地'], hint: '選不到的請選「其他」自己填' },
     { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
     { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用土地坪數換算帶入，可以再修改' },
+    { label: '底價(萬)', type: 'number', hint: '填數字，單位是萬；沒有底價就空白' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租'] },
     { label: '使用狀態補充說明(土地)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
@@ -1535,6 +1537,7 @@ var FIELD_CONFIG = {
     { label: '案名', type: 'text', required: true, maxlength: 15, hint: '最多15字' },
     { label: '單價', type: 'price', required: true, hint: '填數字並選單位。範例：8 萬/坪、30 元/坪/月、10 萬/月\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物＋共同使用面積）換算帶入，可以再修改' },
     { label: '總價', type: 'price', required: true, hint: '填數字並選單位，盡量取整數。範例：2380 萬\n填總價或單價其中一個，另一個會用建物坪數（主建物＋附屬建物＋共同使用面積）換算帶入，可以再修改' },
+    { label: '底價(萬)', type: 'number', hint: '填數字，單位是萬；沒有底價就空白' },
     { label: '使用狀態', type: 'select-other', required: true, options: ['空置','自用','出租','興建中'] },
     { label: '使用狀態補充說明(房屋)', type: 'textarea', hint: '如果上面選擇出租或其他狀況，請補充說明，如：出租中 租金10萬/月 租期115年10月12日到期' },
     { label: '都市或非都市計畫', type: 'select', required: true, options: ['都市計畫','非都市計畫'], controlsGroup: 'urbanPlan', showWhen: '都市計畫', isPlanTypeSelect: true, hint: '※國土測繪雲\nhttps://maps.nlsc.gov.tw/T09/mapshow.action\n※土地使用分區查詢\nhttps://pip.moi.gov.tw/Publicize/Info/Z2060' },
@@ -7329,6 +7332,7 @@ document.getElementById('deedInput').addEventListener('change', function() {
       var ch = [];
       if (r['新到期日']) ch.push('到期日：' + (r['原到期日'] || '—') + ' → <b>' + esc(r['新到期日']) + '</b>');
       if (r['新總價']) ch.push('總價：' + esc(r['原總價'] || '—') + ' → <b>' + esc(r['新總價']) + ' 萬</b>');
+      if (r['新底價']) ch.push('底價：' + esc(r['原底價'] || '—') + ' → <b>' + esc(r['新底價']) + ' 萬</b>（總價不變）');
       if (r['新委託人']) ch.push('委託人：' + esc(r['原委託人'] || '—') + ' → <b>' + esc(r['新委託人']) + '</b>');
       if (r['委託內容']) ch.push('委託內容：' + esc(r['委託內容']));
       if (r['其他']) ch.push('其他：' + esc(r['其他']));
@@ -7354,7 +7358,7 @@ document.getElementById('deedInput').addEventListener('change', function() {
     var r = lastRecords.filter(function(x) { return String(x.row) === row; })[0] || {};
     var dlg = RuiheMatch.showModal('刪除契變書 ' + (r['契變書編號'] || ''),
       '<p style="margin:0 0 10px;">確定要刪除這筆契變紀錄嗎？</p>' +
-      (latest && (r['新到期日'] || r['新總價'] || r['新委託人']) ? '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:700;margin-bottom:10px;"><input type="checkbox" id="ccRevert" checked style="width:auto;margin-top:4px;"> 同時把到期日、總價、委託人改回契變前的值</label>' : '') +
+      (latest && (r['新到期日'] || r['新總價'] || r['新底價'] || r['新委託人']) ? '<label style="display:flex;gap:8px;align-items:flex-start;font-weight:700;margin-bottom:10px;"><input type="checkbox" id="ccRevert" checked style="width:auto;margin-top:4px;"> 同時把到期日、總價、底價、委託人改回契變前的值</label>' : '') +
       '<div class="msg" id="ccDelMsg"></div><div style="display:flex;gap:8px;"><button type="button" class="edit-btn" id="ccDelGo" style="flex:1;background:#B3261E;">刪除</button><button type="button" class="edit-btn secondary" id="ccDelNo">取消</button></div>');
     dlg.body.querySelector('#ccDelNo').addEventListener('click', function() { dlg.close(); });
     dlg.body.querySelector('#ccDelGo').addEventListener('click', function() {
@@ -7385,7 +7389,9 @@ document.getElementById('deedInput').addEventListener('change', function() {
       '<div class="field"><label class="required">變更項目（可複選）</label><div class="checkbox-group">' +
         ['到期日', '價格', '委託內容', '委託人', '其他'].map(function(x) { return '<label class="checkbox-item"><input type="checkbox" class="ccItem" value="' + x + '"> ' + x + '</label>'; }).join('') + '</div></div>' +
       '<div class="sub" data-for="到期日"><label class="required">新的合約到期日</label><input type="date" id="ccExpiry"></div>' +
-      '<div class="sub" data-for="價格"><label class="required">新的總價（萬）</label><input type="text" inputmode="decimal" id="ccPrice" placeholder="例：2800"></div>' +
+      '<div class="sub" data-for="價格"><label class="required">新的價格（萬）</label><input type="text" inputmode="decimal" id="ccPrice" placeholder="例：2800">' +
+        '<div class="checkbox-group" style="margin-top:8px;"><label class="checkbox-item"><input type="radio" name="ccPriceMode" value="floor" checked> 記為底價（總價不變）</label>' +
+        '<label class="checkbox-item"><input type="radio" name="ccPriceMode" value="total"> 直接更動總價</label></div></div>' +
       '<div class="sub" data-for="委託人"><label class="required">新的委託人</label><input type="text" id="ccClient"></div>' +
       '<div class="sub" data-for="委託內容"><label class="required">委託內容變更了什麼</label><textarea id="ccContent" rows="2"></textarea></div>' +
       '<div class="sub" data-for="其他"><label class="required">其他變更的內容</label><textarea id="ccOther" rows="2"></textarea></div>' +
@@ -7401,7 +7407,7 @@ document.getElementById('deedInput').addEventListener('change', function() {
       var b = this, msg = body.querySelector('#ccMsg');
       var ch = { no: body.querySelector('#ccNo').value, date: body.querySelector('#ccDate').value,
         items: [].map.call(body.querySelectorAll('.ccItem:checked'), function(x) { return x.value; }),
-        expiry: body.querySelector('#ccExpiry').value, price: body.querySelector('#ccPrice').value, client: body.querySelector('#ccClient').value,
+        expiry: body.querySelector('#ccExpiry').value, price: body.querySelector('#ccPrice').value, priceMode: (body.querySelector('input[name="ccPriceMode"]:checked') || {}).value || 'floor', client: body.querySelector('#ccClient').value,
         content: body.querySelector('#ccContent').value, other: body.querySelector('#ccOther').value };
       b.disabled = true; b.textContent = '儲存中…'; msg.style.display = 'none';
       runServer('contractChangeAdd', editAuth_.name, editAuth_.code, editCase_.key, ch).then(function(res) {
