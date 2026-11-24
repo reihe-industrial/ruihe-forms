@@ -276,6 +276,25 @@ var DISTRICT_DATA = {};
 var TRANSCRIPT_TYPES = [];
 var entryCount = 0;
 
+// 115/11/24：地址有樓層（例如 3樓、12F、五樓）；土地類謄本才需要問
+function addrHasFloor_(addr) { return /([0-9０-９]+|[一二三四五六七八九十]+)\s*(樓|層|F)\b|[0-9０-９]+\s*樓|[一二三四五六七八九十]+樓/i.test(String(addr || '')); }
+function needBigQuestion_(entryEl) {
+  var landChecked = Array.prototype.some.call(entryEl.querySelectorAll('.transcriptTypeCheckbox:checked'), function(cb) { return cb.value.indexOf('土地') !== -1; });
+  return landChecked && addrHasFloor_(entryEl.querySelector('.addressInput').value);
+}
+function bigProblems_(entryEl) {
+  var out = [];
+  if (!needBigQuestion_(entryEl)) return out;
+  var picked = entryEl.querySelector('.bigRadio:checked');
+  if (!picked) { out.push('地址有樓層，請選擇是否為大樓（多人持分）'); return out; }
+  if (picked.value === '是') {
+    var id = entryEl.querySelector('.idInput').value.trim().toUpperCase();
+    if (!id) out.push('大樓（多人持分）要填所有權人身分證字號');
+    else if (!/^[A-Z][A-D12489][0-9]{8}$/.test(id) && !/^[0-9]{8}$/.test(id)) out.push('身分證字號格式不對（1 個英文字母＋9 碼數字，公司請填 8 碼統編）');
+  }
+  return out;
+}
+
 // 建立一筆「地段」區塊：縣市/鄉鎮/段連動選單 + 地號/建號 + 謄本種類 + 備註
 function createDistrictEntry() {
   entryCount++;
@@ -437,6 +456,61 @@ function createDistrictEntry() {
     addrLabel.querySelector('.addrStar').style.display = buildingInput.value.trim() ? '' : 'none';
   });
 
+  // 115/11/24：申請「土地登記謄本」、而且地址有樓層時，要問是不是大樓（多人持分）；是的話必須填所有權人身分證
+  var bigBlock = document.createElement('div');
+  bigBlock.className = 'field-block bigBlock';
+  bigBlock.style.display = 'none';
+  var bigLabel = document.createElement('label');
+  bigLabel.className = 'field-label';
+  bigLabel.innerHTML = '是否為大樓（多人持分）？<span class="required-star">*</span>';
+  var bigHint = document.createElement('div');
+  bigHint.className = 'hint';
+  bigHint.style.marginBottom = '6px';
+  bigHint.textContent = '地址有樓層，要調土地謄本，請選擇。大樓（多人持分）要填所有權人身分證字號；不是大樓就不用填。';
+  var bigGroup = document.createElement('div');
+  bigGroup.className = 'checkbox-group';
+  var bigName = 'bigBuilding_' + entryId;
+  ['是', '否'].forEach(function(v) {
+    var l = document.createElement('label');
+    var r = document.createElement('input');
+    r.type = 'radio'; r.name = bigName; r.value = v; r.className = 'bigRadio';
+    l.appendChild(r); l.appendChild(document.createTextNode(v));
+    bigGroup.appendChild(l);
+  });
+  var idBlock = document.createElement('div');
+  idBlock.className = 'idBlock';
+  idBlock.style.display = 'none';
+  idBlock.style.marginTop = '10px';
+  var idLabel = document.createElement('label');
+  idLabel.className = 'field-label';
+  idLabel.innerHTML = '所有權人身分證字號<span class="required-star">*</span>';
+  var idHint = document.createElement('div');
+  idHint.className = 'hint';
+  idHint.style.marginBottom = '6px';
+  idHint.textContent = '例如 A123456789；所有權人是公司請填統一編號（8 碼）';
+  var idInput = document.createElement('input');
+  idInput.type = 'text';
+  idInput.className = 'idInput';
+  idInput.maxLength = 12;
+  idInput.autocomplete = 'off';
+  idBlock.appendChild(idLabel);
+  idBlock.appendChild(idHint);
+  idBlock.appendChild(idInput);
+  bigBlock.appendChild(bigLabel);
+  bigBlock.appendChild(bigHint);
+  bigBlock.appendChild(bigGroup);
+  bigBlock.appendChild(idBlock);
+  wrap.appendChild(bigBlock);
+  function refreshBig_() {
+    var need = needBigQuestion_(wrap);
+    bigBlock.style.display = need ? '' : 'none';
+    var yes = wrap.querySelector('.bigRadio[value="是"]:checked');
+    idBlock.style.display = (need && yes) ? '' : 'none';
+  }
+  addrInput.addEventListener('input', refreshBig_);
+  typeGroup.addEventListener('change', refreshBig_);
+  bigGroup.addEventListener('change', refreshBig_);
+
   // 備註
   var noteBlock = document.createElement('div');
   noteBlock.className = 'field-block';
@@ -575,10 +649,15 @@ document.getElementById('submitBtn').addEventListener('click', function() {
     if (!county || !town || !district) { missingParts.push('第 ' + (idx + 1) + ' 筆：縣市/鄉鎮市區/段名'); entryProblems.push('縣市／鄉鎮市區／段名還沒選完'); }
     if (checkedTypes.length === 0) { missingParts.push('第 ' + (idx + 1) + ' 筆：謄本種類（至少勾選一項）'); entryProblems.push('謄本種類至少要勾選一項'); }
     if (building && !address) { missingParts.push('第 ' + (idx + 1) + ' 筆：地址（有填建號的話必填）'); entryProblems.push('有填建號，地址要填'); }
+    bigProblems_(entryEl).forEach(function(m) { missingParts.push('第 ' + (idx + 1) + ' 筆：' + m); entryProblems.push(m); });
     if (entryProblems.length) markEl_(entryEl, entryProblems.join('；'));
 
+    var bigOn = needBigQuestion_(entryEl);
+    var bigPick = entryEl.querySelector('.bigRadio:checked');
+    var bigVal = bigOn && bigPick ? bigPick.value : '';
     entries.push({ county: county, town: town, district: district, lot: lot, building: building,
-      transcriptTypes: checkedTypes, note: note, address: address });
+      transcriptTypes: checkedTypes, note: note, address: address,
+      bigBuilding: bigVal, idNo: bigVal === '是' ? entryEl.querySelector('.idInput').value.trim().toUpperCase() : '' });
   });
 
   if (missingParts.length > 0) {
@@ -656,6 +735,7 @@ function registryCheck_() {
     if (!county || !town || !district) add('第 ' + (idx + 1) + ' 筆：縣市/鄉鎮市區/段名', el);
     if (!types) add('第 ' + (idx + 1) + ' 筆：謄本種類（至少勾選一項）', el);
     if (building && !address) add('第 ' + (idx + 1) + ' 筆：地址（有填建號的話必填）', el);
+    bigProblems_(el).forEach(function(m) { add('第 ' + (idx + 1) + ' 筆：' + m, el); });
   });
   return out;
 }
