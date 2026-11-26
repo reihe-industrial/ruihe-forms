@@ -470,6 +470,10 @@
         <summary>契變書待收件<span class="badge" id="cntCcP">…</span></summary>
         <div class="rem-body" id="bodyCcP"><div class="rem-empty loading">讀取中…</div></div>
       </details>
+      <details class="rem" id="remDiscReqP" hidden>
+        <summary>說明書申請領用待確認<span class="badge" id="cntDiscReqP">…</span></summary>
+        <div class="rem-body" id="bodyDiscReqP"><div class="rem-empty loading">讀取中…</div></div>
+      </details>
       <details class="rem" id="remDiscLateP" hidden>
         <summary>說明書領出逾期未歸還<span class="badge" id="cntDiscLateP">…</span></summary>
         <div class="rem-body" id="bodyDiscLateP"><div class="rem-empty loading">讀取中…</div></div>
@@ -1409,7 +1413,7 @@ $('calAddCo').addEventListener('click', function() { calEdit(null, '公司'); })
 // ===== 秘書、管理員的待辦：契變書待收件、調謄本待申請（115/10/19） =====
 function loadSecReminders() {
   var sec = calIsSec();
-  $('remCcP').hidden = !sec; $('remRegP').hidden = !sec; $('remDelP').hidden = !sec; $('remDiscLateP').hidden = !sec; $('remDiscNoP').hidden = !sec;
+  $('remCcP').hidden = !sec; $('remRegP').hidden = !sec; $('remDelP').hidden = !sec; $('remDiscLateP').hidden = !sec; $('remDiscReqP').hidden = !sec; $('remDiscNoP').hidden = !sec;
   if (!sec || !auth) return;
   post(OBJ_API, 'adminContractChanges', [auth.name, auth.code]).then(function(res) {
     var list = (res.records || []).filter(function(r) { return !r['秘書收件']; });
@@ -1419,7 +1423,11 @@ function loadSecReminders() {
     }).join('') + (list.length > 8 ? '<div class="rem-empty">還有 ' + (list.length - 8) + ' 筆，<a href="secretary.html?tab=cc">到後台管理看全部</a></div>' : '') : '<div class="rem-empty">沒有待收件的契變書。</div>';
   }).catch(function(err) { setBadge('cntCcP', '!', 'hot'); $('bodyCcP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
   post(OBJ_API, 'disclosureReminders', [auth.name, auth.code]).then(function(res) {
-    var late = res.overdue || [], miss = res.missing || [];
+    var late = res.overdue || [], miss = res.missing || [], reqs = res.requests || [];
+    setBadge('cntDiscReqP', reqs.length, reqs.length ? 'hot' : 'warn');
+    $('bodyDiscReqP').innerHTML = reqs.length ? reqs.slice(0, 8).map(function(r) {
+      return '<div class="rem-row"><div class="nm">' + esc(r.name) + '</div><div class="meta">' + esc(r.by + ' 申請領用｜' + r.no + '｜' + r.at + (r.target ? '｜' + r.target : '') + (r.made ? '' : '｜還沒製作')) + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=disc">去處理</a></div></div>';
+    }).join('') + (reqs.length > 8 ? '<div class="rem-empty">還有 ' + (reqs.length - 8) + ' 筆，<a href="secretary.html?tab=disc">到後台管理看全部</a></div>' : '') : '<div class="rem-empty">沒有待確認的領用申請。</div>';
     setBadge('cntDiscLateP', late.length, late.length ? 'hot' : 'warn');
     $('bodyDiscLateP').innerHTML = late.length ? late.slice(0, 8).map(function(r) {
       return '<div class="rem-row"><div class="nm">' + esc(r.name) + '</div><div class="meta">' + esc(r.holder + '｜' + r.no + '｜' + r.outAt + ' 領出，已 ' + r.days + ' 天') + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=disc">去處理</a></div></div>';
@@ -1429,7 +1437,7 @@ function loadSecReminders() {
     $('bodyDiscNoP').innerHTML = miss.length ? miss.slice(0, 8).map(function(r) {
       return '<div class="rem-row"><div class="nm">' + esc(r.name) + '</div><div class="meta">' + esc(r.agents + '｜' + r.no) + '</div><div class="go"><a class="link-btn" href="secretary.html?tab=disc">去登記</a></div></div>';
     }).join('') + (mc > 8 ? '<div class="rem-empty">還有 ' + (mc - 8) + ' 筆，<a href="secretary.html?tab=disc">到後台管理看全部</a></div>' : '') : '<div class="rem-empty">每件委託都有說明書紀錄。</div>';
-  }).catch(function(err) { setBadge('cntDiscLateP', '!', 'hot'); setBadge('cntDiscNoP', '!', 'hot'); $('bodyDiscLateP').innerHTML = $('bodyDiscNoP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
+  }).catch(function(err) { setBadge('cntDiscReqP', '!', 'hot'); setBadge('cntDiscLateP', '!', 'hot'); setBadge('cntDiscNoP', '!', 'hot'); $('bodyDiscReqP').innerHTML = $('bodyDiscLateP').innerHTML = $('bodyDiscNoP').innerHTML = '<div class="rem-error">讀取失敗：' + esc(err.message || '') + '</div>'; });
   post(OBJ_API, 'deleteRequestList', [auth.name, auth.code]).then(function(res) {
     var list = (res.requests || []).filter(function(r) { return r['狀態'] === '待審核'; });
     setBadge('cntDelP', list.length, 'warn');
