@@ -29,7 +29,9 @@
     .tags .warn { background: #fbebe9; color: var(--danger); }
     .sub { color: var(--muted); font-size: 13.5px; margin-top: 4px; line-height: 1.6; }
     .sub b { color: var(--ink); font-weight: 500; }
-    .price { flex: 0 0 auto; text-align: right; margin-left: auto; }
+    .price { flex: 0 0 auto; text-align: right; margin-left: auto; order: 3; }
+    .head-disc { flex: 0 0 300px; order: 2; }
+    @media (max-width: 999px) { .head-disc { order: 4; flex: 1 1 100%; } .head-disc .discbox { max-width: 460px; } }
     .price .big { font-size: 28px; font-weight: 700; color: #b3261e; line-height: 1.1; }
     .price .u { color: var(--muted); font-size: 14px; margin-top: 4px; line-height: 1.6; }
     .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
@@ -38,7 +40,7 @@
     .btn.blue { background: var(--t-factory); border-color: var(--t-factory); }
     .btn.ghost { background: #fff; color: var(--brand-dark); }
     .btn:disabled { opacity: .55; cursor: default; }
-    .discbox { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #FAFBFA; font-size: 13.5px; text-align: left; }
+    .discbox { margin-top: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #FAFBFA; font-size: 13.5px; text-align: left; }
     .discbox .dt { font-weight: 700; margin-bottom: 4px; }
     .discbox .ds { color: var(--muted); font-size: 12.5px; }
     .discbox input[type=text] { width: 100%; height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font: inherit; margin: 6px 0; box-sizing: border-box; }
@@ -391,10 +393,10 @@ function render() {
   var h = '';
   h += '<div class="card"><div class="head"><div class="head-main"><div class="title">' + esc(F('案名') || '（未填案名）') + '</div><div class="tags">' + tags + '</div>' +
     '<div class="sub">' + subLines.join('<br>') + '</div>' + agentsHtml + '</div>' +
+    (discNo_() ? '<div class="head-disc"><div class="discbox" id="discBox"><div class="ds">說明書：讀取中…</div></div></div>' : '') +
     '<div class="price"><div class="big">' + esc(F('總價') || '總價未填') + '</div>' + (units.length ? '<div class="u">' + units.map(esc).join('<br>') + '</div>' : '') +
     '<div class="btns"><button type="button" class="btn" id="dmBtn">給客戶看（DM）</button><button type="button" class="btn blue" id="tourBtn">業務銷講</button></div>' +
     (D.canEdit ? '<div class="btns" style="margin-top:8px;"><a class="btn ghost" href="listing.html?mode=edit&key=' + encodeURIComponent(D.key) + '">修改</a></div>' : '') +
-    (discNo_() ? '<div class="discbox" id="discBox"><div class="ds">說明書：讀取中…</div></div>' : '') +
     '</div></div></div>' + ownerCard;
 
 
